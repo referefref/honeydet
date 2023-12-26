@@ -47,6 +47,22 @@ go get honeydet
     	Connection timeout in seconds (default 5)
   -verbose
     	Enable verbose output
+  -webserver
+    	Run as a web server (API) on port 8080
+```
+### Examples
+* Scan a single host on port 2822 in verbose mode:
+```
+./honeydet -host 192.168.1.1 -port 2822 -verbose
+```
+* Scan hosts from a file with 100 threads checking for a ping before scanning, with a 5 second timeout, and create a json report as report.json
+```
+./honeydet -hostfile hosts.txt -threads 100 -timeout 5 -checkping -report json -output report.json
+```
+* Run in webserver mode to expose an API endpoint:
+```
+./honeydet -webserver
+curl 'http://localhost:8080/scan?targets=1.1.1.1,2.2.2.2,3.3.3.3,4.4.4.4,5.5.5.5,6.6.6.6,7.7.7.7,8.8.8.8,9.9.9.9&report=csv&port=3389'
 ```
 
 ### Wish-list
