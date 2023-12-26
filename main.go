@@ -97,7 +97,7 @@ func readSignatures(filePath string) ([]HoneypotSignature, error) {
             if *verbose {
                 fmt.Println("[Verbose] Skipping malformed line in signature file")
             }
-            continue // Skip malformed lines
+            continue
         }
         signatures = append(signatures, HoneypotSignature{
             Type:     record[0],
@@ -262,7 +262,7 @@ func enhancedHelpOutput() {
   I+ :I+=I+  7I =I+ I7   I7~ :I?   +I,    II,II  I7~ :I?=I=
       =, I7III: =I= I7    IIIII    +I,     II7I   IIIII ~I+
 
-      Go Honeypot Detector, Dec 2023, Version 0.4.5
+      Go Honeypot Detector, Dec 2023, Version 0.4.7
 `))
 
     fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s:\n", os.Args[0])
@@ -271,7 +271,7 @@ func enhancedHelpOutput() {
     fmt.Println(color.Ize(color.White,"  Scan a single host on port 2822 in verbose mode: ./honeydet -host 192.168.1.1 -port 2822 -verbose"))
     fmt.Println(color.Ize(color.White,"  Scan hosts from a file with 100 threads checking for a ping before scanning, with a 5 second timeout, and create a json report as report.json: ./honeydet -hostfile hosts.txt -threads 100 -timeout 5 -checkping -report json -output report.json"))
     fmt.Println(color.Ize(color.White,"  Run in webserver mode to expose an API endpoint: ./honeydet -webserver"))
-    fmt.Println(color.Ize(color.Blue,"   ----- curl 'http://10.1.1.33:8080/scan?targets=10.1.1.99,10.1.1.100,10.1.1.101'"))
+    fmt.Println(color.Ize(color.Blue,"                         curl 'http://10.1.1.33:8080/scan?targets=10.1.1.99,10.1.1.100,10.1.1.101'"))
 }
 
 func scanHandler(w http.ResponseWriter, r *http.Request) {
@@ -284,38 +284,40 @@ func scanHandler(w http.ResponseWriter, r *http.Request) {
     }
     argsBase = append(argsBase, "-report", reportType)
 
-    var combinedOutput []byte
-    
-    for key, values := range params {
-        if len(values) > 0 {
-            value := values[0]
-            switch key {
-            case "checkping", "verbose":
-                if value == "true" {
-                    argsBase = append(argsBase, fmt.Sprintf("-%s", key))
+    resultsChan := make(chan []byte)
+    var wg sync.WaitGroup
+
+    if targets, ok := params["targets"]; ok {
+        hosts := strings.Split(targets[0], ",")
+        for _, host := range hosts {
+            wg.Add(1)
+            go func(host string) {
+                defer wg.Done()
+                args := append([]string(nil), argsBase...)
+                args = append(args, "-host", strings.TrimSpace(host))
+
+                cmd := exec.Command("./honeydet", args...)
+                output, err := cmd.CombinedOutput()
+
+                if err != nil {
+                    log.Printf("Error scanning host %s: %s", host, err)
+                    resultsChan <- nil
+                    return
                 }
-            case "host", "proto":
-                argsBase = append(argsBase, fmt.Sprintf("-%s", key), value)
-            case "delay", "port", "threads", "timeout":
-                argsBase = append(argsBase, fmt.Sprintf("-%s", key), value)
-            }
+
+                resultsChan <- output
+            }(host)
         }
     }
 
-    // Process 'targets' parameter for multiple hosts
-    if targets, ok := params["targets"]; ok {
-        for _, host := range strings.Split(targets[0], ",") {
-            args := append([]string(nil), argsBase...)
-            args = append(args, "-host", strings.TrimSpace(host))
+    go func() {
+        wg.Wait()
+        close(resultsChan)
+    }()
 
-            cmd := exec.Command("./honeydet", args...)
-            output, err := cmd.CombinedOutput()
-
-            if err != nil {
-                http.Error(w, err.Error(), http.StatusInternalServerError)
-                return
-            }
-
+    var combinedOutput []byte
+    for output := range resultsChan {
+        if output != nil {
             combinedOutput = append(combinedOutput, output...)
         }
     }
@@ -339,6 +341,7 @@ func main() {
         log.Fatal(http.ListenAndServe(":8080", nil))
         return
     }
+
 
     var hosts []string
     var err error
