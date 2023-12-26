@@ -10,6 +10,13 @@ honeydet is a signature based, multi-threaded honeypot detection tool written in
 It can detect honeypots based upon the premise that they were generate a unique and identifying response to tcp/udp packets.
 While this could have been implemented as an nmap/zmap script, containing it within a Golang application allows for it's future potential to be extended to be a web application rather than just a command line tool.
 
+### Installation
+```
+git clone https://github.com/referefref/honeydet.git
+cd honeydet
+go get honeydet
+```
+
 ### Command line options
 ```
 -checkping
