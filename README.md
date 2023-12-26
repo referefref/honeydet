@@ -1,6 +1,6 @@
 [![Active Development](https://img.shields.io/badge/Maintenance%20Level-Actively%20Developed-brightgreen.svg)](https://gist.github.com/cheerfulstoic/d107229326a01ff0f333a1d3476e068d)
 
-# honeydet Go Honeypot Detector, Dec 2023, Version 0.3.2
+# honeydet Go Honeypot Detector, Dec 2023, Version 0.4.7
 ![honeydetlogo](https://github.com/referefref/honeydet/assets/56499429/88e9b508-46e1-4822-94e1-e25edb83d0ba)
 
 
@@ -8,7 +8,11 @@
 
 honeydet is a signature based, multi-threaded honeypot detection tool written in Golang.
 It can detect honeypots based upon the premise that given a specifically crafted request they will generate a unique and identifying response to tcp/udp packets.
-While this could have been implemented as an nmap/zmap script, containing it within a Golang application allows for it's future potential to be extended to be a web application rather than just a command line tool.
+Running in webserver mode, you can easily scan multiple IP addresses and return the result in json or csv, this runs multithreaded as default.
+
+### What doesn't it do (just yet)?
+
+honeydet is not bundled with a library of request/response signatures for honeypots, this is something I'm privately working on and will share once completed - or at least in a semi-useful state.
 
 ### Installation
 ```
@@ -46,7 +50,6 @@ go get honeydet
 ```
 
 ### Wish-list
-* API Endpoints
 * Web interface
 * PDF Reports
 * Subnet scanning
