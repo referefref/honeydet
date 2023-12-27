@@ -17,6 +17,7 @@ import (
     "sync"
     "time"
     "github.com/TwiN/go-color"
+    "golang.org/x/crypto/ssh"
 )
 
 var (
@@ -24,6 +25,8 @@ var (
     hostFile      = flag.String("hostfile", "", "File containing a list of hosts to scan")
     port          = flag.Int("port", 22, "Target port to scan")
     proto         = flag.String("proto", "tcp", "Protocol (tcp or udp)")
+    username      = flag.String("username", "", "Username for authentication")
+    password      = flag.String("password", "", "Password for authentication")
     signatureFile = flag.String("signatures", "signatures.csv", "File with signatures")
     verbose       = flag.Bool("verbose", false, "Enable verbose output")
     delay         = flag.Int("delay", 0, "Delay in milliseconds between requests to a single host")
@@ -177,26 +180,167 @@ func probeWithSignature(conn net.Conn, signature HoneypotSignature) bool {
     return strings.Contains(string(response), signature.Response)
 }
 
-func detectHoneypot(host string, port int, proto string, signatures []HoneypotSignature, timeout int) DetectionResult {
+func probeSSHServer(host string, port int, timeout int) bool {
     if *verbose {
-        fmt.Printf("[Verbose] Detecting honeypot on host %s\n", host)
+        fmt.Printf("[Verbose] Checking if the service is an SSH server on host %s:%d\n", host, port)
     }
 
-    conn, err := connectToNetworkService(host, port, proto, timeout)
+    address := fmt.Sprintf("%s:%d", host, port)
+    conn, err := net.DialTimeout("tcp", address, time.Duration(timeout)*time.Second)
     if err != nil {
         if *verbose {
-            fmt.Printf("[Verbose] Unable to connect to host %s: %s\n", host, err)
+            fmt.Printf("[Verbose] Failed to connect to host %s:%d: %s\n", host, port, err)
         }
-        return DetectionResult{Host: host, IsHoneypot: false}
+        return false
     }
     defer conn.Close()
 
-    for _, signature := range signatures {
-        if probeWithSignature(conn, signature) {
+    buffer := make([]byte, 256)
+    conn.SetReadDeadline(time.Now().Add(time.Duration(timeout) * time.Second))
+    _, err = conn.Read(buffer)
+    if err != nil {
+        if *verbose {
+            fmt.Printf("[Verbose] Failed to read from host %s:%d: %s\n", host, port, err)
+        }
+        return false
+    }
+
+    isSSH := strings.Contains(string(buffer), "SSH")
+    if *verbose {
+        fmt.Printf("[Verbose] SSH service detected on host %s:%d: %t\n", host, port, isSSH)
+    }
+    return isSSH
+}
+
+func authenticateSSH(host string, port int, username, password string, timeout int) (*ssh.Client, error) {
+    if *verbose {
+        fmt.Printf("[Verbose] Preparing to authenticate via SSH on %s:%d with username '%s'\n", host, port, username)
+    }
+
+    config := &ssh.ClientConfig{
+        User: username,
+        Auth: []ssh.AuthMethod{
+            ssh.Password(password),
+        },
+        HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+        Timeout:         time.Duration(timeout) * time.Second,
+    }
+
+    if *verbose {
+        fmt.Printf("[Verbose] SSH client configuration set. Dialing TCP connection to %s:%d\n", host, port)
+    }
+
+    address := fmt.Sprintf("%s:%d", host, port)
+    client, err := ssh.Dial("tcp", address, config)
+    if err != nil {
+        if *verbose {
+            fmt.Printf("[Verbose] Failed to establish SSH connection to %s:%d: %s\n", host, port, err)
+        }
+        return client, err
+    }
+
+    if *verbose {
+        fmt.Printf("[Verbose] SSH connection established and authenticated to %s:%d\n", host, port)
+    }
+
+    return client, err
+}
+
+func executeSSHCommand(client *ssh.Client, command string) (string, error) {
+    if *verbose {
+        fmt.Printf("[Verbose] Creating new SSH session to execute command\n")
+    }
+
+    session, err := client.NewSession()
+    if err != nil {
+        if *verbose {
+            fmt.Printf("[Verbose] Failed to create SSH session: %s\n", err)
+        }
+        return "", err
+    }
+    defer session.Close()
+
+    if *verbose {
+        fmt.Printf("[Verbose] SSH session created. Executing command: %s\n", command)
+    }
+
+    output, err := session.CombinedOutput(command)
+    if err != nil {
+        if *verbose {
+            fmt.Printf("[Verbose] Error executing command (%s) via SSH: %s\n", command, err)
+        }
+        return "", err
+    }
+
+    if *verbose {
+        fmt.Printf("[Verbose] Command executed. Output: %s\n", string(output))
+    }
+
+    return string(output), nil
+}
+
+func detectHoneypot(host string, port int, proto string, signatures []HoneypotSignature, timeout int) DetectionResult {
+    var conn net.Conn
+    var err error
+    var sshClient *ssh.Client
+    var isSSH bool = false
+
+    if *username != "" && *password != "" && proto == "tcp" {
+        isSSH = probeSSHServer(host, port, timeout)
+        if isSSH {
             if *verbose {
-                fmt.Printf("[Verbose] Honeypot detected on host %s\n", host)
+                fmt.Printf("[Verbose] SSH service detected on host %s:%d, attempting authentication\n", host, port)
             }
-            return DetectionResult{Host: host, IsHoneypot: true, HoneypotType: signature.Type}
+            if sshClient == nil {
+                sshClient, err = authenticateSSH(host, port, *username, *password, timeout)
+                if err != nil {
+                    if *verbose {
+                        fmt.Printf("[Verbose] SSH authentication failed for host %s:%d: %s\n", host, port, err)
+                    }
+		    isSSH = false
+                } else {
+		    isSSH = true
+                    defer sshClient.Close()
+                }
+            }
+        }
+    }
+
+    if !isSSH {
+        if *verbose {
+            fmt.Printf("[Verbose] Establishing regular %s connection to host %s:%d\n", proto, host, port)
+        }
+        conn, err = connectToNetworkService(host, port, proto, timeout)
+        if err != nil {
+            if *verbose {
+                fmt.Printf("[Verbose] Unable to connect to host %s:%d: %s\n", host, port, err)
+            }
+            return DetectionResult{Host: host, IsHoneypot: false}
+        }
+        defer conn.Close()
+    }
+
+    if isSSH && sshClient != nil {
+        for _, signature := range signatures {
+            response, err := executeSSHCommand(sshClient, signature.Request)
+            if err != nil {
+                if *verbose {
+                    fmt.Printf("[Verbose] Error executing command via SSH: %s\n", err)
+                }
+		return DetectionResult{Host: host, IsHoneypot: true, HoneypotType: "generic"}
+            }
+            if strings.Contains(response, signature.Response) {
+                return DetectionResult{Host: host, IsHoneypot: true, HoneypotType: signature.Type}
+            }
+        }
+    } else {
+        for _, signature := range signatures {
+            if probeWithSignature(conn, signature) {
+                if *verbose {
+                    fmt.Printf("[Verbose] Honeypot detected on host %s\n", host)
+                }
+                return DetectionResult{Host: host, IsHoneypot: true, HoneypotType: signature.Type}
+            }
         }
     }
 
@@ -262,7 +406,7 @@ func enhancedHelpOutput() {
   I+ :I+=I+  7I =I+ I7   I7~ :I?   +I,    II,II  I7~ :I?=I=
       =, I7III: =I= I7    IIIII    +I,     II7I   IIIII ~I+
 
-      Go Honeypot Detector, Dec 2023, Version 0.4.7
+      Go Honeypot Detector, Dec 2023, Version 0.5.21
 `))
 
     fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s:\n", os.Args[0])
@@ -271,40 +415,58 @@ func enhancedHelpOutput() {
     fmt.Println(color.Ize(color.White,"  Scan a single host on port 2822 in verbose mode: ./honeydet -host 192.168.1.1 -port 2822 -verbose"))
     fmt.Println(color.Ize(color.White,"  Scan hosts from a file with 100 threads checking for a ping before scanning, with a 5 second timeout, and create a json report as report.json: ./honeydet -hostfile hosts.txt -threads 100 -timeout 5 -checkping -report json -output report.json"))
     fmt.Println(color.Ize(color.White,"  Run in webserver mode to expose an API endpoint: ./honeydet -webserver"))
-    fmt.Println(color.Ize(color.Blue,"                         curl 'http://10.1.1.33:8080/scan?targets=10.1.1.99,10.1.1.100,10.1.1.101'"))
+    fmt.Println(color.Ize(color.Blue,"                         curl 'http://localhost:8080/scan?targets=10.1.1.99,10.1.1.100,10.1.1.101'"))
 }
 
 func scanHandler(w http.ResponseWriter, r *http.Request) {
     params := r.URL.Query()
-    argsBase := []string{}
 
-    reportType := params.Get("report")
-    if reportType == "" {
-        reportType = "json"
+    argsBase := []string{}
+    if reportType := params.Get("report"); reportType != "" {
+        argsBase = append(argsBase, "-report", reportType)
     }
-    argsBase = append(argsBase, "-report", reportType)
+    if username := params.Get("username"); username != "" {
+        argsBase = append(argsBase, "-username", username)
+    }
+    if password := params.Get("password"); password != "" {
+        argsBase = append(argsBase, "-password", password)
+    }
+    if port := params.Get("port"); port != "" {
+        argsBase = append(argsBase, "-port", port)
+    }
+    if proto := params.Get("proto"); proto != "" {
+        argsBase = append(argsBase, "-proto", proto)
+    }
+    if delay := params.Get("delay"); delay != "" {
+        argsBase = append(argsBase, "-delay", delay)
+    }
+    if threads := params.Get("threads"); threads != "" {
+        argsBase = append(argsBase, "-threads", threads)
+    }
+    if timeout := params.Get("timeout"); timeout != "" {
+        argsBase = append(argsBase, "-timeout", timeout)
+    }
+    if checkPing := params.Get("checkping"); checkPing != "" {
+        argsBase = append(argsBase, "-checkping", checkPing)
+    }
 
     resultsChan := make(chan []byte)
     var wg sync.WaitGroup
 
-    if targets, ok := params["targets"]; ok {
+    if targets, ok := params["targets"]; ok && len(targets) > 0 {
         hosts := strings.Split(targets[0], ",")
         for _, host := range hosts {
             wg.Add(1)
             go func(host string) {
                 defer wg.Done()
-                args := append([]string(nil), argsBase...)
-                args = append(args, "-host", strings.TrimSpace(host))
-
+                args := append(argsBase, "-host", strings.TrimSpace(host))
                 cmd := exec.Command("./honeydet", args...)
                 output, err := cmd.CombinedOutput()
-
                 if err != nil {
                     log.Printf("Error scanning host %s: %s", host, err)
                     resultsChan <- nil
                     return
                 }
-
                 resultsChan <- output
             }(host)
         }
