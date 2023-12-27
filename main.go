@@ -21,7 +21,7 @@ import (
 )
 
 var (
-    host          = flag.String("host", "", "Single host to scan")
+    host          = flag.String("host", "", "Single host or range of hosts to scan (i.e. 1.1.1.1, 10.1.1.1/24, 172.16.10.20-172.16.10.30)")
     hostFile      = flag.String("hostfile", "", "File containing a list of hosts to scan")
     port          = flag.Int("port", 22, "Target port to scan")
     proto         = flag.String("proto", "tcp", "Protocol (tcp or udp)")
