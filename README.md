@@ -1,6 +1,6 @@
 [![Active Development](https://img.shields.io/badge/Maintenance%20Level-Actively%20Developed-brightgreen.svg)](https://gist.github.com/cheerfulstoic/d107229326a01ff0f333a1d3476e068d)
 
-# honeydet Go Honeypot Detector, Dec 2023, Version 0.5.24
+# honeydet Go Honeypot Detector, Dec 2023, Version 0.6.3
 ![honeydetlogo](https://github.com/referefref/honeydet/assets/56499429/88e9b508-46e1-4822-94e1-e25edb83d0ba)
 
 
@@ -29,7 +29,7 @@ go get honeydet
   -delay int
     	Delay in milliseconds between requests to a single host
   -host string
-    	Single host to scan
+    	Single host or range of hosts to scan (i.e. 1.1.1.1, 10.1.1.1/24, 172.16.10.20-172.16.10.30)
   -hostfile string
     	File containing a list of hosts to scan
   -output string
@@ -56,6 +56,10 @@ go get honeydet
 ```
 ./honeydet -host 192.168.1.1 -port 2822 -verbose
 ```
+* Scan a range of hosts in verbose mode:
+```
+./honeydet -host 192.168.1.1-192.168.1.30 -verbose
+```
 * Scan hosts from a file with 100 threads checking for a ping before scanning, with a 5 second timeout, and create a json report as report.json
 ```
 ./honeydet -hostfile hosts.txt -threads 100 -timeout 5 -checkping -report json -output report.json
@@ -63,12 +67,11 @@ go get honeydet
 * Run in verbose webserver mode to expose an API endpoint:
 ```
 ./honeydet -webserver -verbose
-curl 'http://localhost:8080/scan?targets=1.1.1.1,2.2.2.2,3.3.3.3,4.4.4.4,5.5.5.5,6.6.6.6,7.7.7.7,8.8.8.8,9.9.9.9&report=json&port=3389'
+curl 'http://localhost:8080/scan?targets=10.1.1.1/24&report=json&port=3389'
 ```
 
 ### Wish-list
 * Web interface
 * PDF Reports
-* Subnet scanning
 * Active port detection
 * Heuristic based detection including multi-command query and response
