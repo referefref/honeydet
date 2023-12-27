@@ -126,19 +126,31 @@ func connectToNetworkService(host string, port int, proto string, timeout int) (
     }
 
     switch proto {
-    case "tcp":
-        conn, err = net.DialTimeout("tcp", address, time.Duration(timeout)*time.Second)
-    case "udp":
-        conn, err = net.DialTimeout("udp", address, time.Duration(timeout)*time.Second)
+    case "tcp", "udp":
+        conn, err = net.DialTimeout(proto, address, time.Duration(timeout)*time.Second)
+        if err != nil {
+            if *verbose {
+                fmt.Printf("[Verbose] Failed to connect: %s\n", err)
+            }
+            return nil, err
+        }
+        deadline := time.Now().Add(time.Duration(timeout) * time.Second)
+        if err := conn.SetDeadline(deadline); err != nil {
+            if *verbose {
+                fmt.Printf("[Verbose] Failed to set deadline: %s\n", err)
+            }
+            conn.Close()
+            return nil, err
+        }
     default:
         err = fmt.Errorf("unsupported protocol: %s", proto)
+        if *verbose {
+            fmt.Printf("[Verbose] Unsupported protocol: %s\n", proto)
+        }
+        return nil, err
     }
 
-    if err != nil && *verbose {
-        fmt.Printf("[Verbose] Failed to connect: %s\n", err)
-    }
-
-    return conn, err
+    return conn, nil
 }
 
 func hostRespondsToPing(host string) bool {
@@ -266,11 +278,19 @@ func executeSSHCommand(client *ssh.Client, command string) (string, error) {
 
     output, err := session.CombinedOutput(command)
     if err != nil {
+        netErr, ok := err.(net.Error)
+        if ok && netErr.Timeout() {
+            if *verbose {
+                fmt.Printf("[Verbose] SSH command timed out: %s\n", err)
+            }
+            return "SSH command timed out", err
+        }
+
         if *verbose {
-            fmt.Printf("[Verbose] Error executing command (%s) via SSH: %s\n", command, err)
+            fmt.Printf("[Verbose] Error executing command via SSH: %s\n", err)
         }
         return "", err
-    }
+    }    
 
     if *verbose {
         fmt.Printf("[Verbose] Command executed. Output: %s\n", string(output))
@@ -406,7 +426,7 @@ func enhancedHelpOutput() {
   I+ :I+=I+  7I =I+ I7   I7~ :I?   +I,    II,II  I7~ :I?=I=
       =, I7III: =I= I7    IIIII    +I,     II7I   IIIII ~I+
 
-      Go Honeypot Detector, Dec 2023, Version 0.5.23
+      Go Honeypot Detector, Dec 2023, Version 0.5.24
 `))
 
     fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s:\n", os.Args[0])
