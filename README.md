@@ -1,6 +1,6 @@
 [![Active Development](https://img.shields.io/badge/Maintenance%20Level-Actively%20Developed-brightgreen.svg)](https://gist.github.com/cheerfulstoic/d107229326a01ff0f333a1d3476e068d)
 
-# honeydet Go Honeypot Detector, Dec 2023, Version 0.4.7
+# honeydet Go Honeypot Detector, Dec 2023, Version 0.5.23
 ![honeydetlogo](https://github.com/referefref/honeydet/assets/56499429/88e9b508-46e1-4822-94e1-e25edb83d0ba)
 
 
@@ -9,6 +9,7 @@
 honeydet is a signature based, multi-threaded honeypot detection tool written in Golang.
 It can detect honeypots based upon the premise that given a specifically crafted request they will generate a unique and identifying response to tcp/udp packets.
 Running in webserver mode, you can easily scan multiple IP addresses and return the result in json or csv, this runs multithreaded as default.
+Checks for SSH servers and connects with supplied username and password, noting deviations in implementations of SSH sessions to generically detect SSH honeypots such as Cowrie.
 
 ### What doesn't it do (just yet)?
 
@@ -59,10 +60,10 @@ go get honeydet
 ```
 ./honeydet -hostfile hosts.txt -threads 100 -timeout 5 -checkping -report json -output report.json
 ```
-* Run in webserver mode to expose an API endpoint:
+* Run in verbose webserver mode to expose an API endpoint:
 ```
-./honeydet -webserver
-curl 'http://localhost:8080/scan?targets=1.1.1.1,2.2.2.2,3.3.3.3,4.4.4.4,5.5.5.5,6.6.6.6,7.7.7.7,8.8.8.8,9.9.9.9&report=csv&port=3389'
+./honeydet -webserver -verbose
+curl 'http://localhost:8080/scan?targets=1.1.1.1,2.2.2.2,3.3.3.3,4.4.4.4,5.5.5.5,6.6.6.6,7.7.7.7,8.8.8.8,9.9.9.9&report=json&port=3389'
 ```
 
 ### Wish-list
