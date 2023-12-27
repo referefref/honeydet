@@ -50,7 +50,46 @@ type DetectionResult struct {
     HoneypotType string
 }
 
-func readHosts(filePath string) ([]string, error) {
+func parseHostInput(input string) ([]string, error) {
+    var ips []string
+    if strings.Contains(input, "/") {
+        _, ipNet, err := net.ParseCIDR(input)
+        if err != nil {
+            return nil, err
+        }
+        for ip := ipNet.IP.Mask(ipNet.Mask); ipNet.Contains(ip); incIP(ip) {
+            ips = append(ips, ip.String())
+        }
+    } else if strings.Contains(input, "-") {
+        parts := strings.Split(input, "-")
+        if len(parts) != 2 {
+            return nil, fmt.Errorf("invalid range format")
+        }
+        startIP := net.ParseIP(parts[0])
+        endIP := net.ParseIP(parts[1])
+        if startIP == nil || endIP == nil {
+            return nil, fmt.Errorf("invalid IP in range")
+        }
+        for ip := startIP; !ip.Equal(endIP); incIP(ip) {
+            ips = append(ips, ip.String())
+        }
+        ips = append(ips, endIP.String())
+    } else {
+        ips = append(ips, input)
+    }
+    return ips, nil
+}
+
+func incIP(ip net.IP) {
+    for j := len(ip) - 1; j >= 0; j-- {
+        ip[j]++
+        if ip[j] > 0 {
+            break
+        }
+    }
+}
+
+func readHostsFromFile(filePath string) ([]string, error) {
     file, err := os.Open(filePath)
     if err != nil {
         return nil, err
@@ -426,7 +465,7 @@ func enhancedHelpOutput() {
   I+ :I+=I+  7I =I+ I7   I7~ :I?   +I,    II,II  I7~ :I?=I=
       =, I7III: =I= I7    IIIII    +I,     II7I   IIIII ~I+
 
-      Go Honeypot Detector, Dec 2023, Version 0.5.24
+      Go Honeypot Detector, Dec 2023, Version 0.6.3
 `))
 
     fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s:\n", os.Args[0])
@@ -435,20 +474,21 @@ func enhancedHelpOutput() {
     fmt.Println(color.Ize(color.White,"  Scan a single host on port 2822 in verbose mode: ./honeydet -host 192.168.1.1 -port 2822 -verbose"))
     fmt.Println(color.Ize(color.White,"  Scan hosts from a file with 100 threads checking for a ping before scanning, with a 5 second timeout, and create a json report as report.json: ./honeydet -hostfile hosts.txt -threads 100 -timeout 5 -checkping -report json -output report.json"))
     fmt.Println(color.Ize(color.White,"  Run in webserver mode to expose an API endpoint: ./honeydet -webserver"))
-    fmt.Println(color.Ize(color.Blue,"                         curl 'http://10.1.1.33:8080/scan?targets=10.1.1.99,10.1.1.100,10.1.1.101'"))
+    fmt.Println(color.Ize(color.Blue,"                         curl 'http://localhost:8080/scan?targets=192.168.1.1/24'"))
 }
 
 func scanHandler(w http.ResponseWriter, r *http.Request) {
-	if *verbose {
-          log.Printf("Received request: %s\n", r.URL.String())
-	}
-	params := r.URL.Query()
+    if *verbose {
+        log.Printf("Received request: %s\n", r.URL.String())
+    }
+    params := r.URL.Query()
 
-	if *verbose {
-	 for key, value := range params {
-        log.Printf("Parameter: %s, Value: %s\n", key, value)
-	    }
-	}
+    if *verbose {
+        for key, value := range params {
+            log.Printf("Parameter: %s, Value: %s\n", key, value)
+        }
+    }
+
     argsBase := []string{}
     if reportType := params.Get("report"); reportType != "" {
         argsBase = append(argsBase, "-report", reportType)
@@ -482,21 +522,32 @@ func scanHandler(w http.ResponseWriter, r *http.Request) {
     var wg sync.WaitGroup
 
     if targets, ok := params["targets"]; ok && len(targets) > 0 {
-        hosts := strings.Split(targets[0], ",")
+        var hosts []string
+        var err error
+
+        hosts, err = parseHostInput(targets[0])
+        if err != nil {
+            if *verbose {
+                log.Printf("Error parsing target input: %s", err)
+            }
+            http.Error(w, fmt.Sprintf("Invalid target input: %s", err), http.StatusBadRequest)
+            return
+        }
+
         for _, host := range hosts {
             wg.Add(1)
             go func(host string) {
                 defer wg.Done()
                 args := append(argsBase, "-host", strings.TrimSpace(host))
                 cmd := exec.Command("./honeydet", args...)
-		if *verbose {
-			log.Printf("Executing command for host: %s\n", host)
-		}
-		output, err := cmd.CombinedOutput()
+                if *verbose {
+                    log.Printf("Executing command for host: %s\n", host)
+                }
+                output, err := cmd.CombinedOutput()
                 if err != nil {
-		if *verbose {
-                    log.Printf("Error scanning host %s: %s", host, err)
-		}
+                    if *verbose {
+                        log.Printf("Error scanning host %s: %s", host, err)
+                    }
                     resultsChan <- nil
                     return
                 }
@@ -519,10 +570,11 @@ func scanHandler(w http.ResponseWriter, r *http.Request) {
 
     w.Header().Set("Content-Type", "text/plain")
     w.Write(combinedOutput)
-	if *verbose {
-	  log.Printf("Response sent: %s\n", string(combinedOutput))
-	}
+    if *verbose {
+        log.Printf("Response sent: %s\n", string(combinedOutput))
+    }
 }
+
 
 func main() {
     flag.Usage = enhancedHelpOutput
@@ -540,14 +592,16 @@ func main() {
         return
     }
 
-
     var hosts []string
     var err error
 
     if *host != "" {
-        hosts = append(hosts, *host)
+        hosts, err = parseHostInput(*host)
+	if err != nil {
+		log.Fatalf("Error parsing host input: %s", err)
+	}
     } else if *hostFile != "" {
-        hosts, err = readHosts(*hostFile)
+        hosts, err = readHostsFromFile(*hostFile)
         if err != nil {
             fmt.Printf("Error reading hosts: %s\n", err)
             os.Exit(1)
