@@ -7,8 +7,8 @@ on:
       
 permissions:
    contents: write
-   
-jobs:
+ 
+jobs:      
   build:
     name: honeydet release
     strategy:
@@ -17,6 +17,9 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
+      - run: |
+          go get -u golang.org/x/crypto/ssh
+          go get github.com/TwiN/go-color   
       - name: Check out code into the Go module directory
         uses: actions/checkout@v3
         with:
