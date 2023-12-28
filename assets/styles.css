@@ -1,0 +1,89 @@
+body {
+    font-family: 'Roboto', sans-serif;
+    background-color: white;
+}
+.header {
+    background-color: black;
+    color: white;
+    padding: 10px 0;
+    font-size: 18px;
+}
+.header img {
+    width: 50px;
+    height: auto;
+}
+.header a {
+    color: white;
+}
+.fa-github, .fa-globe {
+    font-size: 24px;
+}
+.form-row {
+    margin-bottom: 15px;
+}
+.form-control, .btn {
+    height: 40px;
+}
+.btn {
+    padding: 5px 15px;
+}
+.table thead th {
+    vertical-align: middle;
+    background-color: black;
+    color: white;
+}
+
+.table tbody td {
+    vertical-align: middle;
+    background-color: #f2f2f2;
+    color: black;
+}
+.table th {
+    cursor: pointer;
+}
+.alert-honeypot {
+    background-color: #ffcccc;
+}
+.alert-nonhoneypot {
+    background-color: #ccffcc;
+}
+.footer {
+    background-color: grey;
+    color: white;
+    position: fixed;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    text-align: center;
+    padding: 10px 0;
+    font-size: 10px;
+}
+.button-row {
+    margin-bottom: 20px; /* Adjust the value as needed */
+}
+.overlay {
+    display: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.7);
+    z-index: 999;
+    align-items: center;
+    justify-content: center;
+}
+
+.loadingCircle {
+    border: 5px solid #f3f3f3;
+    border-top: 5px solid #3498db;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
