@@ -1,8 +1,12 @@
-document.getElementById("searchInput").addEventListener("keyup", function() {
-    var search = this.value.toLowerCase();
-    $("#resultsTable tbody tr").filter(function() {
-        $(this).toggle($(this).text().toLowerCase().indexOf(search) > -1)
-    });
+document.addEventListener('DOMContentLoaded', function () {
+    if (document.getElementById("searchInput")) {
+        document.getElementById("searchInput").addEventListener("keyup", function() {
+            var search = this.value.toLowerCase();
+            $("#resultsTable tbody tr").filter(function() {
+                $(this).toggle($(this).text().toLowerCase().indexOf(search) > -1)
+            });
+        });
+    }
 });
 
 function startScan() {
@@ -10,10 +14,16 @@ function startScan() {
     const port = document.getElementById('portInput').value;
     const threads = document.getElementById('threadsInput').value;
     const proto = document.getElementById('protocolSelect').value;
+
+    // Show the loading overlay
     document.getElementById('loadingOverlay').style.display = 'flex';
+
+    // Call the honeydet API
     axios.get(`/scan?host=${host}&port=${port}&threads=${threads}&proto=${proto}`).then(response => {
         const data = response.data;
         populateTable(data);
+
+        // Hide the loading overlay
         document.getElementById('loadingOverlay').style.display = 'none';
     }).catch(error => {
         console.error('Error:', error);
@@ -112,6 +122,11 @@ function displayResults(data) {
     });
 }
 
-document.getElementById("clearBtn").addEventListener("click", function() {
-    document.getElementById("resultsTable").getElementsByTagName("tbody")[0].innerHTML = '';
+document.addEventListener('DOMContentLoaded', function () {
+    var clearBtn = document.getElementById("clearBtn");
+    if (clearBtn) {
+        clearBtn.addEventListener("click", function() {
+            document.getElementById("resultsTable").getElementsByTagName("tbody")[0].innerHTML = '';
+        });
+    }
 });
