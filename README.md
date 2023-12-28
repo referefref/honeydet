@@ -1,6 +1,6 @@
 [![Active Development](https://img.shields.io/badge/Maintenance%20Level-Actively%20Developed-brightgreen.svg)](https://gist.github.com/cheerfulstoic/d107229326a01ff0f333a1d3476e068d)
 
-# honeydet Go Honeypot Detector, Dec 2023, Version 0.7.44
+# honeydet Go Honeypot Detector, Dec 2023, Version 0.8.6
 ![honeydetlogo](https://github.com/referefref/honeydet/assets/56499429/88e9b508-46e1-4822-94e1-e25edb83d0ba)
 
 
@@ -8,12 +8,12 @@
 
 honeydet is a signature based, multi-threaded honeypot detection tool written in Golang.
 It can detect honeypots based upon the premise that given a specifically crafted request they will generate a unique and identifying response to tcp/udp packets.
-Running in webserver mode, you can easily scan multiple IP addresses and ports, returning the result in json or csv.
+Running in webserver mode, you can easily scan multiple IP addresses and ports, from the interface or through the API.
 Checks for SSH servers and connects with supplied username and password, noting deviations in implementations of SSH sessions to generically detect SSH honeypots such as Cowrie (high false positive rate).
 
 ### What doesn't it do (just yet)?
 
-honeydet is not bundled with a library of request/response signatures for honeypots, this is something I'm privately working on and will share once completed - or at least in a semi-useful state.
+honeydet is not bundled with a library of request/response signatures for honeypots, it's bundled with an example detection for Opencanary Redis server. More detections signatures will be made available in future.
 
 ### Installation
 ```
@@ -70,8 +70,18 @@ go get honeydet
 curl 'http://localhost:8080/scan?targets=10.1.1.1/24&report=json&port=3389'
 ```
 
+### Web Interface
+Basic web interface making use of the exposed API
+- Supports single and multiple targets with csv, range, and CIDR
+- Supports single and multiple ports with range and csv list
+- Download results as json or csv
+- Filter and search results
+- Control threads and protocol
+![image](https://github.com/referefref/honeydet/assets/56499429/70ad59af-12b2-4118-bc40-385d125266b2)
+
+
 ### Wish-list
-* Web interface
+* Add checkPing, username, password, timeout, delay to web interface
 * PDF Reports
 * Active port detection
 * Heuristic based detection including multi-command query and response
