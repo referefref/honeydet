@@ -49,7 +49,7 @@ go get honeydet
   -verbose
     	Enable verbose output
   -webserver
-    	Run as a web server (API) on port 8080
+    	Run as a web server (API and interface) on port 8080
 ```
 ### Examples
 * Scan a single host on port 2822 in verbose mode:
