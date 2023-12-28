@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -528,7 +529,7 @@ func enhancedHelpOutput() {
   I+ :I+=I+  7I =I+ I7   I7~ :I?   +I,    II,II  I7~ :I?=I=
       =, I7III: =I= I7    IIIII    +I,     II7I   IIIII ~I+
 
-      Go Honeypot Detector, Dec 2023, Version 0.7.44
+      Go Honeypot Detector, Dec 2023, Version 0.8.6
 `))
 
 	fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s:\n", os.Args[0])
@@ -538,6 +539,7 @@ func enhancedHelpOutput() {
 	fmt.Println(color.Ize(color.White, "  Scan hosts from a file with 100 threads checking for a ping before scanning, with a 5 second timeout, and create a json report as report.json: ./honeydet -hostfile hosts.txt -threads 100 -timeout 5 -checkping -report json -output report.json"))
 	fmt.Println(color.Ize(color.White, "  Run in webserver mode to expose an API endpoint: ./honeydet -webserver"))
 	fmt.Println(color.Ize(color.Blue, "                         curl 'http://localhost:8080/scan?host=192.168.1.1/24'"))
+	fmt.Println(color.Ize(color.Blue, "                         interface 'http://localhost:8080/'"))
 }
 
 func scanHandler(w http.ResponseWriter, r *http.Request) {
@@ -665,6 +667,12 @@ func main() {
 	}
 
 	if *webserver {
+		http.HandleFunc("/form", func(w http.ResponseWriter, r *http.Request) {
+        	http.ServeFile(w, r, filepath.Join(".", "index.html"))
+    		})
+		fs := http.FileServer(http.Dir("."))
+	 	http.Handle("/", fs)
+
 		http.HandleFunc("/scan", scanHandler)
 		log.Println("Starting web server on :8080")
 		log.Fatal(http.ListenAndServe(":8080", nil))
