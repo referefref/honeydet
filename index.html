@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Honeydet Scanner</title>
+    <link rel="stylesheet" href="/assets/styles.css">
+    <script src="/assets/script.js"></script>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+<body>
+    <div class="header d-flex justify-content-between align-items-center px-3">
+        <img src="assets/logo.png" alt="Honeydet Logo">
+        Honeydet (Go Honeypot Detector Tool - Version 0.8)
+        <div>
+            <a href="https://github.com/referefref/honeydet" class="ml-2"><i class="fab fa-github"></i></a>
+            <a href="https://jamesbrine.com.au" class="ml-2"><i class="fas fa-globe"></i></a>
+        </div>
+    </div>
+
+    <div class="container mt-4">
+	        <div class="row">
+        <div class="col-md-6">
+            <label for="hostInput">Hosts</label>
+            <input type="text" id="hostInput" class="form-control" placeholder="192.168.1.1, 192.168.1.0/24">
+        </div>
+        <div class="col-md-6">
+            <label for="portInput">Ports</label>
+            <input type="text" id="portInput" class="form-control" value="22">
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6">
+            <label for="threadsInput">Threads</label>
+            <input type="number" id="threadsInput" class="form-control" value="10" min="1" max="1000">
+        </div>
+        <div class="col-md-6">
+            <label for="protocolSelect">Protocol</label>
+            <select id="protocolSelect" class="form-control">
+                <option value="tcp">TCP</option>
+                <option value="udp">UDP</option>
+            </select>
+        </div>
+    </div>
+    <div class="row mt-3 button-row">
+    <div class="col-md-3">
+        <button id="scanBtn" class="btn btn-success" onclick="startScan()">Scan</button>
+	    <div class="btn-group">
+            <button id="downloadBtn" class="btn btn-success dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                Download Results
+            </button>
+            <div class="dropdown-menu">
+                <a class="dropdown-item" href="#" onclick="downloadResults('json')">JSON</a>
+                <a class="dropdown-item" href="#" onclick="downloadResults('csv')">CSV</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <input type="text" id="searchInput" class="form-control" placeholder="Search Results">
+    </div>
+    <div class="col-md-3">
+        <button id="clearBtn" class="btn btn-danger">Clear Results</button>
+    </div>
+    </div>
+    <div id="loadingOverlay" class="overlay">
+	    <div class="loadingCircle"></div>
+    </div>
+
+    <table id="resultsTable" class="table table-dark">
+        <thead>
+            <tr>
+                <th onclick="sortTable(0)">Scan Time</th>
+                <th onclick="sortTable(1)">Host</th>
+                <th onclick="sortTable(2)">Port</th>
+                <th onclick="sortTable(3)">Is Honeypot</th>
+                <th onclick="sortTable(4)">Honeypot Type</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+    </div>
+
+    <div class="footer">
+        Honeydet v0.8 - jamesbrine.com.au
+    </div>
+</body>
+</html>
