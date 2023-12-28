@@ -22,14 +22,14 @@ jobs:
         go-version: '1.20'
 
     - name: Build
-      run: 
+      run: |
          go version
          go get -u golang.org/x/crypto/ssh
          go get github.com/TwiN/go-color
          go build -v ./...
 
     - name: Test
-      run:
+      run: |
          go version
          go get -u golang.org/x/crypto/ssh
          go get github.com/TwiN/go-color
