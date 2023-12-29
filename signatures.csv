@@ -1,1 +1,4 @@
-"opencanary-redis","[[,[[","-ERR unknown command '[[,[['"
+"cowrie",22,tcp,string,"SSH-1111-OpenSSH_9.0\r\n",string,"bad version 1111"
+"opencanary-redis",6379,tcp,string,"[[,[[",string,"-ERR unknown command '[[,[['"
+"mailoney",25,tcp,string,"HELP\r\n",string,"502 Error: cmomand"
+"redis-honeypot (beehive redis)",6379,tcp,string,"DBSIZE",string,"-ERR unknown command ''"
