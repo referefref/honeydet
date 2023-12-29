@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/csv"
+	"encoding/hex"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -24,27 +25,32 @@ import (
 )
 
 var (
-	host          = flag.String("host", "", "Single host or range of hosts to scan (i.e. 1.1.1.1, 10.1.1.1/24, 172.16.10.20-172.16.10.30)")
-	hostFile      = flag.String("hostfile", "", "File containing a list of hosts to scan")
-	port          = flag.String("port", "22", "Target port(s) to scan, single (22), range (22-80), or list (22,80,443)")
-	proto         = flag.String("proto", "tcp", "Protocol (tcp or udp)")
-	username      = flag.String("username", "", "Username for authentication")
-	password      = flag.String("password", "", "Password for authentication")
-	signatureFile = flag.String("signatures", "signatures.csv", "File with signatures")
-	verbose       = flag.Bool("verbose", false, "Enable verbose output")
-	delay         = flag.Int("delay", 0, "Delay in milliseconds between requests to a single host")
-	threads       = flag.Int("threads", 1, "Number of concurrent threads")
-	reportType    = flag.String("report", "none", "Type of report to generate (none, json, csv)")
-	timeout       = flag.Int("timeout", 5, "Connection timeout in seconds")
-	checkPing     = flag.Bool("checkping", false, "Check if the host responds to ping before scanning")
-	output        = flag.String("output", "", "Output file for the report (default is stdout)")
-	webserver     = flag.Bool("webserver", false, "Run as a web server on port 8080")
+	host            = flag.String("host", "", "Single host or range of hosts to scan (i.e. 1.1.1.1, 10.1.1.1/24, 172.16.10.20-172.16.10.30)")
+	hostFile        = flag.String("hostfile", "", "File containing a list of hosts to scan")
+	port            = flag.String("port", "22", "Target port(s) to scan, single (22), range (22-80), or list (22,80,443)")
+	bypassPortCheck = flag.Bool("bypassPortCheck", false, "Bypass port match checking and run all signatures against all ports")
+	proto           = flag.String("proto", "tcp", "Protocol (tcp or udp)")
+	username        = flag.String("username", "", "Username for authentication")
+	password        = flag.String("password", "", "Password for authentication")
+	signatureFile   = flag.String("signatures", "signatures.csv", "File with signatures")
+	verbose         = flag.Bool("verbose", false, "Enable verbose output")
+	delay           = flag.Int("delay", 0, "Delay in milliseconds between requests to a single host")
+	threads         = flag.Int("threads", 1, "Number of concurrent threads")
+	reportType      = flag.String("report", "none", "Type of report to generate (none, json, csv)")
+	timeout         = flag.Int("timeout", 5, "Connection timeout in seconds")
+	checkPing       = flag.Bool("checkPing", false, "Check if the host responds to ping before scanning")
+	output          = flag.String("output", "", "Output file for the report (default is stdout)")
+	webserver       = flag.Bool("webserver", false, "Run as a web server on port 8080")
 )
 
 type HoneypotSignature struct {
-	Type     string
-	Request  string
-	Response string
+	Name            string
+	Port            string
+	Proto           string
+	InputType       string
+	Input           string
+	OutputMatchType string
+	Output          string
 }
 
 type DetectionResult struct {
@@ -168,6 +174,9 @@ func readHostsFromFile(filePath string) ([]string, error) {
 func readSignatures(filePath string) ([]HoneypotSignature, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
+		if *verbose {
+			fmt.Println(color.Ize(color.Red, fmt.Sprintf("[Verbose] Error opening signature file: %s", err)))
+		}
 		return nil, err
 	}
 	defer file.Close()
@@ -176,7 +185,7 @@ func readSignatures(filePath string) ([]HoneypotSignature, error) {
 	reader := csv.NewReader(bufio.NewReader(file))
 
 	if *verbose {
-		fmt.Printf("[Verbose] Reading signatures from file: %s\n", filePath)
+		fmt.Println(color.Ize(color.Blue, fmt.Sprintf("[Verbose] Reading signatures from file: %s", filePath)))
 	}
 
 	for {
@@ -185,23 +194,36 @@ func readSignatures(filePath string) ([]HoneypotSignature, error) {
 			break
 		}
 		if err != nil {
+			if *verbose {
+				fmt.Println(color.Ize(color.Red, fmt.Sprintf("[Verbose] Error reading a line from signature file: %s", err)))
+			}
 			return nil, err
 		}
-		if len(record) != 3 {
+
+		if len(record) != 7 {
 			if *verbose {
-				fmt.Println("[Verbose] Skipping malformed line in signature file")
+				fmt.Println(color.Ize(color.Red, fmt.Sprintf("[Verbose] Skipping malformed line (expected 7 fields, got %d): %v", len(record), record)))
 			}
 			continue
 		}
+
 		signatures = append(signatures, HoneypotSignature{
-			Type:     record[0],
-			Request:  record[1],
-			Response: record[2],
+			Name:            record[0],
+			Port:            record[1],
+			Proto:           record[2],
+			InputType:       record[3],
+			Input:           record[4],
+			OutputMatchType: record[5],
+			Output:          record[6],
 		})
+
+		if *verbose {
+			fmt.Println(color.Ize(color.Green, fmt.Sprintf("[Verbose] Loaded signature: %v", record)))
+		}
 	}
 
 	if *verbose {
-		fmt.Printf("[Verbose] Loaded %d signatures\n", len(signatures))
+		fmt.Println(color.Ize(color.Green, fmt.Sprintf("[Verbose] Total loaded signatures: %d", len(signatures))))
 	}
 
 	return signatures, nil
@@ -254,33 +276,86 @@ func hostRespondsToPing(host string) bool {
 	return err == nil
 }
 
-func probeWithSignature(conn net.Conn, signature HoneypotSignature) bool {
-	if *verbose {
-		fmt.Printf("[Verbose] Sending probe: %s\n", signature.Request)
-	}
-
-	_, err := conn.Write([]byte(signature.Request + "\n"))
-	if err != nil {
+func probeWithSignature(conn net.Conn, signature HoneypotSignature, timeout int) bool {
+	var request string
+	switch signature.InputType {
+	case "string":
+		request = signature.Input
+	case "hex":
+		decodedRequest, err := hex.DecodeString(signature.Input)
+		if err != nil {
+			if *verbose {
+				fmt.Println(color.Ize(color.Red, fmt.Sprintf("[Verbose] Error decoding hex input for signature '%s': %s", signature.Name, err)))
+			}
+			return false
+		}
+		request = string(decodedRequest)
+	default:
 		if *verbose {
-			fmt.Printf("[Verbose] Error sending probe: %s\n", err)
+			fmt.Println(color.Ize(color.Red, fmt.Sprintf("[Verbose] Unsupported input type '%s' for signature '%s'", signature.InputType, signature.Name)))
 		}
 		return false
 	}
 
-	response := make([]byte, 1024)
-	_, err = conn.Read(response)
+	if *verbose {
+		fmt.Println(color.Ize(color.Blue, fmt.Sprintf("[Verbose] Sending probe to %s: %s", conn.RemoteAddr(), request)))
+	}
+
+	_, err := conn.Write([]byte(request + "\n"))
 	if err != nil {
 		if *verbose {
-			fmt.Printf("[Verbose] Error reading response: %s\n", err)
+			fmt.Println(color.Ize(color.Red, fmt.Sprintf("[Verbose] Error sending probe: %s", err)))
+		}
+		return false
+	}
+
+	buffer := make([]byte, 4096)
+	conn.SetReadDeadline(time.Now().Add(time.Duration(timeout) * time.Second))
+	n, err := conn.Read(buffer)
+	if err != nil {
+		if *verbose {
+			fmt.Println(color.Ize(color.Red, fmt.Sprintf("[Verbose] Error reading response: %s", err)))
+		}
+		return false
+	}
+
+	response := string(buffer[:n])
+	if *verbose {
+		fmt.Println(color.Ize(color.Green, fmt.Sprintf("[Verbose] Received response: %s", response)))
+	}
+
+	var isMatch bool
+	switch signature.OutputMatchType {
+	case "string":
+		isMatch = strings.Contains(response, signature.Output)
+	case "hex":
+		hexResponse := hex.EncodeToString([]byte(response))
+		isMatch = strings.Contains(hexResponse, signature.Output)
+	case "regex":
+		matched, err := regexp.MatchString(signature.Output, response)
+		if err != nil {
+			if *verbose {
+				fmt.Println(color.Ize(color.Red, fmt.Sprintf("[Verbose] Error compiling regex: %s", err)))
+			}
+			return false
+		}
+		isMatch = matched
+	default:
+		if *verbose {
+			fmt.Println(color.Ize(color.Red, fmt.Sprintf("[Verbose] Unsupported output match type '%s' for signature '%s'", signature.OutputMatchType, signature.Name)))
 		}
 		return false
 	}
 
 	if *verbose {
-		fmt.Printf("[Verbose] Received response: %s\n", string(response))
+		matchStatus := "not matched"
+		if isMatch {
+			matchStatus = "matched"
+		}
+		fmt.Println(color.Ize(color.Green, fmt.Sprintf("[Verbose] Response %s honeypot signature '%s'", matchStatus, signature.Name)))
 	}
 
-	return strings.Contains(string(response), signature.Response)
+	return isMatch
 }
 
 func probeSSHServer(host string, port int, timeout int) bool {
@@ -405,12 +480,12 @@ func detectHoneypot(host string, ports []int, proto string, signatures []Honeypo
 			isSSH = probeSSHServer(host, port, timeout)
 			if isSSH {
 				if *verbose {
-					fmt.Printf("[Verbose] SSH service detected on host %s:%d, attempting authentication\n", host, port)
+					fmt.Println(color.Ize(color.Blue, fmt.Sprintf("[Verbose] SSH service detected on host %s:%d, attempting authentication", host, port)))
 				}
 				sshClient, err = authenticateSSH(host, port, *username, *password, timeout)
 				if err != nil {
 					if *verbose {
-						fmt.Printf("[Verbose] SSH authentication failed for host %s:%d: %s\n", host, port, err)
+						fmt.Println(color.Ize(color.Red, fmt.Sprintf("[Verbose] SSH authentication failed for host %s:%d: %s", host, port, err)))
 					}
 					results = append(results, DetectionResult{Host: host, Port: port, IsHoneypot: true, HoneypotType: "generic"})
 					continue
@@ -421,12 +496,12 @@ func detectHoneypot(host string, ports []int, proto string, signatures []Honeypo
 
 		if !isSSH {
 			if *verbose {
-				fmt.Printf("[Verbose] Establishing regular %s connection to host %s:%d\n", proto, host, port)
+				fmt.Println(color.Ize(color.White, fmt.Sprintf("[Verbose] Establishing regular %s connection to host %s:%d", proto, host, port)))
 			}
 			conn, err = connectToNetworkService(host, port, proto, timeout)
 			if err != nil {
 				if *verbose {
-					fmt.Printf("[Verbose] Unable to connect to host %s:%d: %s\n", host, port, err)
+					fmt.Println(color.Ize(color.Red, fmt.Sprintf("[Verbose] Unable to connect to host %s:%d: %s", host, port, err)))
 				}
 				results = append(results, DetectionResult{Host: host, Port: port, IsHoneypot: false})
 				continue
@@ -434,43 +509,172 @@ func detectHoneypot(host string, ports []int, proto string, signatures []Honeypo
 			defer conn.Close()
 		}
 
-		if isSSH && sshClient != nil {
-			for _, signature := range signatures {
-				response, err := executeSSHCommand(sshClient, signature.Request)
-				if err != nil {
-					if *verbose {
-						fmt.Printf("[Verbose] Error executing command via SSH: %s\n", err)
-					}
-					honeypotDetected = true
-					honeypotType = "generic"
-					break
+		for _, signature := range signatures {
+			if *bypassPortCheck || isPortMatch(port, signature.Port) {
+				if *verbose {
+					fmt.Println(color.Ize(color.Green, fmt.Sprintf("[Verbose] Testing signature '%s' on host %s:%d", signature.Name, host, port)))
 				}
-				if strings.Contains(response, signature.Response) {
-					honeypotDetected = true
-					honeypotType = signature.Type
-					break
-				}
-			}
-		} else {
-			for _, signature := range signatures {
-				if probeWithSignature(conn, signature) {
-					if *verbose {
-						fmt.Printf("[Verbose] Honeypot detected on host %s\n", host)
+
+				response := ""
+				if signature.InputType == "ssh" && sshClient != nil {
+					response, err = executeSSHCommand(sshClient, signature.Output)
+					if err != nil {
+						if *verbose {
+							fmt.Println(color.Ize(color.Red, fmt.Sprintf("[Verbose] Error executing SSH command: %s", err)))
+						}
+						continue
 					}
+				} else {
+					conn, err = sendRequest(host, port, signature, timeout)
+					if err != nil {
+						if *verbose {
+							fmt.Println(color.Ize(color.Red, fmt.Sprintf("[Verbose] Error sending request: %s", err)))
+						}
+						continue
+					}
+					response, err = readResponse(conn)
+					if err != nil {
+						if *verbose {
+							fmt.Println(color.Ize(color.Red, fmt.Sprintf("[Verbose] Error reading response: %s", err)))
+						}
+						continue
+					}
+				}
+
+				if isResponseMatch(response, signature.OutputMatchType, signature.Output) {
 					honeypotDetected = true
-					honeypotType = signature.Type
+					honeypotType = signature.Name
 					break
 				}
 			}
 		}
 
 		if *verbose && !honeypotDetected {
-			fmt.Printf("[Verbose] No honeypot detected on host %s\n", host)
+			fmt.Println(color.Ize(color.White, fmt.Sprintf("[Verbose] No honeypot detected on host %s:%d", host, port)))
 		}
 		results = append(results, DetectionResult{Host: host, Port: port, IsHoneypot: honeypotDetected, HoneypotType: honeypotType})
 	}
 
 	return results
+}
+
+func isPortMatch(port int, signaturePort string) bool {
+	if signaturePort == "web-ports" {
+		webPorts := []int{80, 88, 8080, 8888, 443, 8443}
+		for _, webPort := range webPorts {
+			if port == webPort {
+				return true
+			}
+		}
+		return false
+	} else if strings.Contains(signaturePort, "-") {
+		rangeParts := strings.Split(signaturePort, "-")
+		startPort, _ := strconv.Atoi(rangeParts[0])
+		endPort, _ := strconv.Atoi(rangeParts[1])
+			return port >= startPort && port <= endPort
+	} else {
+		signaturePortInt, _ := strconv.Atoi(signaturePort)
+		return port == signaturePortInt
+	}
+}
+
+func sendRequest(host string, port int, signature HoneypotSignature, timeout int) (net.Conn, error) {
+	address := fmt.Sprintf("%s:%d", host, port)
+	conn, err := net.DialTimeout(signature.Proto, address, time.Duration(timeout)*time.Second)
+	if err != nil {
+		if *verbose {
+			fmt.Println(color.Ize(color.Red, fmt.Sprintf("[Verbose] Error dialing %s: %s", address, err)))
+		}
+		return nil, err
+	}
+
+	conn.SetReadDeadline(time.Now().Add(time.Duration(timeout) * time.Second))
+
+	var request []byte
+	switch signature.InputType {
+	case "string":
+		request = []byte(signature.Input + "\n")
+	case "hex":
+		request, err = hex.DecodeString(signature.Input)
+		if err != nil {
+			if *verbose {
+				fmt.Println(color.Ize(color.Red, fmt.Sprintf("[Verbose] Error decoding hex string: %s", err)))
+			}
+			return nil, err
+		}
+	case "GET", "POST":
+		request = []byte(fmt.Sprintf("%s / HTTP/1.1\r\nHost: %s\r\n\r\n", signature.Input, host))
+	default:
+		errMsg := fmt.Sprintf("unsupported input type: %s", signature.InputType)
+		if *verbose {
+			fmt.Println(color.Ize(color.Red, fmt.Sprintf("[Verbose] %s", errMsg)))
+		}
+		return nil, fmt.Errorf(errMsg)
+	}
+
+	if *verbose {
+		fmt.Println(color.Ize(color.Green, fmt.Sprintf("[Verbose] Sending request to %s", address)))
+	}
+
+	_, err = conn.Write(request)
+	if err != nil {
+		if *verbose {
+			fmt.Println(color.Ize(color.Red, fmt.Sprintf("[Verbose] Error sending request: %s", err)))
+		}
+		return nil, err
+	}
+
+	if *verbose {
+		fmt.Println(color.Ize(color.Green, "[Verbose] Request sent successfully"))
+	}
+
+	return conn, nil
+}
+
+func readResponse(conn net.Conn) (string, error) {
+	buffer := make([]byte, 4096)
+	n, err := conn.Read(buffer)
+	if err != nil {
+		if *verbose {
+			fmt.Println(color.Ize(color.Red, fmt.Sprintf("[Verbose] Error reading response: %s", err)))
+		}
+		return "", err
+	}
+	response := string(buffer[:n])
+
+	if *verbose {
+		fmt.Println(color.Ize(color.Green, fmt.Sprintf("[Verbose] Response received: %s", response)))
+	}
+
+	return response, nil
+}
+
+func isResponseMatch(response, matchType, matchPattern string) bool {
+	trimmedResponse := strings.TrimSpace(response)
+
+	if *verbose {
+		fmt.Println(color.Ize(color.Blue, fmt.Sprintf("[Verbose] Trimmed Response: %s", trimmedResponse)))
+		fmt.Println(color.Ize(color.Blue, fmt.Sprintf("[Verbose] Expected Output: %s %s", matchPattern, matchType)))
+	}
+
+	switch matchType {
+	case "string":
+		if *verbose {
+			fmt.Println(color.Ize(color.Blue, fmt.Sprintf("[Verbose] Comparing string: Response contains Output? %t", strings.Contains(trimmedResponse, matchPattern))))
+		}
+		return strings.Contains(trimmedResponse, matchPattern)
+	case "hex":
+		hexResponse := hex.EncodeToString([]byte(trimmedResponse))
+		return strings.Contains(hexResponse, matchPattern)
+	case "regex":
+		matched, err := regexp.MatchString(matchPattern, trimmedResponse)
+		if err != nil {
+			return false
+		}
+		return matched
+	default:
+		return false
+	}
 }
 
 func generateReport(results []DetectionResult, reportType string) {
@@ -507,31 +711,7 @@ func reportCSV(results []DetectionResult) {
 }
 
 func enhancedHelpOutput() {
-	fmt.Println(color.Ize(color.Red, `                                                        ~+
-                                                        I7
-  ,                                                   ~II7II,
- ?I  II                          jamesbrine.com.au    =?II,
- +I: 7?                                                 ?I,
- ~I= I+   ~II   +I7II~          ~I:  :7+    7I          ?I,
- :I? I=   IIII  II?,II    ?III= ~I=  II~    7I    ?III= ?I,
- :III7I  ~III7  ?I, +I:  ?I= ?I::I? ,II     I7   ?I= ?I:?I,
-:III:I~  +I?:I: +I: ~I: :I?  ~II II ?I7 ~II77I  :I?  ~II?I,
- ,II:I=  +I~ 7I +I~ ~I: ?I,~7I?  II:III~I? ,7I, ?I,~7I? ?I,
-  II I=  II~ II =I~ =7: IIIII    ~IIII=?I,  ~7: IIIII   ?I,
-  II I=  II, II,=I+ +I::III  ~7   7III:II   ,I~:III  ~7 ?I,
-  II I+ =I+  =I:~I+ ?7,II=   ,I+  :~II,?I   ,7+II=   ,I+?I,
-  II I? ?I:  ,I~~I+ II 7I:    I7    7I ?I:   II7I:    I7?I,
-  II II II,   I=:I= II ~I~    II    II ~I=   7I~I~    II?I,
-  II II I7    I+:I= I7 :I+    II   ,I?  I?   7I:I+    II+7:
- ,II II II    I+:I= I7  II    II   :I=  II,  7I II    II+I:
- ,I? ?I,I7    I=:I= I7  ?I,   II   =I~  ~I?  II ?I,   II+I:
- ,II +I:I7,  ?I:~I= I7  ,I?   I7   =I,   II: II ,I?   I7=7~
-  I+ :I+=I+  7I =I+ I7   I7~ :I?   +I,    II,II  I7~ :I?=I=
-      =, I7III: =I= I7    IIIII    +I,     II7I   IIIII ~I+
-
-      Go Honeypot Detector, Dec 2023, Version 0.8.6
-`))
-
+	logo()
 	fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s:\n", os.Args[0])
 	flag.PrintDefaults()
 	fmt.Println("\nExamples:")
@@ -544,9 +724,12 @@ func enhancedHelpOutput() {
 
 func scanHandler(w http.ResponseWriter, r *http.Request) {
 	if *verbose {
-		log.Printf("Received request: %s\n", r.URL.String())
+		log.Printf(color.Ize(color.White, fmt.Sprintf("Received request: %s", r.URL.String())))
 	}
+
 	params := r.URL.Query()
+	checkPing, _ := strconv.ParseBool(params.Get("checkPing"))
+	bypassPortCheck, _ := strconv.ParseBool(params.Get("bypassPortCheck"))
 
 	if _, found := params["report"]; !found {
 		params.Set("report", "json")
@@ -557,37 +740,58 @@ func scanHandler(w http.ResponseWriter, r *http.Request) {
 		for _, value := range values {
 			value = sanitizeInput(value)
 			if !isValidInput(key, value) {
-				log.Printf("Invalid input for key: %s, Value: %s\n", key, value)
-				http.Error(w, fmt.Sprintf("Invalid input: %s", value), http.StatusBadRequest)
+				errMsg := fmt.Sprintf("Invalid input for key: %s, Value: %s", key, value)
+				if *verbose {
+					log.Printf(color.Ize(color.Red, errMsg))
+				}
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusBadRequest)
+				json.NewEncoder(w).Encode(map[string]string{"error": errMsg})
 				return
 			}
 
-			args = append(args, fmt.Sprintf("-%s", key), value)
+			if key != "checkPing" && key != "bypassPortCheck" {
+				args = append(args, fmt.Sprintf("-%s", key), value)
+			}
+
 			if *verbose {
-				log.Printf("Parameter: %s, Value: %s\n", key, value)
+				log.Printf(color.Ize(color.Blue, fmt.Sprintf("Parameter: %s, Value: %s", key, value)))
 			}
 		}
+	}
+
+	if checkPing {
+		args = append(args, "-checkPing")
+	}
+	if bypassPortCheck {
+		args = append(args, "-bypassPortCheck")
 	}
 
 	cmd := exec.Command("./honeydet", args...)
 	if *verbose {
-		log.Printf("Executing command: ./honeydet %s\n", strings.Join(args, " "))
+		log.Printf(color.Ize(color.Blue, fmt.Sprintf("Executing command: ./honeydet %s", strings.Join(args, " "))))
 	}
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		if *verbose {
-			log.Printf("Error executing command: %s, Output: %s\n", err, string(output))
+			log.Printf(color.Ize(color.Red, fmt.Sprintf("Error executing command: %s, Output: %s", err, string(output))))
 		}
-		http.Error(w, fmt.Sprintf("Error executing command: %s", err), http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": fmt.Sprintf("Error executing command: %s", err)})
 		return
 	}
 
 	w.Header().Set("Content-Type", "text/plain")
 	if _, err := w.Write(output); err != nil {
-		log.Printf("Error sending response: %s\n", err)
+		log.Printf(color.Ize(color.Red, fmt.Sprintf("Error sending response: %s", err)))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": fmt.Sprintf("Error sending response: %s", err)})
+		return
 	}
 	if *verbose {
-		log.Printf("Response sent\n")
+		log.Printf(color.Ize(color.White, "Response sent"))
 	}
 }
 
@@ -606,9 +810,16 @@ func isValidInput(key, value string) bool {
 		return isValidHost(value)
 	case "username", "password", "proto", "report":
 		return isValidString(value)
+	case "checkPing", "bypassPortCheck":
+		return isValidBoolean(value)
 	default:
 		return false
 	}
+}
+
+func isValidBoolean(value string) bool {
+	_, err := strconv.ParseBool(value)
+	return err == nil
 }
 
 func isValidNumber(value string) bool {
@@ -648,13 +859,49 @@ func isValidHost(value string) bool {
 		`\d{1,3}(\.\d{1,3}){3}|` + // Single IP address
 		`\d{1,3}(\.\d{1,3}){3}/\d{1,2}|` + // CIDR notation
 		`\d{1,3}(\.\d{1,3}){3}-\d{1,3}(\.\d{1,3}){3})$` // IP range
+
+	hosts := strings.Split(value, ",")
 	re := regexp.MustCompile(pattern)
-	return re.MatchString(value)
+
+	for _, host := range hosts {
+		trimmedHost := strings.TrimSpace(host)
+		if !re.MatchString(trimmedHost) {
+			return false
+		}
+	}
+	return true
 }
 
 func isValidString(value string) bool {
 	re := regexp.MustCompile(`^[a-zA-Z0-9.-]+$`)
 	return re.MatchString(value)
+}
+
+func logo() {
+	fmt.Println(color.Ize(color.Red, `                                                        ~+
+                                                        I7
+  ,                                                   ~II7II,
+ ?I  II                          jamesbrine.com.au    =?II,
+ +I: 7?                                                 ?I,
+ ~I= I+   ~II   +I7II~          ~I:  :7+    7I          ?I,
+ :I? I=   IIII  II?,II    ?III= ~I=  II~    7I    ?III= ?I,
+ :III7I  ~III7  ?I, +I:  ?I= ?I::I? ,II     I7   ?I= ?I:?I,
+:III:I~  +I?:I: +I: ~I: :I?  ~II II ?I7 ~II77I  :I?  ~II?I,
+ ,II:I=  +I~ 7I +I~ ~I: ?I,~7I?  II:III~I? ,7I, ?I,~7I? ?I,
+  II I=  II~ II =I~ =7: IIIII    ~IIII=?I,  ~7: IIIII   ?I,
+  II I=  II, II,=I+ +I::III  ~7   7III:II   ,I~:III  ~7 ?I,
+  II I+ =I+  =I:~I+ ?7,II=   ,I+  :~II,?I   ,7+II=   ,I+?I,
+  II I? ?I:  ,I~~I+ II 7I:    I7    7I ?I:   II7I:    I7?I,
+  II II II,   I=:I= II ~I~    II    II ~I=   7I~I~    II?I,
+  II II I7    I+:I= I7 :I+    II   ,I?  I?   7I:I+    II+7:
+ ,II II II    I+:I= I7  II    II   :I=  II,  7I II    II+I:
+ ,I? ?I,I7    I=:I= I7  ?I,   II   =I~  ~I?  II ?I,   II+I:
+ ,II +I:I7,  ?I:~I= I7  ,I?   I7   =I,   II: II ,I?   I7=7~
+  I+ :I+=I+  7I =I+ I7   I7~ :I?   +I,    II,II  I7~ :I?=I=
+      =, I7III: =I= I7    IIIII    +I,     II7I   IIIII ~I+
+
+      Go Honeypot Detector, Dec 2023, Version 0.9.36
+`))
 }
 
 func main() {
@@ -667,15 +914,20 @@ func main() {
 	}
 
 	if *webserver {
-		http.HandleFunc("/form", func(w http.ResponseWriter, r *http.Request) {
-        	http.ServeFile(w, r, filepath.Join(".", "index.html"))
-    		})
-		fs := http.FileServer(http.Dir("."))
-	 	http.Handle("/", fs)
+		logo()
+
+		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+			http.ServeFile(w, r, filepath.Join(".", "index.html"))
+		})
 
 		http.HandleFunc("/scan", scanHandler)
-		log.Println("Starting web server on :8080")
-		log.Fatal(http.ListenAndServe(":8080", nil))
+
+		log.Println("Starting HTTP server on :8888...")
+		err := http.ListenAndServe(":8888", nil)
+		if err != nil {
+			log.Fatal("ListenAndServe: ", err)
+		}
+
 		return
 	}
 
@@ -684,7 +936,6 @@ func main() {
 	var portList []int
 
 	if *host != "" {
-		// Split the host input by comma for multiple IPs
 		hostInputs := strings.Split(*host, ",")
 		for _, hostInput := range hostInputs {
 			hosts, err := parseHostInput(hostInput)
@@ -716,50 +967,60 @@ func main() {
 		os.Exit(1)
 	}
 
+	numHostsPerThread := len(allHosts) / *threads
+	if len(allHosts)%*threads != 0 {
+		numHostsPerThread++
+	}
+
 	var wg sync.WaitGroup
-	resultsChan := make(chan []DetectionResult)
-	hostChan := make(chan string, *threads)
+	resultsChan := make(chan []DetectionResult, *threads)
 
 	for i := 0; i < *threads; i++ {
+		start := i * numHostsPerThread
+		end := start + numHostsPerThread
+		if end > len(allHosts) {
+			end = len(allHosts)
+		}
+		if start >= len(allHosts) {
+			break
+		}
+
 		wg.Add(1)
-		go func() {
+		go func(hosts []string) {
 			defer wg.Done()
-			for host := range hostChan {
+			var combinedResults []DetectionResult
+			for _, host := range hosts {
+				if *verbose {
+					fmt.Println(color.Ize(color.Blue, fmt.Sprintf("[Verbose] Processing host: %s", host)))
+				}
 				if *checkPing && !hostRespondsToPing(host) {
 					if *verbose {
 						fmt.Printf("[Verbose] Host %s does not respond to ping, skipping\n", host)
 					}
 					continue
 				}
-
-				var combinedResultsForHost []DetectionResult
 				for _, port := range portList {
 					if *verbose {
 						fmt.Printf("[Verbose] Scanning host %s on port %d\n", host, port)
 					}
 					results := detectHoneypot(host, []int{port}, *proto, signatures, *timeout)
-					combinedResultsForHost = append(combinedResultsForHost, results...)
+					combinedResults = append(combinedResults, results...)
 				}
-
-				resultsChan <- combinedResultsForHost
-				time.Sleep(time.Millisecond * time.Duration(*delay))
 			}
-		}()
+			resultsChan <- combinedResults
+		}(allHosts[start:end])
 	}
 
-	for _, host := range allHosts {
-		hostChan <- host
-	}
-	close(hostChan)
-
-	go func() {
-		wg.Wait()
-		close(resultsChan)
-	}()
+	wg.Wait()
+	close(resultsChan)
 
 	var finalResults []DetectionResult
 	for results := range resultsChan {
 		finalResults = append(finalResults, results...)
+	}
+
+	if *verbose {
+		fmt.Println(color.Ize(color.Green, "[Verbose] Scan completed, compiling results"))
 	}
 
 	var reportData []byte
@@ -781,6 +1042,9 @@ func main() {
 		fmt.Printf("Error generating report: %s\n", err)
 		os.Exit(1)
 	} else if *output != "" {
+		if *verbose {
+			fmt.Println(color.Ize(color.Green, fmt.Sprintf("[Verbose] Writing report to file: %s", *output)))
+		}
 		err = os.WriteFile(*output, reportData, 0644)
 		if err != nil {
 			fmt.Printf("Error writing to file: %s\n", err)
