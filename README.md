@@ -3,18 +3,16 @@
 # honeydet Go Honeypot Detector
 ![image](https://github.com/referefref/honeydet/assets/56499429/563eacf3-8b3b-42d5-962a-bfc2e42f420f)
 
-
-
 ### What does honeydet do?
 
 honeydet is a signature based, multi-threaded honeypot detection tool written in Golang.
 It can detect honeypots based upon the premise that given a specifically crafted request they will generate a unique and identifying response to tcp/udp packets.
-Running in webserver mode, you can easily scan multiple IP addresses and ports, from the interface or through the API.
-Checks for SSH servers and connects with supplied username and password, noting deviations in implementations of SSH sessions to generically detect SSH honeypots such as Cowrie (high false positive rate).
+It can be run either as a web server, a command line tool, or as a web API.
+Signatures support hex, string and regex detection methods on TCP and UDP.
 
 ### What doesn't it do (just yet)?
 
-honeydet is not bundled with a library of request/response signatures for honeypots, it's bundled with an example detection for Opencanary Redis server. More detections signatures will be made available in future.
+Honeydet comes with a few example signatures for detecting honeypots, after the application is in a reasonable working state more effort will be put into creating signatures for various honeypots.
 
 ### Installation
 ```
@@ -25,7 +23,9 @@ go get honeydet
 
 ### Command line options
 ```
--checkping
+  -bypassPortCheck
+    	Bypass port match checking and run all signatures against all ports
+  -checkPing
     	Check if the host responds to ping before scanning
   -delay int
     	Delay in milliseconds between requests to a single host
@@ -35,8 +35,10 @@ go get honeydet
     	File containing a list of hosts to scan
   -output string
     	Output file for the report (default is stdout)
-  -port int
-    	Target port(s) to scan, single (22), range (22-80), or list (22,80,443)
+  -password string
+    	Password for authentication
+  -port string
+    	Target port(s) to scan, single (22), range (22-80), or list (22,80,443) (default "22")
   -proto string
     	Protocol (tcp or udp) (default "tcp")
   -report string
@@ -47,10 +49,12 @@ go get honeydet
     	Number of concurrent threads (default 1)
   -timeout int
     	Connection timeout in seconds (default 5)
+  -username string
+    	Username for authentication
   -verbose
     	Enable verbose output
   -webserver
-    	Run as a web server (API and interface) on port 8080
+    	Run as a web server on port 8080
 ```
 ### Examples
 * Scan a single host on port 2822 in verbose mode:
@@ -74,18 +78,16 @@ curl 'http://localhost:8080/scan?targets=10.1.1.1/24&report=json&port=3389'
 ### Web Interface
 ![image](https://github.com/referefref/honeydet/assets/56499429/70ad59af-12b2-4118-bc40-385d125266b2)
 Basic web interface making use of the exposed API
+- Can schedule multiple scans
 - Supports single and multiple targets with csv, range, and CIDR
 - Supports single and multiple ports with range and csv list
 - Download results as json or csv
 - Filter and search results
-- Control threads and protocol
-
+- Adjust execution options to ignore signature port mapping, pingtest host before test, threads, timeout and delay
 
 
 ### Wish-list
-* Extend signatures to include port, request and response type, and regex matching
-* Add option to check all signatures on all ports if flag is set
-* Add checkPing, username, password, timeout, delay to web interface
+* SSL
 * PDF Reports
 * Active port detection
 * Heuristic based detection including multi-command query and response
