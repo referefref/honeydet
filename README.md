@@ -76,8 +76,9 @@ curl 'http://localhost:8080/scan?targets=10.1.1.1/24&report=json&port=3389'
 ```
 
 ### Web Interface
-![image](https://github.com/referefref/honeydet/assets/56499429/70ad59af-12b2-4118-bc40-385d125266b2)
-Basic web interface making use of the exposed API
+![image](https://github.com/referefref/honeydet/assets/56499429/7cab7ea7-470f-4bfc-b62f-bfe13657fc9f)
+
+#### Features:
 - Can schedule multiple scans
 - Supports single and multiple targets with csv, range, and CIDR
 - Supports single and multiple ports with range and csv list
