@@ -571,7 +571,7 @@ func isPortMatch(port int, signaturePort string) bool {
 		rangeParts := strings.Split(signaturePort, "-")
 		startPort, _ := strconv.Atoi(rangeParts[0])
 		endPort, _ := strconv.Atoi(rangeParts[1])
-			return port >= startPort && port <= endPort
+		return port >= startPort && port <= endPort
 	} else {
 		signaturePortInt, _ := strconv.Atoi(signaturePort)
 		return port == signaturePortInt
@@ -900,7 +900,7 @@ func logo() {
   I+ :I+=I+  7I =I+ I7   I7~ :I?   +I,    II,II  I7~ :I?=I=
       =, I7III: =I= I7    IIIII    +I,     II7I   IIIII ~I+
 
-      Go Honeypot Detector, Dec 2023, Version 0.9.36
+      Go Honeypot Detector, Dec 2023, Version 0.9.40
 `))
 }
 
@@ -916,17 +916,19 @@ func main() {
 	if *webserver {
 		logo()
 
+		fs := http.FileServer(http.Dir("./assets"))
+		http.Handle("/assets/", http.StripPrefix("/assets/", fs))
+		http.HandleFunc("/scan", scanHandler)
 		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-			http.ServeFile(w, r, filepath.Join(".", "index.html"))
+			if r.URL.Path == "/" {
+				http.ServeFile(w, r, filepath.Join(".", "index.html"))
+			} else {
+				http.NotFound(w, r)
+			}
 		})
 
-		http.HandleFunc("/scan", scanHandler)
-
-		log.Println("Starting HTTP server on :8888...")
-		err := http.ListenAndServe(":8888", nil)
-		if err != nil {
-			log.Fatal("ListenAndServe: ", err)
-		}
+		log.Println("Starting web server on :8888")
+		log.Fatal(http.ListenAndServe(":8888", nil))
 
 		return
 	}
