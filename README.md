@@ -83,6 +83,8 @@ Basic web interface making use of the exposed API
 
 
 ### Wish-list
+* Extend signatures to include port, request and response type, and regex matching
+* Add option to check all signatures on all ports if flag is set
 * Add checkPing, username, password, timeout, delay to web interface
 * PDF Reports
 * Active port detection
