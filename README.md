@@ -83,12 +83,13 @@ curl 'http://localhost:8080/scan?targets=10.1.1.1/24&report=json&port=3389'
 - Supports single and multiple targets with csv, range, and CIDR
 - Supports single and multiple ports with range and csv list
 - Download results as json or csv
-- Filter and search results
 - Adjust execution options to ignore signature port mapping, pingtest host before test, threads, timeout and delay
 
 
 ### Wish-list
 * SSL
+* Move Scan results to sqlite3 DB to persist
+* Update frontend to call scanResults endpoint to return all previous scans
 * PDF Reports
 * Active port detection
 * Heuristic based detection including multi-command query and response
