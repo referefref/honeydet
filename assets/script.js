@@ -1,5 +1,6 @@
 var storedScans = {};
 var hasNewScans = false;
+let confirmCallback = null;
 
 document.addEventListener('DOMContentLoaded', function () {
     fetchScans();
@@ -8,6 +9,11 @@ document.addEventListener('DOMContentLoaded', function () {
             fetchScans();
         }
     }, 1000);
+
+    var clearDbBtn = document.getElementById('clearDbBtn');
+    if (clearDbBtn) {
+        clearDbBtn.addEventListener('click', clearDatabase);
+    }
 
     var scanBtn = document.getElementById('scanBtn');
     if (scanBtn) {
@@ -41,7 +47,30 @@ document.addEventListener('DOMContentLoaded', function () {
     } else {
 	    console.error("Advanced options toggle not found");
     }
-    
+
+    var confirmBtn = document.getElementById('confirmBtn');
+    if (confirmBtn) {
+        confirmBtn.addEventListener('click', function() {
+            $('#confirmationModal').modal('hide');
+            if (typeof confirmCallback === 'function') {
+                confirmCallback();
+                confirmCallback = null; // Reset callback after invocation
+            }
+        });
+    } else {
+        console.error("Confirm button not found");
+    }
+
+    var searchExecutionsInput = document.getElementById('searchExecutionsInput');
+    if (searchExecutionsInput) {
+        searchExecutionsInput.addEventListener('keyup', function() {
+            var search = this.value.toLowerCase();
+            filterTableRows('scanExecutionsTable', search);
+        });
+    }
+
+    $('[data-toggle="tooltip"]').tooltip();
+
 });
 
 function filterTableRows(tableId, search) {
@@ -59,6 +88,13 @@ function filterTableRows(tableId, search) {
         }
         tr[i].style.display = found ? '' : 'none';
     }
+}
+
+function showConfirmationModal(title, message, callback) {
+    $('#confirmationModal .modal-title').text(title);
+    $('#confirmationModal .modal-body').text(message);
+    confirmCallback = callback;
+    $('#confirmationModal').modal('show');
 }
 
 function toggleAdvancedOptions() {
@@ -216,7 +252,6 @@ function fetchScans() {
         });
 }
 
-
 function aggregateScans(scanResults) {
     const aggregatedScans = {};
     scanResults.forEach(result => {
@@ -267,8 +302,9 @@ function addScanToExecutionList(scan) {
 
    if (statusCell.innerHTML === 'Completed') {
         actionCell.innerHTML = '<button class="btn btn-primary btn-sm" onclick="viewResults(\'' + scan.scan_id + '\')">View Results</button>' +
-                               '<button class="btn btn-success btn-sm ml-2" onclick="downloadResults(\'' + scan.scan_id + '\', \'json\')">JSON</button>' +
-                               '<button class="btn btn-success btn-sm ml-2" onclick="downloadResults(\'' + scan.scan_id + '\', \'csv\')">CSV</button>';
+           '<button class="btn btn-success btn-sm ml-2" onclick="downloadResults(\'' + scan.scan_id + '\', \'json\')">JSON</button>' +
+           '<button class="btn btn-success btn-sm ml-2" onclick="downloadResults(\'' + scan.scan_id + '\', \'csv\')">CSV</button>' +
+           '<button class="btn btn-danger btn-sm ml-2" onclick="deleteScan(\'' + scan.scan_id + '\')"><i class="fas fa-times"></i></button>';
     } else {
         actionCell.innerHTML = '';
     }
@@ -277,9 +313,10 @@ function addScanToExecutionList(scan) {
 }
 
 function getActionButtonsHTML(scanId) {
-    return '<button class="btn btn-primary btn-sm" onclick="viewResults(\'' + scan.scan_id + '\')">View Results</button>' +
+	return '<button class="btn btn-primary btn-sm" onclick="viewResults(\'' + scan.scan_id + '\')">View Results</button>' +
            '<button class="btn btn-success btn-sm ml-2" onclick="downloadResults(\'' + scan.scan_id + '\', \'json\')">JSON</button>' +
-           '<button class="btn btn-success btn-sm ml-2" onclick="downloadResults(\'' + scan.scan_id + '\', \'csv\')">CSV</button>';
+           '<button class="btn btn-success btn-sm ml-2" onclick="downloadResults(\'' + scan.scan_id + '\', \'csv\')">CSV</button>' +
+           '<button class="btn btn-danger btn-sm ml-2" onclick="deleteScan(\'' + scan.scan_id + '\')"><i class="fas fa-times"></i></button>';
 }
 
 function autoRefreshForNewScans() {
@@ -322,17 +359,6 @@ function populateResults(results, scanId) {
     });
 }
 
-function extractScanTime(scanId) {
-    var scan = storedScans[scanId];
-    console.log("Extracting time for scanId:", scanId, "Data:", scan);
-
-    if (scan && scan.start_time) {
-        return new Date(scan.start_time).toLocaleString();
-    } else {
-        return 'Unknown Time';
-    }
-}
-
 function clearResults() {
     var table = document.getElementById("resultsTable");
     if (table) {
@@ -340,6 +366,34 @@ function clearResults() {
     } else {
         console.error("Results table not found");
     }
+}
+
+function clearDatabase() {
+        showConfirmationModal("Confirm Delete", "Are you sure you want to delete all records from the database?", function() {
+	axios.get('/clearDatabase')
+            .then(response => {
+                clearResults();
+		fetchScans(); 
+            })
+            .catch(error => {
+                console.error('Error clearing database:', error);
+            });
+    });
+}
+
+function deleteScan(scanId) {
+        showConfirmationModal("Confirm Delete", "Are you sure you want to delete this scan and its results?", function() {
+	axios.get(`/deleteScan?scanId=${scanId}`)
+            .then(response => {
+                showModal("Scan Deleted", "Scan and related results have been deleted.");
+                clearResults();
+		fetchScans(); 
+            })
+            .catch(error => {
+                console.error('Error deleting scan:', error);
+                showModal("Error", "Failed to delete the scan.");
+            });
+    });
 }
 
 function downloadResults(scanId, format) {
@@ -381,4 +435,10 @@ function downloadResults(scanId, format) {
     } else {
         console.error("No data found for scanId:", scanId);
     }
+}
+
+function showModal(title, message) {
+    $('#infoModal .modal-title').text(title);
+    $('#infoModal .modal-body').text(message);
+    $('#infoModal').modal('show');
 }
