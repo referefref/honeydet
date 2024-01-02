@@ -160,6 +160,64 @@ func updateScanStatus(db *sql.DB, scanID int64, endTime time.Time) error {
 	return err
 }
 
+func clearDatabaseHandler(w http.ResponseWriter, r *http.Request) {
+	db, err := initializeDatabase()
+	if err != nil {
+		log.Printf("Error initializing database: %s", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+	defer db.Close()
+
+	_, err = db.Exec("DELETE FROM scan_results")
+	if err != nil {
+		log.Printf("Error clearing scan_results table: %s", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	_, err = db.Exec("DELETE FROM scans")
+	if err != nil {
+		log.Printf("Error clearing scans table: %s", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	fmt.Fprintln(w, "Database cleared successfully")
+}
+
+func deleteScanHandler(w http.ResponseWriter, r *http.Request) {
+	db, err := initializeDatabase()
+	if err != nil {
+		log.Printf("Error initializing database: %s", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+	defer db.Close()
+
+	scanId := r.URL.Query().Get("scanId")
+	if scanId == "" {
+		http.Error(w, "Scan ID is required", http.StatusBadRequest)
+		return
+	}
+
+	_, err = db.Exec("DELETE FROM scan_results WHERE scan_id = ?", scanId)
+	if err != nil {
+		log.Printf("Error deleting from scan_results table: %s", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	_, err = db.Exec("DELETE FROM scans WHERE scan_id = ?", scanId)
+	if err != nil {
+		log.Printf("Error deleting from scans table: %s", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	fmt.Fprintf(w, "Scan with ID %s deleted successfully", scanId)
+}
+
 func getScans(db *sql.DB) ([]map[string]interface{}, error) {
 	rows, err := db.Query(`
         SELECT s.scan_id, s.start_time, s.end_time, s.parameters,
@@ -1156,7 +1214,7 @@ func logo() {
   I+ :I+=I+  7I =I+ I7   I7~ :I?   +I,    II,II  I7~ :I?=I=
       =, I7III: =I= I7    IIIII    +I,     II7I   IIIII ~I+
 
-      Go Honeypot Detector, Dec 2023, Version 0.9.128
+      Go Honeypot Detector, Dec 2023, Version 1.0.1
 `))
 }
 
@@ -1182,6 +1240,8 @@ func main() {
 		fs := http.FileServer(http.Dir("./assets"))
 		http.Handle("/assets/", http.StripPrefix("/assets/", fs))
 		http.HandleFunc("/scan", scanHandler)
+		http.HandleFunc("/clearDatabase", clearDatabaseHandler)
+		http.HandleFunc("/deleteScan", deleteScanHandler)
 		http.HandleFunc("/getScans", func(w http.ResponseWriter, r *http.Request) {
 			scans, err := getScans(db)
 			if err != nil {
@@ -1377,12 +1437,5 @@ func main() {
 		}
 	} else {
 		fmt.Print(string(reportData))
-	}
-}
-
-func init() {
-	if os.Geteuid() != 0 {
-		fmt.Println("This program requires root privileges. Run as root or with sudo.")
-		os.Exit(1)
 	}
 }
