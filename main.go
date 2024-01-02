@@ -3,17 +3,20 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"database/sql"
 	"encoding/csv"
 	"encoding/hex"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"github.com/TwiN/go-color"
+	_ "github.com/mattn/go-sqlite3"
 	"golang.org/x/crypto/ssh"
 	"io"
 	"log"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -54,10 +57,202 @@ type HoneypotSignature struct {
 }
 
 type DetectionResult struct {
-	Host         string
-	Port         int
-	IsHoneypot   bool
-	HoneypotType string
+	Host          string
+	Port          int
+	IsHoneypot    bool
+	HoneypotType  string
+	DetectionTime time.Time
+}
+
+type Scan struct {
+	ScanID     int64
+	StartTime  time.Time
+	EndTime    time.Time
+	Parameters string
+}
+
+func initializeDatabase() (*sql.DB, error) {
+	db, err := sql.Open("sqlite3", "./scans.db")
+	if err != nil {
+		return nil, err
+	}
+
+	createScansTableSQL := `
+    CREATE TABLE IF NOT EXISTS scans (
+        scan_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        start_time DATETIME,
+        end_time DATETIME,
+        parameters TEXT
+    );`
+	_, err = db.Exec(createScansTableSQL)
+	if err != nil {
+		return nil, err
+	}
+
+	createScanResultsTableSQL := `
+    CREATE TABLE IF NOT EXISTS scan_results (
+        result_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        scan_id INTEGER,
+        host TEXT,
+        port INTEGER,
+        is_honeypot BOOLEAN,
+        honeypot_type TEXT,
+        detection_time DATETIME,
+	FOREIGN KEY(scan_id) REFERENCES scans(scan_id)
+    );`
+	_, err = db.Exec(createScanResultsTableSQL)
+	if err != nil {
+		return nil, err
+	}
+
+	return db, nil
+}
+
+func insertScanResults(db *sql.DB, scanID int64, results []DetectionResult) error {
+	stmt, err := db.Prepare("INSERT INTO scan_results(scan_id, host, port, is_honeypot, honeypot_type, detection_time) VALUES(?, ?, ?, ?, ?, ?)")
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	for _, result := range results {
+		if *verbose {
+			log.Printf(color.Ize(color.Cyan, fmt.Sprintf("[Verbose] Inserting result into database: ScanID=%d, Host=%s, Port=%d, IsHoneypot=%t, HoneypotType=%s, DetectionTime=%s", scanID, result.Host, result.Port, result.IsHoneypot, result.HoneypotType, result.DetectionTime)))
+
+		}
+		_, err := stmt.Exec(scanID, result.Host, result.Port, result.IsHoneypot, result.HoneypotType, result.DetectionTime)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func insertScanData(db *sql.DB, startTime time.Time, parameters string) (int64, error) {
+	stmt, err := db.Prepare("INSERT INTO scans(start_time, parameters) VALUES(?, ?)")
+	if err != nil {
+		return 0, err
+	}
+	defer stmt.Close()
+
+	res, err := stmt.Exec(startTime, parameters)
+	if err != nil {
+		return 0, err
+	}
+
+	scanID, err := res.LastInsertId()
+	if err != nil {
+		return 0, err
+	}
+
+	return scanID, nil
+}
+
+func updateScanStatus(db *sql.DB, scanID int64, endTime time.Time) error {
+	stmt, err := db.Prepare("UPDATE scans SET end_time = ? WHERE scan_id = ?")
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	_, err = stmt.Exec(endTime, scanID)
+	return err
+}
+
+func getScans(db *sql.DB) ([]map[string]interface{}, error) {
+	rows, err := db.Query(`
+        SELECT s.scan_id, s.start_time, s.end_time, s.parameters,
+               r.result_id, r.host, r.port, r.is_honeypot, r.honeypot_type, r.detection_time
+        FROM scans s
+        LEFT JOIN scan_results r ON s.scan_id = r.scan_id
+        ORDER BY s.scan_id, r.result_id
+    `)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var scans = make(map[int64]map[string]interface{})
+	for rows.Next() {
+		var scanID int64
+		var startTime, endTime, detectionTime sql.NullString
+		var resultID sql.NullInt64
+		var host sql.NullString
+		var port sql.NullInt64
+		var parameters string
+		var isHoneypot sql.NullBool
+		var honeypotType sql.NullString
+
+		err = rows.Scan(&scanID, &startTime, &endTime, &parameters, &resultID, &host, &port, &isHoneypot, &honeypotType, &detectionTime)
+		if err != nil {
+			return nil, err
+		}
+
+		scan, exists := scans[scanID]
+		if !exists {
+			scan = make(map[string]interface{})
+			scan["scan_id"] = scanID
+			scan["start_time"] = startTime.String
+			scan["end_time"] = endTime.String
+			scan["results"] = make([]map[string]interface{}, 0)
+			scan["target_hosts"] = extractHostsFromParameters(parameters)
+			scan["target_ports"] = extractPortsFromParameters(parameters)
+		}
+
+		if host.Valid && port.Valid {
+			result := map[string]interface{}{
+				"result_id":      resultID.Int64,
+				"host":           host.String,
+				"port":           int(port.Int64),
+				"is_honeypot":    isHoneypot.Bool,
+				"honeypot_type":  honeypotType.String,
+				"detection_time": detectionTime.String,
+			}
+			scan["results"] = append(scan["results"].([]map[string]interface{}), result)
+		}
+
+		scans[scanID] = scan
+	}
+
+	var scanSlice []map[string]interface{}
+	for _, scan := range scans {
+		scanSlice = append(scanSlice, scan)
+	}
+
+	return scanSlice, nil
+}
+
+func extractHostsFromParameters(parameters string) string {
+	query := strings.TrimPrefix(parameters, "/scan?")
+	parsedParams, err := url.ParseQuery(query)
+	if err != nil {
+		log.Printf("Error parsing parameters: %s", err)
+		return "N/A"
+	}
+
+	hosts, ok := parsedParams["host"]
+	if !ok || len(hosts) == 0 {
+		return "N/A"
+	}
+
+	return hosts[0]
+}
+
+func extractPortsFromParameters(parameters string) string {
+	query := strings.TrimPrefix(parameters, "/scan?")
+	parsedParams, err := url.ParseQuery(query)
+	if err != nil {
+		log.Printf("Error parsing parameters: %s", err)
+		return "N/A"
+	}
+
+	ports, ok := parsedParams["port"]
+	if !ok || len(ports) == 0 {
+		return "N/A"
+	}
+
+	return ports[0]
 }
 
 func parsePortInput(portInput string) ([]int, error) {
@@ -111,30 +306,34 @@ func parsePortInput(portInput string) ([]int, error) {
 
 func parseHostInput(input string) ([]string, error) {
 	var ips []string
-	if strings.Contains(input, "/") {
-		_, ipNet, err := net.ParseCIDR(input)
-		if err != nil {
-			return nil, err
+	hostInputs := strings.Split(input, ",")
+	for _, hostInput := range hostInputs {
+		trimmedHostInput := strings.TrimSpace(hostInput)
+		if strings.Contains(trimmedHostInput, "/") {
+			_, ipNet, err := net.ParseCIDR(trimmedHostInput)
+			if err != nil {
+				return nil, err
+			}
+			for ip := ipNet.IP.Mask(ipNet.Mask); ipNet.Contains(ip); incIP(ip) {
+				ips = append(ips, ip.String())
+			}
+		} else if strings.Contains(trimmedHostInput, "-") {
+			parts := strings.Split(trimmedHostInput, "-")
+			if len(parts) != 2 {
+				return nil, fmt.Errorf("invalid range format")
+			}
+			startIP := net.ParseIP(parts[0])
+			endIP := net.ParseIP(parts[1])
+			if startIP == nil || endIP == nil {
+				return nil, fmt.Errorf("invalid IP in range")
+			}
+			for ip := startIP; !ip.Equal(endIP); incIP(ip) {
+				ips = append(ips, ip.String())
+			}
+			ips = append(ips, endIP.String())
+		} else {
+			ips = append(ips, trimmedHostInput)
 		}
-		for ip := ipNet.IP.Mask(ipNet.Mask); ipNet.Contains(ip); incIP(ip) {
-			ips = append(ips, ip.String())
-		}
-	} else if strings.Contains(input, "-") {
-		parts := strings.Split(input, "-")
-		if len(parts) != 2 {
-			return nil, fmt.Errorf("invalid range format")
-		}
-		startIP := net.ParseIP(parts[0])
-		endIP := net.ParseIP(parts[1])
-		if startIP == nil || endIP == nil {
-			return nil, fmt.Errorf("invalid IP in range")
-		}
-		for ip := startIP; !ip.Equal(endIP); incIP(ip) {
-			ips = append(ips, ip.String())
-		}
-		ips = append(ips, endIP.String())
-	} else {
-		ips = append(ips, input)
 	}
 	return ips, nil
 }
@@ -266,12 +465,12 @@ func connectToNetworkService(host string, port int, proto string, timeout int) (
 	return conn, nil
 }
 
-func hostRespondsToPing(host string) bool {
+func hostRespondsToPing(host string, timeout int) bool {
 	if *verbose {
 		fmt.Printf("[Verbose] Checking if host %s responds to ping\n", host)
 	}
 
-	cmd := exec.Command("ping", "-c", "1", "-W", "1", host)
+	cmd := exec.Command("ping", "-c", "1", "-W", strconv.Itoa(timeout), host)
 	err := cmd.Run()
 	return err == nil
 }
@@ -465,8 +664,9 @@ func executeSSHCommand(client *ssh.Client, command string) (string, error) {
 	return string(output), nil
 }
 
-func detectHoneypot(host string, ports []int, proto string, signatures []HoneypotSignature, timeout int) []DetectionResult {
+func detectHoneypot(host string, ports []int, proto string, signatures []HoneypotSignature, timeout int, bypassPortCheck bool) []DetectionResult {
 	var results []DetectionResult
+	detectionTime := time.Now()
 
 	for _, port := range ports {
 		var conn net.Conn
@@ -487,7 +687,7 @@ func detectHoneypot(host string, ports []int, proto string, signatures []Honeypo
 					if *verbose {
 						fmt.Println(color.Ize(color.Red, fmt.Sprintf("[Verbose] SSH authentication failed for host %s:%d: %s", host, port, err)))
 					}
-					results = append(results, DetectionResult{Host: host, Port: port, IsHoneypot: true, HoneypotType: "generic"})
+					results = append(results, DetectionResult{Host: host, Port: port, IsHoneypot: true, HoneypotType: "generic", DetectionTime: detectionTime})
 					continue
 				}
 				defer sshClient.Close()
@@ -503,14 +703,14 @@ func detectHoneypot(host string, ports []int, proto string, signatures []Honeypo
 				if *verbose {
 					fmt.Println(color.Ize(color.Red, fmt.Sprintf("[Verbose] Unable to connect to host %s:%d: %s", host, port, err)))
 				}
-				results = append(results, DetectionResult{Host: host, Port: port, IsHoneypot: false})
+				results = append(results, DetectionResult{Host: host, Port: port, IsHoneypot: false, DetectionTime: detectionTime})
 				continue
 			}
 			defer conn.Close()
 		}
 
 		for _, signature := range signatures {
-			if *bypassPortCheck || isPortMatch(port, signature.Port) {
+			if bypassPortCheck || isPortMatch(port, signature.Port) {
 				if *verbose {
 					fmt.Println(color.Ize(color.Green, fmt.Sprintf("[Verbose] Testing signature '%s' on host %s:%d", signature.Name, host, port)))
 				}
@@ -552,7 +752,7 @@ func detectHoneypot(host string, ports []int, proto string, signatures []Honeypo
 		if *verbose && !honeypotDetected {
 			fmt.Println(color.Ize(color.White, fmt.Sprintf("[Verbose] No honeypot detected on host %s:%d", host, port)))
 		}
-		results = append(results, DetectionResult{Host: host, Port: port, IsHoneypot: honeypotDetected, HoneypotType: honeypotType})
+		results = append(results, DetectionResult{Host: host, Port: port, IsHoneypot: honeypotDetected, HoneypotType: honeypotType, DetectionTime: detectionTime})
 	}
 
 	return results
@@ -723,81 +923,137 @@ func enhancedHelpOutput() {
 }
 
 func scanHandler(w http.ResponseWriter, r *http.Request) {
-	if *verbose {
-		log.Printf(color.Ize(color.White, fmt.Sprintf("Received request: %s", r.URL.String())))
-	}
-
-	params := r.URL.Query()
-	checkPing, _ := strconv.ParseBool(params.Get("checkPing"))
-	bypassPortCheck, _ := strconv.ParseBool(params.Get("bypassPortCheck"))
-
-	if _, found := params["report"]; !found {
-		params.Set("report", "json")
-	}
-
-	args := []string{}
-	for key, values := range params {
-		for _, value := range values {
-			value = sanitizeInput(value)
-			if !isValidInput(key, value) {
-				errMsg := fmt.Sprintf("Invalid input for key: %s, Value: %s", key, value)
-				if *verbose {
-					log.Printf(color.Ize(color.Red, errMsg))
-				}
-				w.Header().Set("Content-Type", "application/json")
-				w.WriteHeader(http.StatusBadRequest)
-				json.NewEncoder(w).Encode(map[string]string{"error": errMsg})
-				return
-			}
-
-			if key != "checkPing" && key != "bypassPortCheck" {
-				args = append(args, fmt.Sprintf("-%s", key), value)
-			}
-
-			if *verbose {
-				log.Printf(color.Ize(color.Blue, fmt.Sprintf("Parameter: %s, Value: %s", key, value)))
-			}
-		}
-	}
-
-	if checkPing {
-		args = append(args, "-checkPing")
-	}
-	if bypassPortCheck {
-		args = append(args, "-bypassPortCheck")
-	}
-
-	cmd := exec.Command("./honeydet", args...)
-	if *verbose {
-		log.Printf(color.Ize(color.Blue, fmt.Sprintf("Executing command: ./honeydet %s", strings.Join(args, " "))))
-	}
-	output, err := cmd.CombinedOutput()
+	db, err := initializeDatabase()
 	if err != nil {
-		if *verbose {
-			log.Printf(color.Ize(color.Red, fmt.Sprintf("Error executing command: %s, Output: %s", err, string(output))))
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{"error": fmt.Sprintf("Error executing command: %s", err)})
+		log.Printf(color.Ize(color.Red, fmt.Sprintf("Error initializing database: %s", err)))
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
+	defer db.Close()
 
-	w.Header().Set("Content-Type", "text/plain")
-	if _, err := w.Write(output); err != nil {
-		log.Printf(color.Ize(color.Red, fmt.Sprintf("Error sending response: %s", err)))
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{"error": fmt.Sprintf("Error sending response: %s", err)})
-		return
-	}
 	if *verbose {
-		log.Printf(color.Ize(color.White, "Response sent"))
+		log.Printf(color.Ize(color.White, "Received request: "+r.URL.String()))
 	}
-}
 
-func sanitizeInput(input string) string {
-	re := regexp.MustCompile(`[^a-zA-Z0-9,./-]`)
-	return strings.TrimSpace(re.ReplaceAllString(input, ""))
+	checkPing, _ := strconv.ParseBool(r.URL.Query().Get("checkPing"))
+	bypassPortCheck, _ := strconv.ParseBool(r.URL.Query().Get("bypassPortCheck"))
+	threads, err := strconv.Atoi(r.URL.Query().Get("threads"))
+	if err != nil || threads <= 0 {
+		threads = 1
+	}
+
+	hosts, err := parseHostInput(r.URL.Query().Get("host"))
+	if err != nil {
+		log.Printf(color.Ize(color.Red, "Error parsing host input: "+err.Error()))
+		return
+	}
+
+	ports, err := parsePortInput(r.URL.Query().Get("port"))
+	if err != nil {
+		log.Printf(color.Ize(color.Red, "Error parsing port input: "+err.Error()))
+		return
+	}
+
+	proto := r.URL.Query().Get("proto")
+	timeout, _ := strconv.Atoi(r.URL.Query().Get("timeout"))
+	if timeout == 0 {
+		timeout = 5
+	}
+
+	signatures, err := readSignatures(*signatureFile)
+	if err != nil {
+		log.Printf(color.Ize(color.Red, "Error reading signatures: "+err.Error()))
+		return
+	}
+
+	var responsiveHosts []string
+	if checkPing {
+		log.Printf(color.Ize(color.Blue, "Ping check enabled. Starting to ping hosts."))
+		var pingWg sync.WaitGroup
+		for _, host := range hosts {
+			pingWg.Add(1)
+			go func(h string) {
+				defer pingWg.Done()
+				log.Printf(color.Ize(color.Blue, "Pinging host: "+h))
+				if hostRespondsToPing(h, timeout) {
+					responsiveHosts = append(responsiveHosts, h)
+					if *verbose {
+						log.Printf(color.Ize(color.Green, "Host "+h+" responds to ping"))
+					}
+				} else {
+					log.Printf(color.Ize(color.Yellow, "No response from host: "+h))
+				}
+			}(host)
+		}
+		pingWg.Wait()
+		log.Printf(color.Ize(color.Blue, "Ping check completed."))
+	} else {
+		responsiveHosts = hosts
+	}
+
+	totalWorkUnits := len(responsiveHosts) * len(ports)
+	workUnitsPerThread := totalWorkUnits / threads
+	if totalWorkUnits%threads != 0 {
+		workUnitsPerThread++
+	}
+
+	var scanWg sync.WaitGroup
+	resultsChan := make(chan []DetectionResult, threads)
+
+	for i := 0; i < threads; i++ {
+		scanWg.Add(1)
+		go func(threadID int) {
+			defer scanWg.Done()
+			var combinedResults []DetectionResult
+			for j := threadID; j < totalWorkUnits; j += threads {
+				hostIndex := j / len(ports)
+				portIndex := j % len(ports)
+				if hostIndex < len(responsiveHosts) {
+					host := responsiveHosts[hostIndex]
+					port := ports[portIndex]
+					if *verbose {
+						log.Printf(color.Ize(color.Blue, "Processing host: "+host+" on port "+strconv.Itoa(port)))
+					}
+					results := detectHoneypot(host, []int{port}, proto, signatures, timeout, bypassPortCheck)
+					combinedResults = append(combinedResults, results...)
+				}
+			}
+			resultsChan <- combinedResults
+		}(i)
+	}
+
+	scanWg.Wait()
+	close(resultsChan)
+
+	var finalResults []DetectionResult
+	for results := range resultsChan {
+		finalResults = append(finalResults, results...)
+	}
+
+	startTime := time.Now()
+	scanParameters := r.URL.String()
+	scanID, err := insertScanData(db, startTime, scanParameters)
+	if err != nil {
+		log.Printf(color.Ize(color.Red, "Error inserting scan data: "+err.Error()))
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	err = insertScanResults(db, scanID, finalResults)
+	if err != nil {
+		log.Printf(color.Ize(color.Red, "Error inserting scan results: "+err.Error()))
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	endTime := time.Now()
+	err = updateScanStatus(db, scanID, endTime)
+	if err != nil {
+		log.Printf(color.Ize(color.Red, "Error updating scan status: "+err.Error()))
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(finalResults)
 }
 
 func isValidInput(key, value string) bool {
@@ -855,10 +1111,10 @@ func isValidPort(value string) bool {
 }
 
 func isValidHost(value string) bool {
-	pattern := `^([a-zA-Z0-9.-]+|` + // Hostname
-		`\d{1,3}(\.\d{1,3}){3}|` + // Single IP address
-		`\d{1,3}(\.\d{1,3}){3}/\d{1,2}|` + // CIDR notation
-		`\d{1,3}(\.\d{1,3}){3}-\d{1,3}(\.\d{1,3}){3})$` // IP range
+	pattern := `^([a-zA-Z0-9.-]+|` +
+		`\d{1,3}(\.\d{1,3}){3}|` +
+		`\d{1,3}(\.\d{1,3}){3}/\d{1,2}|` +
+		`\d{1,3}(\.\d{1,3}){3}-\d{1,3}(\.\d{1,3}){3})$`
 
 	hosts := strings.Split(value, ",")
 	re := regexp.MustCompile(pattern)
@@ -900,13 +1156,20 @@ func logo() {
   I+ :I+=I+  7I =I+ I7   I7~ :I?   +I,    II,II  I7~ :I?=I=
       =, I7III: =I= I7    IIIII    +I,     II7I   IIIII ~I+
 
-      Go Honeypot Detector, Dec 2023, Version 0.9.40
+      Go Honeypot Detector, Dec 2023, Version 0.9.128
 `))
 }
 
 func main() {
 	flag.Usage = enhancedHelpOutput
 	flag.Parse()
+
+	var err error
+	db, err := initializeDatabase()
+	if err != nil {
+		log.Fatalf("Error initializing database: %s", err)
+	}
+	defer db.Close()
 
 	if len(os.Args) <= 1 {
 		flag.Usage()
@@ -919,6 +1182,20 @@ func main() {
 		fs := http.FileServer(http.Dir("./assets"))
 		http.Handle("/assets/", http.StripPrefix("/assets/", fs))
 		http.HandleFunc("/scan", scanHandler)
+		http.HandleFunc("/getScans", func(w http.ResponseWriter, r *http.Request) {
+			scans, err := getScans(db)
+			if err != nil {
+				log.Printf("Error retrieving scans: %s", err)
+				http.Error(w, "Internal server error", http.StatusInternalServerError)
+				return
+			}
+
+			w.Header().Set("Content-Type", "application/json")
+			if scans == nil {
+				scans = make([]map[string]interface{}, 0)
+			}
+			json.NewEncoder(w).Encode(scans)
+		})
 		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 			if r.URL.Path == "/" {
 				http.ServeFile(w, r, filepath.Join(".", "index.html"))
@@ -934,7 +1211,6 @@ func main() {
 	}
 
 	var allHosts []string
-	var err error
 	var portList []int
 
 	if *host != "" {
@@ -969,48 +1245,73 @@ func main() {
 		os.Exit(1)
 	}
 
-	numHostsPerThread := len(allHosts) / *threads
-	if len(allHosts)%*threads != 0 {
-		numHostsPerThread++
+	var pingWg sync.WaitGroup
+	pingResults := make(map[string]bool)
+	var pingResultsMutex sync.Mutex
+
+	for _, host := range allHosts {
+		pingWg.Add(1)
+		go func(h string) {
+			defer pingWg.Done()
+			pingResult := hostRespondsToPing(h, *timeout)
+			pingResultsMutex.Lock()
+			pingResults[h] = pingResult
+			pingResultsMutex.Unlock()
+		}(host)
+	}
+	pingWg.Wait()
+
+	var responsiveHosts []string
+	for host, isResponsive := range pingResults {
+		if isResponsive {
+			responsiveHosts = append(responsiveHosts, host)
+		}
+	}
+
+	responsiveHostsMap := make(map[string]bool)
+	for _, host := range responsiveHosts {
+		responsiveHostsMap[host] = true
+	}
+
+	totalWorkUnits := len(allHosts) * len(portList)
+	workUnitsPerThread := totalWorkUnits / *threads
+	if totalWorkUnits%*threads != 0 {
+		workUnitsPerThread++
 	}
 
 	var wg sync.WaitGroup
 	resultsChan := make(chan []DetectionResult, *threads)
-
 	for i := 0; i < *threads; i++ {
-		start := i * numHostsPerThread
-		end := start + numHostsPerThread
-		if end > len(allHosts) {
-			end = len(allHosts)
-		}
-		if start >= len(allHosts) {
-			break
-		}
-
 		wg.Add(1)
-		go func(hosts []string) {
+		go func(threadID int) {
 			defer wg.Done()
 			var combinedResults []DetectionResult
-			for _, host := range hosts {
-				if *verbose {
-					fmt.Println(color.Ize(color.Blue, fmt.Sprintf("[Verbose] Processing host: %s", host)))
-				}
-				if *checkPing && !hostRespondsToPing(host) {
+			for j := threadID; j < totalWorkUnits; j += *threads {
+				hostIndex := j / len(portList)
+				portIndex := j % len(portList)
+				if hostIndex < len(allHosts) {
+					host := allHosts[hostIndex]
+					port := portList[portIndex]
 					if *verbose {
-						fmt.Printf("[Verbose] Host %s does not respond to ping, skipping\n", host)
+						fmt.Println(color.Ize(color.Blue, fmt.Sprintf("[Verbose] Processing host: %s on port %d", host, port)))
 					}
-					continue
-				}
-				for _, port := range portList {
-					if *verbose {
-						fmt.Printf("[Verbose] Scanning host %s on port %d\n", host, port)
+					if *checkPing && !responsiveHostsMap[host] {
+						if *verbose {
+							fmt.Printf("[Verbose] Host %s does not respond to ping, skipping\n", host)
+						}
+						continue
 					}
-					results := detectHoneypot(host, []int{port}, *proto, signatures, *timeout)
+					results := detectHoneypot(host, []int{port}, *proto, signatures, *timeout, *bypassPortCheck)
+					for _, result := range results {
+						if *verbose {
+							log.Printf(color.Ize(color.Green, fmt.Sprintf("[Verbose] Result for host %s on port %d: IsHoneypot=%t, HoneypotType=%s", result.Host, result.Port, result.IsHoneypot, result.HoneypotType)))
+						}
+					}
 					combinedResults = append(combinedResults, results...)
 				}
 			}
 			resultsChan <- combinedResults
-		}(allHosts[start:end])
+		}(i)
 	}
 
 	wg.Wait()
@@ -1023,6 +1324,28 @@ func main() {
 
 	if *verbose {
 		fmt.Println(color.Ize(color.Green, "[Verbose] Scan completed, compiling results"))
+		log.Println(color.Ize(color.Green, "[Verbose] Final aggregated scan results:"))
+		for _, result := range finalResults {
+			log.Printf(color.Ize(color.Yellow, fmt.Sprintf("[Verbose] Host: %s, Port: %d, IsHoneypot: %t, HoneypotType: %s", result.Host, result.Port, result.IsHoneypot, result.HoneypotType)))
+		}
+	}
+
+	startTime := time.Now()
+	scanParameters := fmt.Sprintf("Host: %s, Port: %s, Threads: %d, Protocol: %s", *host, *port, *threads, *proto)
+	scanID, err := insertScanData(db, startTime, scanParameters)
+	if err != nil {
+		log.Fatalf("Error inserting scan data: %s", err)
+	}
+
+	err = insertScanResults(db, scanID, finalResults)
+	if err != nil {
+		log.Fatalf("Error inserting scan results: %s", err)
+	}
+
+	endTime := time.Now()
+	err = updateScanStatus(db, scanID, endTime)
+	if err != nil {
+		log.Fatalf("Error updating scan status: %s", err)
 	}
 
 	var reportData []byte
@@ -1054,5 +1377,12 @@ func main() {
 		}
 	} else {
 		fmt.Print(string(reportData))
+	}
+}
+
+func init() {
+	if os.Geteuid() != 0 {
+		fmt.Println("This program requires root privileges. Run as root or with sudo.")
+		os.Exit(1)
 	}
 }
