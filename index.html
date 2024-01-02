@@ -1,12 +1,13 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Honeydet Scanner - Version 0.9</title>
+    <title>Honeydet Scanner - Version 1.0</title>
     <link rel="stylesheet" href="/assets/styles.css">
     <script src="/assets/script.js"></script>
     <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 </head>
@@ -24,11 +25,11 @@
         <div class="row">
             <div class="col-md-6">
                 <label for="hostInput">Hosts</label>
-                <input type="text" id="hostInput" class="form-control" placeholder="192.168.1.1, 192.168.1.0/24">
+                <input type="text" id="hostInput" class="form-control" data-toggle="tooltip" placeholder="192.168.1.1, 192.168.1.0/24" title="Hosts can be entered as single IPs like 192.168.1.1, or as ranges like 192.168.1.1-192.168.1.50, as CIDR ranges like 192.168.1.0/24 or as comma separated lists like 192.168.1.1,192.168.1.2,192.168.1.30,192.168.1.55">
             </div>
             <div class="col-md-6">
                 <label for="portInput">Ports</label>
-                <input type="text" id="portInput" class="form-control" value="22">
+                <input type="text" id="portInput" class="form-control" value="22" data-toggle="tooltip" title="Ports can be entered as single ports like 1337, as ranges like 1-1000, or as lists like 22,2222,80,8080,8888">
             </div>
         </div>
 
@@ -40,22 +41,22 @@
     <div id="advancedOptions" style="display:none;">
         <div class="row mt-2">
             <div class="col-md-6">
-                <label for="threadsInput" title="Number of concurrent threads for scanning">Threads</label>
-                <input type="number" id="threadsInput" class="form-control" value="10" min="1" max="1000">
+                <label for="threadsInput">Threads</label>
+                <input type="number" id="threadsInput" class="form-control" value="10" min="1" max="1000" data-toggle="tooltip" title="Number of concurrent threads for scanning">
             </div>
             <div class="col-md-6">
-                <label for="timeoutInput" title="Connection timeout in seconds">Timeout</label>
-                <input type="number" id="timeoutInput" class="form-control" value="5" min="1">
+                <label for="timeoutInput">Timeout</label>
+                <input type="number" id="timeoutInput" class="form-control" value="5" min="1" data-toggle="tooltip" title="Connection timeout in seconds">
             </div>
         </div>
         <div class="row mt-2">
             <div class="col-md-6">
-                <label for="delayInput" title="Delay in milliseconds between requests to a single host">Delay</label>
-                <input type="number" id="delayInput" class="form-control" value="0" min="0">
+                <label for="delayInput">Delay</label>
+                <input type="number" id="delayInput" class="form-control" value="0" min="0" data-toggle="tooltip" title="Delay in milliseconds between requests to a single host. This is useful for evading detection where threshold of events over time is used to detect scanning activity">
             </div>
             <div class="col-md-6">
-                <label for="protocolSelect" title="Protocol to use (TCP/UDP)">Protocol</label>
-                <select id="protocolSelect" class="form-control">
+                <label for="protocolSelect">Protocol</label>
+                <select id="protocolSelect" class="form-control" data-toggle="tooltip" title="Protocol to use (TCP/UDP)">
                     <option value="tcp">TCP</option>
                     <option value="udp">UDP</option>
                 </select>
@@ -63,12 +64,12 @@
         </div>
         <div class="row mt-2">
             <div class="col-md-6">
-                <label for="pingCheckInput" title="Check if the host responds to ping before scanning">Ping Check</label>
-                <input type="checkbox" id="pingCheckInput" class="form-control">
+                <label for="pingCheckInput">Ping Check</label>
+                <input type="checkbox" id="pingCheckInput" class="form-control" data-toggle="tooltip" title="Check if the host responds to ping before scanning. This is useful for speeding up queries against many ports and many hosts, if you're testing just one port per IP address, it's probably more efficient to leave this unchecked">
             </div>
             <div class="col-md-6">
-                <label for="portOverrideInput" title="Override port matching to run all signatures against all ports">Port Override</label>
-                <input type="checkbox" id="portOverrideInput" class="form-control">
+                <label for="portOverrideInput">Port Override</label>
+                <input type="checkbox" id="portOverrideInput" class="form-control" data-toggle="tooltip" title="Override port matching (defined in signatures file) to run all signatures against all ports. This is useful for discovering honeypots running services on non-standard ports but increases the likelihood of false positives">
             </div>
         </div>
         <div class="row mt-2">
@@ -87,13 +88,37 @@
         <div class="row mt-3 button-row">
             <div class="col-md-3">
                 <button id="scanBtn" class="btn btn-success">Scan</button>
+		 <button id="clearDbBtn" class="btn btn-danger ml-2">Clear Database</button>
             </div>
         </div>
+
+<div class="modal fade" id="confirmationModal" tabindex="-1" role="dialog" aria-labelledby="confirmationModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="confirmationModalLabel">Confirm Action</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <!-- Confirmation message will be set here -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-danger" id="confirmBtn">Yes</button>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">No</button>
+            </div>
+        </div>
+    </div>
+</div>
 
         <!-- Scan Executions Table -->
         <div class="mt-4">
             <h5>Scan Executions</h5>
-            <table id="scanExecutionsTable" class="table table-dark mt-2">
+            <div class="mt-4">
+    <input type="text" id="searchExecutionsInput" class="form-control" placeholder="Search Scan Executions...">
+</div>
+	    <table id="scanExecutionsTable" class="table table-dark mt-2">
                 <thead>
                     <tr>
                         <th>Scan Start Time</th>
@@ -107,12 +132,12 @@
                 <tbody></tbody>
             </table>
         </div>
-	<div class="mt-4">
-	    <input type="text" id="searchInput" class="form-control" placeholder="Search Results...">
-	</div>
         <!-- Results Table -->
         <div class="mt-4">
             <h5>Results</h5>
+	<div class="mt-4">
+	    <input type="text" id="searchInput" class="form-control" placeholder="Search Results...">
+	</div>
             <table id="resultsTable" class="table table-dark mt-2">
                 <thead>
                     <tr>
