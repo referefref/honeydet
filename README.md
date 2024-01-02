@@ -9,10 +9,11 @@ honeydet is a signature based, multi-threaded honeypot detection tool written in
 It can detect honeypots based upon the premise that given a specifically crafted request they will generate a unique and identifying response to tcp/udp packets.
 It can be run either as a web server, a command line tool, or as a web API.
 Signatures support hex, string and regex detection methods on TCP and UDP.
+Features a SQL backend for persistent scans which can be managed throuhg the web interface.
 
 ### What doesn't it do (just yet)?
 
-Honeydet comes with a few example signatures for detecting honeypots, after the application is in a reasonable working state more effort will be put into creating signatures for various honeypots.
+Honeydet comes with a few example signatures for detecting honeypots, now that the code is in a useable state, signature development will continue.
 
 ### Installation
 ```
@@ -79,17 +80,15 @@ curl 'http://localhost:8080/scan?targets=10.1.1.1/24&report=json&port=3389'
 ![image](https://github.com/referefref/honeydet/assets/56499429/7cab7ea7-470f-4bfc-b62f-bfe13657fc9f)
 
 #### Features:
-- Can schedule multiple scans
+- Multi-threaded, and now super fast. /24 single port scan in around 1 second
 - Supports single and multiple targets with csv, range, and CIDR
 - Supports single and multiple ports with range and csv list
 - Download results as json or csv
 - Adjust execution options to ignore signature port mapping, pingtest host before test, threads, timeout and delay
 
-
 ### Wish-list
 * SSL
-* Move Scan results to sqlite3 DB to persist
-* Update frontend to call scanResults endpoint to return all previous scans
+* Scan data charts
 * PDF Reports
-* Active port detection
-* Heuristic based detection including multi-command query and response
+* Active port detection (without requiring root)
+* Change csv based signatures to yaml and allow for multi-step signatures that interact with services
