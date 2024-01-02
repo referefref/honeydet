@@ -11,10 +11,7 @@ It can be run either as a web server, a command line tool, or as a web API.
 Signatures support hex, string and regex detection methods on TCP and UDP.
 Features a SQL backend for persistent scans which can be managed throuhg the web interface.
 
-### Web Interface
-![image](https://github.com/referefref/honeydet/assets/56499429/e6d8c6fe-daa9-46eb-8122-0add1cd83754)
-
-### Features:
+### Frontend Features:
 - Multi-threaded, and now super fast. /24 single port scan in around 1 second
 - Supports single and multiple targets with csv, range, and CIDR
 - Supports single and multiple ports with range and csv list
@@ -29,8 +26,10 @@ Features a SQL backend for persistent scans which can be managed throuhg the web
 * Change csv based signatures to yaml and allow for multi-step signatures that interact with services
 
 ### What doesn't it do (just yet)?
-
 Honeydet comes with a few example signatures for detecting honeypots, now that the code is in a useable state, signature development will continue.
+
+### Web Interface
+![image](https://github.com/referefref/honeydet/assets/56499429/e6d8c6fe-daa9-46eb-8122-0add1cd83754)
 
 ### Installation
 ```
