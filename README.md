@@ -36,6 +36,7 @@ Honeydet comes with a few example signatures for detecting honeypots, now that t
 git clone https://github.com/referefref/honeydet.git
 cd honeydet
 go get honeydet
+go build
 ```
 
 ### Command line options
