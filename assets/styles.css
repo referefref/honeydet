@@ -1,149 +1,336 @@
 body {
-    font-family: 'Roboto', sans-serif;
-    background-color: white;
+	font-family: 'Roboto', sans-serif;
+	background-color: white; /* Light background */
+	/* 	padding-bottom: 50px !important; */
+}
+
+.dark-mode {
+	background-color: #121212; /* Dark background */
 }
 
 .header {
-    background-color: black;
-    color: white;
-    padding: 10px 0;
-    font-size: 18px;
+	background-color: black;
+	color: white;
+	padding: 10px 0;
+	font-size: 18px;
+}
+
+.dark-mode .header {
+	background-color: #1a1a1a; /* Darker shade for header */
 }
 
 .header img {
-    width: 50px;
-    height: auto;
+	width: 50px;
+	height: auto;
 }
 
-.header a {
-    color: white;
+.header a, .fa-github, .fa-globe {
+	color: white;
+}
+
+.dark-mode .header a {
+	color: #ccc; /* Lighter text color for links */
 }
 
 .fa-github, .fa-globe {
-    font-size: 24px;
+	font-size: 24px;
 }
 
-.form-row, .row {
-    margin-bottom: 15px;
+.form-row {
+    margin-bottom: 5px; /* Adjust space between rows */
+}
+
+.form-group {
+    display: flex;
+    align-items: center;
+}
+
+.form-label {
+    margin-right: 10px; /* Space between label and checkbox */
+    flex-grow: 1;
+}
+
+.form-checkbox {
+    flex-shrink: 0;
+    width: 20px; /* Adjust checkbox size */
+    height: 20px; /* Adjust checkbox size */
+}
+
+.row {
+	margin-bottom: 15px;
 }
 
 .form-control, .btn, select {
-    height: 40px;
+	height: 40px;
 }
 
 .btn {
-    padding: 5px 15px;
+	padding: 5px 15px;
 }
 
 .table thead th {
-    vertical-align: middle;
-    background-color: black;
-    color: white;
+	vertical-align: middle;
+	background-color: black;
+	color: white;
+}
+
+.dark-mode .table thead th {
+	background-color: #333; /* Darker background for thead */
+	color: #ddd; /* Lighter text color */
 }
 
 .table tbody td {
-    vertical-align: middle;
-    background-color: #f2f2f2;
-    color: black;
+	vertical-align: middle;
+	background-color: #f2f2f2;
+	color: black;
+}
+
+.dark-mode .table tbody td {
+	background-color: #242424; /* Dark background for tbody */
+	color: #eee; /* Lighter text color */
 }
 
 .table th {
-    cursor: pointer;
+	cursor: pointer;
+}
+
+#resultsTable {
+	margin-bottom: 80px;
 }
 
 .alert-honeypot {
-    background-color: #ffcccc;
+	background-color: #ffcccc;
+}
+
+.dark-mode .alert-honeypot {
+	background-color: #562222; /* Darker background for honeypot alerts */
 }
 
 .alert-nonhoneypot {
-    background-color: #ccffcc;
+	background-color: #ccffcc;
+}
+
+.dark-mode .alert-nonhoneypot {
+	background-color: #225622; /* Darker background for nonhoneypot alerts */
 }
 
 .footer {
-    background-color: grey;
-    color: white;
-    position: fixed;
-    left: 0;
-    bottom: 0;
-    width: 100%;
-    text-align: center;
-    padding: 10px 0;
-    font-size: 10px;
+	background-color: grey;
+	color: white;
+	position: fixed;
+	left: 0;
+	bottom: 0;
+	width: 100%;
+	text-align: center;
+	padding: 5px 0;
+	font-size: 10px;
+}
+
+.dark-mode .footer {
+	background-color: #333; /* Darker footer background */
 }
 
 .button-row {
-    margin-bottom: 20px;
+	margin-bottom: 20px;
 }
 
 .overlay {
-    display: none;
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(255, 255, 255, 0.7);
-    z-index: 999;
-    align-items: center;
-    justify-content: center;
+	display: none;
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background: rgba(255, 255, 255, 0.7);
+	z-index: 999;
+	align-items: center;
+	justify-content: center;
+}
+
+.dark-mode .overlay {
+	background: rgba(0, 0, 0, 0.7); /* Dark overlay */
 }
 
 .loadingCircle {
-    border: 5px solid #f3f3f3;
-    border-top: 5px solid #3498db;
-    border-radius: 50%;
-    width: 50px;
-    height: 50px;
-    animation: spin 2s linear infinite;
+	border: 5px solid #f3f3f3;
+	border-top: 5px solid #3498db;
+	border-radius: 50%;
+	width: 50px;
+	height: 50px;
+	animation: spin 2s linear infinite;
 }
 
 @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+	0% { transform: rotate(0deg); }
+	100% { transform: rotate(360deg); }
 }
 
 #advancedOptions {
-    display: none;
-    margin-top: 15px;
+	display: none;
+	margin-top: 15px;
 }
 
 #executionListTable {
-    margin-top: 30px;
+	margin-top: 30px;
 }
 
 #executionListTable th, #executionListTable td {
-    text-align: center;
+	text-align: center;
 }
 
 .tooltip {
-    font-size: 14px;
+	font-size: 14px;
 }
 
 /* Tooltip styling */
 [data-tooltip]:hover::before {
-    content: attr(data-tooltip);
-    position: absolute;
-    bottom: 100%;
-    left: 50%;
-    transform: translateX(-50%);
-    background-color: #333;
-    color: #fff;
-    text-align: center;
-    border-radius: 6px;
-    padding: 5px;
-    font-size: 12px;
-    z-index: 1000;
-    width: 200px;
+	content: attr(data-tooltip);
+	position: absolute;
+	bottom: 100%;
+	left: 50%;
+	transform: translateX(-50%);
+	background-color: #333;
+	color: #fff;
+	text-align: center;
+	border-radius: 6px;
+	padding: 5px;
+	font-size: 12px;
+	z-index: 1000;
+	width: 200px;
+}
+
+.dark-mode [data-tooltip]:hover::before {
+	background-color: #ddd; /* Lighter background for tooltips */
+	color: #333; /* Darker text color */
 }
 
 [data-tooltip]:hover::after {
-    content: '';
-    position: absolute;
-    bottom: 100%;
-    left: 50%;
-    transform: translateX(-50%);
-    border-width: 5px;
-    border-style: solid;
-    border-color: #333 transparent transparent transparent;
-    z-index: 1000;
+	content: '';
+	position: absolute;
+	bottom: 100%;
+	left: 50%;
+	transform: translateX(-50%);
+	border-width: 5px;
+	border-style: solid;
+	border-color: #333 transparent transparent transparent;
+	z-index: 1000;
+}
+
+.actions-column {
+	width: 280px;
+}
+
+.actions-column button {
+	max-width: 100%; /* Ensures buttons don't exceed the cell width */
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+
+.action-buttons {
+	display: flex;
+	flex-wrap: nowrap;
+	align-items: center;
+	white-space: nowrap;
+}
+
+.action-buttons .btn {
+	padding: 0.25rem 0.5rem; /* Adjust padding as needed */
+	font-size: 0.875rem; /* Adjust font size as needed */
+}
+
+#scanExecutionsTable tbody tr td:nth-child(3),
+#scanExecutionsTable tbody tr td:nth-child(4) {
+	white-space: normal;
+	word-break: break-word;
+}
+
+
+.dark-mode [data-tooltip]:hover::after {
+	border-color: #ddd transparent transparent transparent; /* Lighter arrow color */
+}
+
+.chart-container {
+	width: 80%;
+	margin: auto;
+	padding: 20px;
+}
+
+body.dark-mode {
+	background-color: #121212;
+	color: #ffffff;
+}
+
+body.dark-mode .header {
+	background-color: #1c1c1c;
+}
+
+body.dark-mode .header a {
+	color: #ffffff;
+}
+
+body.dark-mode .form-group label,
+body.dark-mode .form-row label,
+body.dark-mode .row label {
+	color: #cccccc; /* Lighter label color for visibility */
+}
+
+body.dark-mode .form-control,
+body.dark-mode .btn,
+body.dark-mode select {
+	background-color: #333333; /* Dark background for form elements */
+	color: #ffffff; /* Light text color */
+	border: 1px solid #555555; /* Optional: Adds a border to make elements stand out */
+}
+
+body.dark-mode .table thead th {
+	background-color: #333333;
+	color: #ffffff;
+}
+
+body.dark-mode .table tbody td {
+	background-color: #242424;
+	color: #ffffff;
+}
+
+body.dark-mode .footer {
+	background-color: #1c1c1c;
+}
+
+body.dark-mode .btn {
+	background-color: initial;
+}
+body.dark-mode .modal-content {
+	background-color: #333; /* Dark background for modal */
+	color: #fff; /* Light text color */
+}
+
+body.dark-mode .modal-header {
+	border-bottom: 1px solid #444; /* Dark border for modal header */
+}
+
+body.dark-mode .modal-footer {
+	border-top: 1px solid #444; /* Dark border for modal footer */
+}
+
+body.dark-mode .modal-close {
+	color: #fff; /* Light color for close button */
+}
+
+body.dark-mode .modal-body {
+	background-color: #2a2a2a; /* Slightly different shade for modal body, if needed */
+}
+
+.chart-heading {
+	font-size: 16px; /* Adjust size as needed */
+	margin-bottom: 10px;
+}
+
+.hidden {
+	display: none;
+}
+
+.dark-mode .chart-heading {
+	color: #ffffff; /* White text for dark mode */
 }
