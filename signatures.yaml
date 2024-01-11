@@ -1,0 +1,103 @@
+signatures:
+  - name: "cowrie"
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "SSH-1111-OpenSSH_9.0\r\n"
+        output_match_type: string
+        output: "bad version 1111"
+    confidence: "High"
+
+  - name: "cisco-asa"
+    port: "web-ports"
+    proto: "GET"
+    steps:
+      - input_type: string
+        input: "/+CSCOE+/logon.html?fcadbadd=1"
+        output_match_type: string
+        output: "font-weight: bold; cursor: pointer;"
+    confidence: "High"
+
+  - name: "dionaea-ftp"
+    port: 21
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "USER root\r\nPASS \r\n"
+        output_match_type: string
+        output: "500 Syntax error: PASS requires an argument"
+    confidence: "High"
+
+  - name: "dionaea-mongodb"
+    port: 27017
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "3b0000003c300000ffffffffd40700000000000061646d696e2e24636d640000000000ffffffff14000000106275696c64696e666f000100000000"
+        output_match_type: regex
+        output: |
+          "([A-Za-z:0-9.]+)"
+    confidence: "High"
+
+  - name: "opencanary-redis"
+    port: 6379
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "[[,[["
+        output_match_type: string
+        output: "-ERR unknown command '[[,[['"
+    confidence: "High"
+    comment: "Opencanary's Redis honeypot does not handle special characters in the same way that a real Redis server does."
+
+  - name: "mailoney"
+    port: 25
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "HELP\r\n"
+        output_match_type: string
+        output: "502 Error: cmomand"
+    confidence: "High"
+
+  - name: "redis-honeypot (beehive redis)"
+    port: 6379
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "DBSIZE"
+        output_match_type: string
+        output: "-ERR unknown command ''"
+    confidence: "High"
+
+  - name: "snare"
+    port: "web-ports"
+    proto: "GET"
+    steps:
+      - input_type: string
+        input: "/ HTTP/1337\nHost: nuggets"
+        output_match_type: string
+        output: "Bad status line"
+    confidence: "High"
+
+  - name: "generic-snmp-honeypot"
+    port: "161"
+    proto: "GET"
+    steps:
+      - input_type: string
+        input: "1.3.6.1.2.1.1.3.0"
+        output_match_type: regex
+        output: |
+          \D
+    confidence: "Medium"
+
+  - name: "opencanary-snmp"
+    port: "161"
+    proto: "GET"
+    steps:
+      - input_type: string
+        input: "1.3.6.1.2.1.1.3.0"
+        output_match_type: "no-response"
+        output: ""
+    confidence: "High"
