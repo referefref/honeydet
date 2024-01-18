@@ -331,4 +331,3 @@ func isResponseMatch(response, matchType, matchPattern string) bool {
 		return false
 	}
 }
-ro
