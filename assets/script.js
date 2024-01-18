@@ -826,3 +826,4 @@ function updatePaginationControls(tableId, rowsPerPage) {
 		console.error('Pagination UL not found for tableId:', tableId);
 	}
 }
+
