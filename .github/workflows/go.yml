@@ -26,6 +26,7 @@ jobs:
          go version
          go get -u golang.org/x/crypto/ssh
          go get github.com/TwiN/go-color
+         go get github.com/simonvetter/modbus
          go build -v ./...
 
     - name: Test
@@ -33,4 +34,5 @@ jobs:
          go version
          go get -u golang.org/x/crypto/ssh
          go get github.com/TwiN/go-color
+         go get github.com/simonvetter/modbus
          go test -v ./...
