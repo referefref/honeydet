@@ -52,8 +52,8 @@ body {
 
 .form-checkbox {
     flex-shrink: 0;
-    width: 20px; /* Adjust checkbox size */
-    height: 20px; /* Adjust checkbox size */
+    width: 10px; /* Adjust checkbox size */
+    height: 10px; /* Adjust checkbox size */
 }
 
 .row {
