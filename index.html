@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-	<title>Honeydet Scanner - Version 1.1.81</title>
+	<title>Honeydet Scanner - Version 1.1.100</title>
 	<link rel="stylesheet" href="/assets/styles.css">
 	<script src="https://cdn.amcharts.com/lib/5/index.js"></script>
 	<script src="https://cdn.amcharts.com/lib/5/percent.js"></script>
@@ -21,7 +21,7 @@
 <body>
 	<div class="header d-flex justify-content-between align-items-center px-3">
 		<img src="assets/logo.png" alt="Honeydet Logo">
-		Honeydet (Go Honeypot Detector Tool - Version 1.1.81)
+		Honeydet (Go Honeypot Detector Tool - Version 1.1.100)
 		<div>
 			<button id="darkModeToggle" class="btn btn-dark ml-2"><i class="fas fa-moon"></i></button>
 			<a href="https://github.com/referefref/honeydet" class="ml-2"><i class="fab fa-github"></i></a>
@@ -41,57 +41,60 @@
 			</div>
 		</div>
 
-	<div class="form-group mt-3">
 	<div class="custom-control custom-switch">
 		<input type="checkbox" class="custom-control-input" id="advancedOptionsToggle">
 	<label class="custom-control-label" for="advancedOptionsToggle">Advanced Options</label>
 	</div>
 	<div id="advancedOptions" style="display:none;">
-		<div class="row mt-2">
-			<div class="col-md-6">
-				<label for="threadsInput">Threads</label>
-				<input type="number" id="threadsInput" class="form-control" value="10" min="1" max="1000" data-toggle="tooltip" title="Number of concurrent threads for scanning">
-			</div>
-			<div class="col-md-6">
-				<label for="timeoutInput">Timeout</label>
-				<input type="number" id="timeoutInput" class="form-control" value="5" min="1" data-toggle="tooltip" title="Connection timeout in seconds">
-			</div>
-		</div>
-		<div class="row mt-2">
-			<div class="col-md-6">
-				<label for="delayInput">Delay</label>
-				<input type="number" id="delayInput" class="form-control" value="0" min="0" data-toggle="tooltip" title="Delay in milliseconds between requests to a single host. This is useful for evading detection where threshold of events over time is used to detect scanning activity">
-			</div>
-			<div class="col-md-6">
-				<label for="protocolSelect">Protocol</label>
-				<select id="protocolSelect" class="form-control" data-toggle="tooltip" title="Protocol to use (TCP/UDP)">
-					<option value="tcp">TCP</option>
-					<option value="udp">UDP</option>
-				</select>
-			</div>
-		</div>
-		<div class="row mt-2">
-			<div class="col-md-6 form-group">
-				<label for="pingCheckInput">Ping Check</label>
-				<input type="checkbox" id="pingCheckInput" class="form-control" data-toggle="tooltip" title="Check if the host responds to ping before scanning. This is useful for speeding up queries against many ports and many hosts, if you're testing just one port per IP address, it's probably more efficient to leave this unchecked">
-			</div>
-			<div class="col-md-6 form-group">
-				<label for="portOverrideInput">Port Override</label>
-				<input type="checkbox" id="portOverrideInput" class="form-control" data-toggle="tooltip" title="Override port matching (defined in signatures file) to run all signatures against all ports. This is useful for discovering honeypots running services on non-standard ports but increases the likelihood of false positives">
-			</div>
-		</div>
-		<div class="row mt-2">
-			<div class="col-md-6">
-				<label for="usernameInput" title="Username for SSH authentication">Username</label>
-				<input type="text" id="usernameInput" class="form-control">
-			</div>
-			<div class="col-md-6">
-				<label for="passwordInput" title="Password for SSH authentication">Password</label>
-				<input type="password" id="passwordInput" class="form-control">
-			</div>
-		</div>
+    <div class="row mt-2">
+        <div class="col-md-6">
+            <label for="threadsInput">Threads</label>
+            <input type="number" id="threadsInput" class="form-control" value="10" min="1" max="1000" data-toggle="tooltip" title="Number of concurrent threads for scanning">
+        </div>
+        <div class="col-md-6">
+            <label for="timeoutInput">Timeout</label>
+            <input type="number" id="timeoutInput" class="form-control" value="5" min="1" data-toggle="tooltip" title="Connection timeout in seconds">
+        </div>
+    </div>
+    <div class="row mt-2">
+        <div class="col-md-6">
+            <label for="delayInput">Delay</label>
+            <input type="number" id="delayInput" class="form-control" value="0" min="0" data-toggle="tooltip" title="Delay in milliseconds between requests to a single host. This is useful for evading detection where threshold of events over time is used to detect scanning activity">
+        </div>
+        <div class="col-md-6">
+            <label for="protocolSelect">Protocol</label>
+            <select id="protocolSelect" class="form-control" data-toggle="tooltip" title="Protocol to use (TCP/UDP)">
+                <option value="tcp">TCP</option>
+                <option value="udp">UDP</option>
+            </select>
+        </div>
+    </div>
+    <div class="row mt-2">
+        <div class="col-md-6">
+            <div class="form-group">
+                <label for="pingCheckInput">Ping Check</label>
+                <input type="checkbox" id="pingCheckInput" class="form-control" data-toggle="tooltip" title="Check if the host responds to ping before scanning. This is useful for speeding up queries against many ports and many hosts, if you're testing just one port per IP address, it's probably more efficient to leave this unchecked">
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="form-group">
+                <label for="portOverrideInput">Port Override</label>
+                <input type="checkbox" id="portOverrideInput" class="form-control" data-toggle="tooltip" title="Override port matching (defined in signatures file) to run all signatures against all ports. This is useful for discovering honeypots running services on non-standard ports but increases the likelihood of false positives">
+            </div>
+        </div>
+    </div>
+    <div class="row mt-2">
+        <div class="col-md-6">
+            <label for="usernameInput" title="Username for SSH authentication">Username</label>
+            <input type="text" id="usernameInput" class="form-control">
+        </div>
+        <div class="col-md-6">
+            <label for="passwordInput" title="Password for SSH authentication">Password</label>
+            <input type="password" id="passwordInput" class="form-control">
+        </div>
+    </div>
+
 	</div>
-</div>
 
 		<div class="row mt-3 button-row">
 			<div class="col-md-3">
@@ -211,7 +214,7 @@
 		</div>
 
 	<div class="footer">
-		Honeydet v1.1.81 - jamesbrine.com.au
+		Honeydet v1.1.100 - jamesbrine.com.au
 	</div>
 </body>
 </html>
