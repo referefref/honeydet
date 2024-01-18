@@ -6,6 +6,7 @@ import (
 	"github.com/TwiN/go-color"
 	"github.com/gosnmp/gosnmp"
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/simonvetter/modbus"
 	"golang.org/x/crypto/ssh"
 	"net"
 	"os/exec"
@@ -70,8 +71,8 @@ func detectHoneypot(host string, ports []int, proto string, signatures Signature
 		var conn net.Conn
 		var err error
 		var sshClient *ssh.Client
-		var isSSH bool = false
-		var honeypotDetected bool = false
+		var modbusClient *modbus.ModbusClient
+		var isSSH, isModbus, honeypotDetected bool
 		var honeypotType string = ""
 
 		if *username != "" && *password != "" && proto == "tcp" && port != 161 {
@@ -89,6 +90,16 @@ func detectHoneypot(host string, ports []int, proto string, signatures Signature
 				}
 				defer sshClient.Close()
 			}
+		} else if port == 502 {
+			isModbus = true
+			modbusClient, err := setupModbusClient(host, port, time.Duration(timeout)*time.Second)
+			if err != nil {
+				if *verbose {
+					fmt.Println(color.Ize(color.Red, fmt.Sprintf("[Verbose] Error setting up Modbus client for host %s: %s", host, err)))
+				}
+				continue
+			}
+			defer modbusClient.Close()
 		}
 
 		var snmpClient *gosnmp.GoSNMP
@@ -103,7 +114,7 @@ func detectHoneypot(host string, ports []int, proto string, signatures Signature
 			defer snmpClient.Conn.Close()
 		}
 
-		if !isSSH && port != 161 {
+		if !isSSH && port != 161 && port != 502 {
 			if *verbose {
 				fmt.Println(color.Ize(color.White, fmt.Sprintf("[Verbose] Establishing regular %s connection to host %s:%d", proto, host, port)))
 			}
@@ -135,9 +146,7 @@ func detectHoneypot(host string, ports []int, proto string, signatures Signature
 
 				for _, step := range signature.Steps {
 					var response string
-
 					if port == 161 {
-						// Handling SNMP request
 						response, err = sendSNMPRequest(snmpClient, step)
 						if err != nil {
 							if *verbose {
@@ -145,6 +154,16 @@ func detectHoneypot(host string, ports []int, proto string, signatures Signature
 							}
 							break
 						}
+					} else if isModbus {
+						var modbusResponse string
+						modbusResponse, err := sendModbusRequest(modbusClient, step)
+						if err != nil {
+							if *verbose {
+								fmt.Println(color.Ize(color.Red, fmt.Sprintf("[Verbose] Modbus request failed for signature '%s' on host %s:%d: %s", signature.Name, host, port, err)))
+							}
+							break
+						}
+						response = modbusResponse
 					} else if isSSH && sshClient != nil {
 						response, err = executeSSHCommand(sshClient, step.Input)
 						if err != nil {
@@ -162,12 +181,6 @@ func detectHoneypot(host string, ports []int, proto string, signatures Signature
 							break
 						}
 						response, err = readResponse(conn)
-						if err != nil {
-							if *verbose {
-								fmt.Println(color.Ize(color.Red, fmt.Sprintf("[Verbose] Error reading response: %s", err)))
-							}
-							break
-						}
 					}
 
 					if isResponseMatch(response, step.OutputMatchType, step.Output) {
@@ -318,3 +331,4 @@ func isResponseMatch(response, matchType, matchPattern string) bool {
 		return false
 	}
 }
+ro
