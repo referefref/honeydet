@@ -1,160 +1,220 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Honeydet Scanner - Version 1.0</title>
-    <link rel="stylesheet" href="/assets/styles.css">
-    <script src="/assets/script.js"></script>
-    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
-    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" rel="stylesheet">
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+	<title>Honeydet Scanner - Version 1.1.100</title>
+	<link rel="stylesheet" href="/assets/styles.css">
+	<script src="https://cdn.amcharts.com/lib/5/index.js"></script>
+	<script src="https://cdn.amcharts.com/lib/5/percent.js"></script>
+	<script src="https://cdn.amcharts.com/lib/5/xy.js"></script>
+	<script src="https://cdn.amcharts.com/lib/5/themes/Animated.js"></script>
+	<script src="https://cdn.amcharts.com/lib/5/themes/Micro.js"></script>
+	<script src="https://cdn.amcharts.com/lib/5/themes/Dark.js"></script>
+	<script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+	<link href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" rel="stylesheet">
+	<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+	<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css" rel="stylesheet">
+	<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+	<script src="/assets/script.js"></script>
+
 </head>
 <body>
-    <div class="header d-flex justify-content-between align-items-center px-3">
-        <img src="assets/logo.png" alt="Honeydet Logo">
-        Honeydet (Go Honeypot Detector Tool - Version 1.0)
-        <div>
-            <a href="https://github.com/referefref/honeydet" class="ml-2"><i class="fab fa-github"></i></a>
-            <a href="https://jamesbrine.com.au" class="ml-2"><i class="fas fa-globe"></i></a>
-        </div>
-    </div>
+	<div class="header d-flex justify-content-between align-items-center px-3">
+		<img src="assets/logo.png" alt="Honeydet Logo">
+		Honeydet (Go Honeypot Detector Tool - Version 1.1.100)
+		<div>
+			<button id="darkModeToggle" class="btn btn-dark ml-2"><i class="fas fa-moon"></i></button>
+			<a href="https://github.com/referefref/honeydet" class="ml-2"><i class="fab fa-github"></i></a>
+			<a href="https://jamesbrine.com.au" class="ml-2"><i class="fas fa-globe"></i></a>
+		</div>
+	</div>
 
-    <div class="container mt-4">
-        <div class="row">
-            <div class="col-md-6">
-                <label for="hostInput">Hosts</label>
-                <input type="text" id="hostInput" class="form-control" data-toggle="tooltip" placeholder="192.168.1.1, 192.168.1.0/24" title="Hosts can be entered as single IPs like 192.168.1.1, or as ranges like 192.168.1.1-192.168.1.50, as CIDR ranges like 192.168.1.0/24 or as comma separated lists like 192.168.1.1,192.168.1.2,192.168.1.30,192.168.1.55">
-            </div>
-            <div class="col-md-6">
-                <label for="portInput">Ports</label>
-                <input type="text" id="portInput" class="form-control" value="22" data-toggle="tooltip" title="Ports can be entered as single ports like 1337, as ranges like 1-1000, or as lists like 22,2222,80,8080,8888">
-            </div>
-        </div>
+	<div class="container mt-4">
+		<div class="row">
+			<div class="col-md-6">
+				<label for="hostInput">Hosts</label>
+				<input type="text" id="hostInput" class="form-control" data-toggle="tooltip" placeholder="192.168.1.1, 192.168.1.0/24" title="Hosts can be entered as single IPs like 192.168.1.1, or as ranges like 192.168.1.1-192.168.1.50, as CIDR ranges like 192.168.1.0/24 or as comma separated lists like 192.168.1.1,192.168.1.2,192.168.1.30,192.168.1.55">
+			</div>
+			<div class="col-md-6">
+				<label for="portInput">Ports</label>
+				<input type="text" id="portInput" class="form-control" value="22" data-toggle="tooltip" title="Ports can be entered as single ports like 1337, as ranges like 1-1000, or as lists like 22,2222,80,8080,8888">
+			</div>
+		</div>
 
-	<div class="form-group mt-3">
-    <div class="custom-control custom-switch">
-        <input type="checkbox" class="custom-control-input" id="advancedOptionsToggle">
+	<div class="custom-control custom-switch">
+		<input type="checkbox" class="custom-control-input" id="advancedOptionsToggle">
 	<label class="custom-control-label" for="advancedOptionsToggle">Advanced Options</label>
+	</div>
+	<div id="advancedOptions" style="display:none;">
+    <div class="row mt-2">
+        <div class="col-md-6">
+            <label for="threadsInput">Threads</label>
+            <input type="number" id="threadsInput" class="form-control" value="10" min="1" max="1000" data-toggle="tooltip" title="Number of concurrent threads for scanning">
+        </div>
+        <div class="col-md-6">
+            <label for="timeoutInput">Timeout</label>
+            <input type="number" id="timeoutInput" class="form-control" value="5" min="1" data-toggle="tooltip" title="Connection timeout in seconds">
+        </div>
     </div>
-    <div id="advancedOptions" style="display:none;">
-        <div class="row mt-2">
-            <div class="col-md-6">
-                <label for="threadsInput">Threads</label>
-                <input type="number" id="threadsInput" class="form-control" value="10" min="1" max="1000" data-toggle="tooltip" title="Number of concurrent threads for scanning">
-            </div>
-            <div class="col-md-6">
-                <label for="timeoutInput">Timeout</label>
-                <input type="number" id="timeoutInput" class="form-control" value="5" min="1" data-toggle="tooltip" title="Connection timeout in seconds">
-            </div>
+    <div class="row mt-2">
+        <div class="col-md-6">
+            <label for="delayInput">Delay</label>
+            <input type="number" id="delayInput" class="form-control" value="0" min="0" data-toggle="tooltip" title="Delay in milliseconds between requests to a single host. This is useful for evading detection where threshold of events over time is used to detect scanning activity">
         </div>
-        <div class="row mt-2">
-            <div class="col-md-6">
-                <label for="delayInput">Delay</label>
-                <input type="number" id="delayInput" class="form-control" value="0" min="0" data-toggle="tooltip" title="Delay in milliseconds between requests to a single host. This is useful for evading detection where threshold of events over time is used to detect scanning activity">
-            </div>
-            <div class="col-md-6">
-                <label for="protocolSelect">Protocol</label>
-                <select id="protocolSelect" class="form-control" data-toggle="tooltip" title="Protocol to use (TCP/UDP)">
-                    <option value="tcp">TCP</option>
-                    <option value="udp">UDP</option>
-                </select>
-            </div>
+        <div class="col-md-6">
+            <label for="protocolSelect">Protocol</label>
+            <select id="protocolSelect" class="form-control" data-toggle="tooltip" title="Protocol to use (TCP/UDP)">
+                <option value="tcp">TCP</option>
+                <option value="udp">UDP</option>
+            </select>
         </div>
-        <div class="row mt-2">
-            <div class="col-md-6">
+    </div>
+    <div class="row mt-2">
+        <div class="col-md-6">
+            <div class="form-group">
                 <label for="pingCheckInput">Ping Check</label>
                 <input type="checkbox" id="pingCheckInput" class="form-control" data-toggle="tooltip" title="Check if the host responds to ping before scanning. This is useful for speeding up queries against many ports and many hosts, if you're testing just one port per IP address, it's probably more efficient to leave this unchecked">
             </div>
-            <div class="col-md-6">
+        </div>
+        <div class="col-md-6">
+            <div class="form-group">
                 <label for="portOverrideInput">Port Override</label>
                 <input type="checkbox" id="portOverrideInput" class="form-control" data-toggle="tooltip" title="Override port matching (defined in signatures file) to run all signatures against all ports. This is useful for discovering honeypots running services on non-standard ports but increases the likelihood of false positives">
             </div>
         </div>
-        <div class="row mt-2">
-            <div class="col-md-6">
-                <label for="usernameInput" title="Username for SSH authentication">Username</label>
-                <input type="text" id="usernameInput" class="form-control">
-            </div>
-            <div class="col-md-6">
-                <label for="passwordInput" title="Password for SSH authentication">Password</label>
-                <input type="password" id="passwordInput" class="form-control">
-            </div>
+    </div>
+    <div class="row mt-2">
+        <div class="col-md-6">
+            <label for="usernameInput" title="Username for SSH authentication">Username</label>
+            <input type="text" id="usernameInput" class="form-control">
+        </div>
+        <div class="col-md-6">
+            <label for="passwordInput" title="Password for SSH authentication">Password</label>
+            <input type="password" id="passwordInput" class="form-control">
         </div>
     </div>
-</div>
 
-        <div class="row mt-3 button-row">
-            <div class="col-md-3">
-                <button id="scanBtn" class="btn btn-success">Scan</button>
+	</div>
+
+		<div class="row mt-3 button-row">
+			<div class="col-md-3">
+				<button id="scanBtn" class="btn btn-success">Scan</button>
 		 <button id="clearDbBtn" class="btn btn-danger ml-2">Clear Database</button>
-            </div>
-        </div>
+			</div>
+		</div>
 
 <div class="modal fade" id="confirmationModal" tabindex="-1" role="dialog" aria-labelledby="confirmationModalLabel" aria-hidden="true">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="confirmationModalLabel">Confirm Action</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body">
-                <!-- Confirmation message will be set here -->
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-danger" id="confirmBtn">Yes</button>
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">No</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-        <!-- Scan Executions Table -->
-        <div class="mt-4">
-            <h5>Scan Executions</h5>
-            <div class="mt-4">
-    <input type="text" id="searchExecutionsInput" class="form-control" placeholder="Search Scan Executions...">
-</div>
-	    <table id="scanExecutionsTable" class="table table-dark mt-2">
-                <thead>
-                    <tr>
-                        <th>Scan Start Time</th>
-                        <th>Scan Finish Time</th>
-                        <th>Targets</th>
-                        <th>Ports</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
-        </div>
-        <!-- Results Table -->
-        <div class="mt-4">
-            <h5>Results</h5>
-	<div class="mt-4">
-	    <input type="text" id="searchInput" class="form-control" placeholder="Search Results...">
+	<div class="modal-dialog" role="document">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="confirmationModalLabel">Confirm Action</h5>
+				<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+					<span aria-hidden="true">&times;</span>
+				</button>
+			</div>
+			<div class="modal-body">
+				<!-- Confirmation message will be set here -->
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-danger" id="confirmBtn">Yes</button>
+				<button type="button" class="btn btn-secondary" data-dismiss="modal">No</button>
+			</div>
+		</div>
 	</div>
-            <table id="resultsTable" class="table table-dark mt-2">
-                <thead>
-                    <tr>
-                        <th>Scan Time</th>
-                        <th>Host</th>
-                        <th>Port</th>
-                        <th>Is Honeypot</th>
-                        <th>Honeypot Type</th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
-        </div>
-    </div>
+</div>
+		<!-- Scan Executions Table -->
+		<div class="mt-4">
+		    <h5>Scan Executions</h5>
+		        <div class="row mb-3">
+			        <div class="col-md-8">
+			            <input type="text" id="searchExecutionsInput" class="form-control" placeholder="Search Scan Executions...">
+			        </div>
+			        <div class="col-md-4 d-flex justify-content-end align-items-center">
+			            <nav aria-label="Page navigation for scan executions" class="mr-3">
+			                <ul id="paginationScanExecutions" class="pagination">
+					</ul>
+			            </nav>
+			<label for="scanExecutionsRowCount" class="mb-0 mr-2">Rows:</label>
+		            <select id="scanExecutionsRowCount" class="form-control">
+		                <option value="5">5</option>
+		                <option value="10">10</option>
+		                <option value="20">20</option>
+		                <option value="50">50</option>
+		                <option value="100">100</option>
+		                <option value="200">200</option>
+		            </select>
+		        </div>
+		    </div>
 
-    <div class="footer">
-        Honeydet v1.0 - jamesbrine.com.au
-    </div>
+		<table id="scanExecutionsTable" class="table table-dark mt-2">
+			<thead>
+				<tr>
+					<th>Scan Start Time</th>
+					<th>Scan Finish Time</th>
+					<th>Targets</th>
+					<th>Ports</th>
+					<th>Status</th>
+					<th class="actions-column">Actions</th>
+				</tr>
+			</thead>
+			<tbody></tbody>
+			<tfoot>
+			</tfoot>
+		</table>
+		<!-- Results Table -->
+		<div class="mt-4">
+		    <h5>Results</h5>
+			<div id="chartDiv">
+				<div class="row justify-content-center">
+				<div class="col">
+					<div id="hostsByHoneypotTypeChartDiv" style="width: 100%; height: 200px; display: none;"></div>
+				</div>
+				<div class="col">
+					<div id="hostsByIsHoneypotChartDiv" style="width: 100%; height: 200px; display: none;"></div>
+				</div>
+			        <div class="col">
+			        	<div id="detectionsByPortChartDiv" style="width: 100%; height: 200px; display: none;"></div>
+				</div>
+			</div>
+		</div>
+		    <div class="row mb-3">
+		        <div class="col-md-8">
+		            <input type="text" id="searchInput" class="form-control" placeholder="Search Results...">
+		        </div>
+		        <div class="col-md-4 d-flex justify-content-end align-items-center">
+		            <nav aria-label="Page navigation for results" class="mr-3">
+		                <ul id="paginationResults" class="pagination">
+		                    <!-- Pagination items will be added here dynamically -->
+		                </ul>
+		            </nav>
+		            <label for="resultsRowCount" class="mb-0 mr-2">Rows:</label>
+		            <select id="resultsRowCount" class="form-control">
+		                <option value="20">20</option>
+		                <option value="50">50</option>
+		                <option value="100">100</option>
+		                <option value="200">200</option>
+		            </select>
+		        </div>
+		    </div>
+		
+		    <table id="resultsTable" class="table table-dark mt-2">
+		        <thead>
+		            <tr>
+		                <th>Scan Time</th>
+		                <th>Host</th>
+		                <th>Port</th>
+		                <th>Honeypot</th>
+		                <th>Type</th>
+		                <th>Confidence</th>
+		                <th>Comment</th>
+		            </tr>
+		        </thead>
+		        <tbody></tbody>
+		    </table>
+		</div>
+
+	<div class="footer">
+		Honeydet v1.1.100 - jamesbrine.com.au
+	</div>
 </body>
 </html>
