@@ -28,6 +28,7 @@ jobs:
             go version
             go get -u golang.org/x/crypto/ssh
             go get github.com/TwiN/go-color
+            go get github.com/simonvetter/modbus
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v5
         with:
