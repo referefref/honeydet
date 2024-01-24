@@ -16,7 +16,7 @@ import (
 func getScans(db *sql.DB) ([]map[string]interface{}, error) {
 	rows, err := db.Query(`
         SELECT s.scan_id, s.start_time, s.end_time, s.parameters,
-               r.result_id, r.host, r.port, r.is_honeypot, r.honeypot_type, r.confidence, r.comment, r.detection_time
+               r.result_id, r.host, r.port, r.is_honeypot, r.honeypot_type, r.confidence, r.comment, r.detection_time, r.shodan_info
         FROM scans s
         LEFT JOIN scan_results r ON s.scan_id = r.scan_id
         ORDER BY s.scan_id, r.result_id
@@ -38,8 +38,9 @@ func getScans(db *sql.DB) ([]map[string]interface{}, error) {
 		var honeypotType sql.NullString
 		var confidence sql.NullString
 		var comment sql.NullString
+		var shodanInfoJSON sql.NullString
 
-		err = rows.Scan(&scanID, &startTime, &endTime, &parameters, &resultID, &host, &port, &isHoneypot, &honeypotType, &confidence, &comment, &detectionTime)
+		err = rows.Scan(&scanID, &startTime, &endTime, &parameters, &resultID, &host, &port, &isHoneypot, &honeypotType, &confidence, &comment, &detectionTime, &shodanInfoJSON)
 		if err != nil {
 			return nil, err
 		}
@@ -65,6 +66,7 @@ func getScans(db *sql.DB) ([]map[string]interface{}, error) {
 				"confidence":     confidence.String,
 				"comment":        comment.String,
 				"detection_time": detectionTime.String,
+				"shodan_info":    shodanInfoJSON.String, // Use the String field for Shodan info
 			}
 			scan["results"] = append(scan["results"].([]map[string]interface{}), result)
 		}
@@ -172,7 +174,7 @@ func scanHandler(w http.ResponseWriter, r *http.Request) {
 					if *verbose {
 						log.Printf(color.Ize(color.Blue, "Processing host: "+host+" on port "+strconv.Itoa(port)))
 					}
-					results := detectHoneypot(host, []int{port}, proto, signatures, timeout, bypassPortCheck)
+					results := detectHoneypot(host, []int{port}, proto, signatures, timeout, bypassPortCheck, shodanClient)
 					combinedResults = append(combinedResults, results...)
 				}
 			}
