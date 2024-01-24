@@ -1,15 +1,128 @@
 signatures:
+  - name: "conpot-siemens"
+    id: 1
+    port: 102
+    proto: udp
+    steps:
+      - input_type: hex
+        input: "0300001611e00000000400c1020100c2020102c0010a"
+        output_match_type: hex
+        output: "030000130ed00000000000c1020000c2020000"
+        invert_match: false
+    confidence: "High"
+    comment: "Detected Siemens specific conpot instance"
+
+  - name: "express-honeypot"
+    id: 2
+    port: 3001
+    proto: TCP
+    steps:
+     - input_type: string
+       input: "GET /beekeeper.jpg HTTP/1.0\nHost: localhost\n\n"
+       output_match_type: string
+       output: "Canon PowerShot A710"
+    confidence: "High"
+    comment: "Default image included in listing page"
+
+  - name: "node-ftp-honeypot"
+    id: 3
+    port: 2121
+    proto: tcp
+    steps:
+     - input_type: string
+       input: ""
+       output_match_type: string
+       output: "Welcome to VOFTP a very open FTP Server."
+       invert_match: false
+     - input_type: string
+       input: ""
+       output_match_type: string
+       output: "220"
+       invert_match: false
+     - input_type: string
+       input: "USER"
+       output_match_type: string
+       output: "501 Must provide username"
+       invert_match: false
+    confidence: "High"
+    comment: "Uncommon error message matches node-ftp-honeypot: https://github.com/christophe77/node-ftp-honeypot"
+
+  - name: "FTPHoney"
+    id: 4
+    port: 2121
+    proto: tcp
+    steps:
+     - input_type: string
+       input: "."
+       output_match_type: string
+       output: "220 (vsFTPd 3.0.3)"
+       invert_match: false
+    confidence: "High"
+    comment: "Mishandled character matches Golang FTP honeypot, likely FTPHoney https://github.com/farinap5/FTPHoney"
+
+  - name: "twisted-ftp"
+    id: 5
+    port: 2121
+    proto: tcp
+    steps:
+     - input_type: string
+       input: "."
+       output_match_type: regex
+       output: "220 Twisted .+ FTP Server"
+       invert_match: false
+    confidence: "Low"
+    comment: "Generic Twisted FTP Server - May be https://github.com/alexbredo/honeypot-ftp"
+
+  - name: "BearFTP"
+    id: 6
+    port: 21
+    proto: tcp
+    steps:
+     - input_type: string
+       input: ""
+       output_match_type: regex
+       output: "220"
+       invert_match: false
+     - input_type: string
+       input: "overflowoverflowoverflowoverflowoverflowoverflowoverflowoverflowoverflowoverflowoverflowoverflowoverflowoverflowoverflowoverflowoverflowoverflowoverflowoverflowoverflowoverflowoverflowoverflowoverflowoverflowoverflowoverflowoverflow"
+       output_match_type: string
+       output: "Input line is too long; login aborted."
+       invert_match: false
+    confidence: "Medium"
+    comment: "Response to long line is uncommon - May be https://github.com/kolya5544/BearFTP"
+
+  - name: "smtp-honey"
+    id: 7
+    port: 1993
+    proto: tcp
+    steps:
+     - input_type: string
+       input: ""
+       output_match_type: regex
+       output: "!ZZZ"
+       invert_match: false
+     - input_type: string
+       input: "HELP"
+       output_match_type: string
+       output: "334 UGFzc3dvcmQ6"
+       invert_match: false
+    confidence: "Medium"
+    comment: "https://github.com/yvesago/imap-honey"
+
   - name: "cowrie"
+    id: 8
     port: 22
     proto: tcp
     steps:
-      - input_type: string
-        input: "SSH-1111-OpenSSH_9.0\r\n"
-        output_match_type: string
-        output: "bad version 1111"
+     - input_type: string
+       input: "SSH-1111-OpenSSH_9.0\r\n"
+       output_match_type: string
+       output: "bad version 1111"
+       invert_match: false
     confidence: "High"
 
   - name: "cisco-asa"
+    id: 9
     port: "web-ports"
     proto: "GET"
     steps:
@@ -17,9 +130,11 @@ signatures:
         input: "/+CSCOE+/logon.html?fcadbadd=1"
         output_match_type: string
         output: "font-weight: bold; cursor: pointer;"
+        invert_match: false
     confidence: "High"
 
   - name: "dionaea-ftp"
+    id: 10
     port: 21
     proto: tcp
     steps:
@@ -27,9 +142,11 @@ signatures:
         input: "USER root\r\nPASS \r\n"
         output_match_type: string
         output: "500 Syntax error: PASS requires an argument"
+        invert_match: false
     confidence: "High"
 
   - name: "dionaea-mongodb"
+    id: 11
     port: 27017
     proto: tcp
     steps:
@@ -38,9 +155,11 @@ signatures:
         output_match_type: regex
         output: |
           "([A-Za-z:0-9.]+)"
+        invert_match: false
     confidence: "High"
 
   - name: "opencanary-redis"
+    id: 12
     port: 6379
     proto: tcp
     steps:
@@ -48,10 +167,12 @@ signatures:
         input: "[[,[["
         output_match_type: string
         output: "-ERR unknown command '[[,[['"
+        invert_match: false
     confidence: "High"
     comment: "Opencanary's Redis honeypot does not handle special characters in the same way that a real Redis server does."
 
   - name: "mailoney"
+    id: 13
     port: 25
     proto: tcp
     steps:
@@ -59,9 +180,11 @@ signatures:
         input: "HELP\r\n"
         output_match_type: string
         output: "502 Error: cmomand"
+        invert_match: false
     confidence: "High"
 
   - name: "redis-honeypot (beehive redis)"
+    id: 14
     port: 6379
     proto: tcp
     steps:
@@ -69,9 +192,11 @@ signatures:
         input: "DBSIZE"
         output_match_type: string
         output: "-ERR unknown command ''"
+        invert_match: false
     confidence: "High"
 
   - name: "snare"
+    id: 15
     port: "web-ports"
     proto: "GET"
     steps:
@@ -79,9 +204,11 @@ signatures:
         input: "/ HTTP/1337\nHost: nuggets"
         output_match_type: string
         output: "Bad status line"
+        invert_match: false
     confidence: "High"
 
   - name: "generic-snmp-honeypot"
+    id: 16
     port: "161"
     proto: "GET"
     steps:
@@ -90,9 +217,11 @@ signatures:
         output_match_type: regex
         output: |
           \D
+        invert_match: false
     confidence: "Medium"
 
   - name: "opencanary-snmp"
+    id: 17
     port: "161"
     proto: "GET"
     steps:
@@ -100,4 +229,5 @@ signatures:
         input: "1.3.6.1.2.1.1.3.0"
         output_match_type: "no-response"
         output: ""
+        invert_match: false
     confidence: "High"
