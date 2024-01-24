@@ -94,7 +94,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		var scanExecutionsRowCount = document.getElementById('scanExecutionsRowCount');
 	if (scanExecutionsRowCount) {
 		scanExecutionsRowCount.addEventListener('change', function() {
-		        console.log("Rows per page changed to:", this.value);
+				console.log("Rows per page changed to:", this.value);
 			updatePaginationControls('scanExecutionsTable', this.value);
 			paginateTable('scanExecutionsTable', 1, this.value);
 		});
@@ -112,7 +112,30 @@ document.addEventListener('DOMContentLoaded', function () {
 		console.error("Element 'resultsRowCount' not found");
 	}
 
+	document.querySelectorAll('.comment-col').forEach(cell => {
+		cell.addEventListener('mouseover', function() {
+			const commentDiv = this.querySelector('.comment-content');
+			if (commentDiv) {
+				commentDiv.style.width = this.offsetWidth + 'px';
+			}
+		});
+	});
+
 });
+
+function formatShodanData(shodanInfo) {
+	if (!shodanInfo || shodanInfo === 'null' || shodanInfo.trim() === '') {
+		return 'No Shodan data available';
+	}
+	try {
+		// Parse the JSON string and then stringify it with indentation
+		var parsedJson = JSON.parse(shodanInfo);
+		var prettyJson = JSON.stringify(parsedJson, null, 2); // Indent with 2 spaces
+		return `<pre class="shodan-info-container">${prettyJson}</pre>`; // Use <pre> tag for formatted display
+	} catch (e) {
+		return 'Invalid JSON data';
+	}
+}
 
 function toggleChartThemes() {
 
@@ -494,23 +517,23 @@ function autoRefreshForNewScans() {
 }
 
 function viewResults(scanId) {
-    var scan = storedScans[scanId];
-    if (scan && scan.results) {
-        populateResults(scan.results, scanId);
+	var scan = storedScans[scanId];
+	if (scan && scan.results) {
+		populateResults(scan.results, scanId);
 
-        const chartData = processDataForCharts([scan]); 
+		const chartData = processDataForCharts([scan]); 
 
-        initializeAndUpdateCharts(chartData);
+		initializeAndUpdateCharts(chartData);
 
-        toggleChartVisibility('hostsByHoneypotTypeChartDiv', true);
-        toggleChartVisibility('hostsByIsHoneypotChartDiv', true);
-        toggleChartVisibility('detectionsByPortChartDiv', true);
+		toggleChartVisibility('hostsByHoneypotTypeChartDiv', true);
+		toggleChartVisibility('hostsByIsHoneypotChartDiv', true);
+		toggleChartVisibility('detectionsByPortChartDiv', true);
 
-        updatePaginationControls('resultsTable', 20);
-        paginateTable('resultsTable', 1, 20);
-    } else {
-        console.error('No data or invalid data found for scanId:', scanId);
-    }
+		updatePaginationControls('resultsTable', 20);
+		paginateTable('resultsTable', 1, 20);
+	} else {
+		console.error('No data or invalid data found for scanId:', scanId);
+	}
 }
 
 function toggleChartVisibility(chartDivId, isVisible) {
@@ -548,15 +571,40 @@ function populateResults(results, scanId) {
 
 		detectionTimeCell.innerHTML = result.detection_time ? new Date(result.detection_time).toLocaleString() : 'N/A';
 		hostCell.innerHTML = result.host || 'N/A';
+		/* hostCell.className = 'wrap-cell'; */
 		portCell.innerHTML = result.port || 'N/A';
 		isHoneypotCell.innerHTML = result.is_honeypot ? 'Yes' : 'No';
 		honeypotTypeCell.innerHTML = result.honeypot_type || 'N/A';
 		confidenceCell.innerHTML = result.confidence || 'N/A';
-			commentCell.innerHTML = result.comment || 'N/A';
+		commentCell.innerHTML = result.comment || 'N/A';
+		
+		hostCell.className = 'host-col';
+		detectionTimeCell.className = 'time-col';
+		/* portCell.className = 'port-col'; */
+		isHoneypotCell.className = 'honeypot-col';
+		honeypotTypeCell.className = 'type-col';
+		confidenceCell.className = 'confidence-col';
+		commentCell.className = 'wrap-cell';
 
 		row.className = result.is_honeypot ? 'alert-honeypot' : 'alert-nonhoneypot';
-	        updatePaginationControls('resultsTable', 20);
-	        paginateTable('resultsTable', 1, 20);
+
+		row.addEventListener('click', function() {
+			var shodanRow = this.nextElementSibling;
+			if (shodanRow && shodanRow.classList.contains('shodan-info')) {
+				shodanRow.style.display = shodanRow.style.display === 'none' ? '' : 'none';
+			}
+		});
+
+		if (result.shodan_info && result.shodan_info !== 'null' && result.shodan_info.trim() !== '') {
+			var shodanRow = tbody.insertRow();
+			shodanRow.className = 'shodan-info';
+			shodanRow.style.display = 'none';
+			var shodanCell = shodanRow.insertCell(0);
+			shodanCell.colSpan = 7;
+			shodanCell.innerHTML = formatShodanData(result.shodan_info);
+		}
+		updatePaginationControls('resultsTable', 20);
+			paginateTable('resultsTable', 1, 20);
 
 	});
 }
@@ -784,19 +832,19 @@ function processDataForCharts(scansData) {
 }
 
 function paginateTable(tableId, page, rowsPerPage) {
-    var table = document.getElementById(tableId);
-    var tr = table.getElementsByTagName('tr');
+	var table = document.getElementById(tableId);
+	var tr = table.getElementsByTagName('tr');
 
-    var start = (page - 1) * rowsPerPage + 1;
-    var end = start + rowsPerPage;
+	var start = (page - 1) * rowsPerPage + 1;
+	var end = start + rowsPerPage;
 
-    for (var i = 1; i < tr.length; i++) {
-        if (i >= start && i < end) {
-            tr[i].style.display = ''; 
-        } else {
-            tr[i].style.display = 'none'; 
-        }
-    }
+	for (var i = 1; i < tr.length; i++) {
+		if (i >= start && i < end) {
+			tr[i].style.display = ''; 
+		} else {
+			tr[i].style.display = 'none'; 
+		}
+	}
 }
 
 function updatePaginationControls(tableId, rowsPerPage) {
@@ -826,4 +874,3 @@ function updatePaginationControls(tableId, rowsPerPage) {
 		console.error('Pagination UL not found for tableId:', tableId);
 	}
 }
-
