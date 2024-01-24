@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"github.com/TwiN/go-color"
 	_ "github.com/mattn/go-sqlite3"
@@ -39,6 +40,7 @@ func initializeDatabase() (*sql.DB, error) {
         detection_time DATETIME,
 	comment TEXT,
 	confidence TEXT,
+	shodan_info TEXT,
 	FOREIGN KEY(scan_id) REFERENCES scans(scan_id)
     );`
 	_, err = db.Exec(createScanResultsTableSQL)
@@ -50,18 +52,19 @@ func initializeDatabase() (*sql.DB, error) {
 }
 
 func insertScanResults(db *sql.DB, scanID int64, results []DetectionResult) error {
-	stmt, err := db.Prepare("INSERT INTO scan_results(scan_id, host, port, is_honeypot, honeypot_type, confidence, comment, detection_time) VALUES(?, ?, ?, ?, ?, ?, ?, ?)")
+	stmt, err := db.Prepare("INSERT INTO scan_results(scan_id, host, port, is_honeypot, honeypot_type, confidence, comment, detection_time, shodan_info) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)")
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
 
 	for _, result := range results {
-		if *verbose {
-			log.Printf(color.Ize(color.Cyan, fmt.Sprintf("[Verbose] Inserting result into database: ScanID=%d, Host=%s, Port=%d, IsHoneypot=%t, HoneypotType=%s, Confidence=%s, Comment=%s, DetectionTime=%s", scanID, result.Host, result.Port, result.IsHoneypot, result.HoneypotType, result.Confidence, result.Comment, result.DetectionTime)))
+		shodanInfoJSON, _ := json.Marshal(result.ShodanInfo)
+		if *debug {
+			log.Printf(color.Ize(color.Cyan, fmt.Sprintf("[Debug] Inserting result into database: ScanID=%d, Host=%s, Port=%d, IsHoneypot=%t, HoneypotType=%s, Confidence=%s, Comment=%s, DetectionTime=%s, ShodanInfo=%s", scanID, result.Host, result.Port, result.IsHoneypot, result.HoneypotType, result.Confidence, result.Comment, result.DetectionTime, string(shodanInfoJSON))))
 
 		}
-		_, err := stmt.Exec(scanID, result.Host, result.Port, result.IsHoneypot, result.HoneypotType, result.Confidence, result.Comment, result.DetectionTime)
+		_, err := stmt.Exec(scanID, result.Host, result.Port, result.IsHoneypot, result.HoneypotType, result.Confidence, result.Comment, result.DetectionTime, string(shodanInfoJSON))
 		if err != nil {
 			return err
 		}
@@ -102,9 +105,15 @@ func updateScanStatus(db *sql.DB, scanID int64, endTime time.Time) error {
 }
 
 func clearDatabaseHandler(w http.ResponseWriter, r *http.Request) {
+	if *verbose {
+		fmt.Println(color.Ize(color.Blue, "[Verbose] Clearing database"))
+	}
+
 	db, err := initializeDatabase()
 	if err != nil {
-		log.Printf("Error initializing database: %s", err)
+		if *debug {
+			fmt.Println(color.Ize(color.Red, "[Debug] Error initializing database: "+err.Error()))
+		}
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
@@ -112,25 +121,37 @@ func clearDatabaseHandler(w http.ResponseWriter, r *http.Request) {
 
 	_, err = db.Exec("DELETE FROM scan_results")
 	if err != nil {
-		log.Printf("Error clearing scan_results table: %s", err)
+		if *debug {
+			fmt.Println(color.Ize(color.Red, "[Debug] Error clearing scan_results table: "+err.Error()))
+		}
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
 	_, err = db.Exec("DELETE FROM scans")
 	if err != nil {
-		log.Printf("Error clearing scans table: %s", err)
+		if *debug {
+			fmt.Println(color.Ize(color.Red, "[Debug] Error clearing scans table: "+err.Error()))
+		}
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
-	fmt.Fprintln(w, "Database cleared successfully")
+	if *verbose {
+		fmt.Fprintln(w, "Database cleared successfully")
+	}
 }
 
 func deleteScanHandler(w http.ResponseWriter, r *http.Request) {
+	if *verbose {
+		fmt.Println(color.Ize(color.Blue, "[Verbose] Deleting scan from database"))
+	}
+
 	db, err := initializeDatabase()
 	if err != nil {
-		log.Printf("Error initializing database: %s", err)
+		if *debug {
+			fmt.Println(color.Ize(color.Red, "[Debug] Error initializing database: "+err.Error()))
+		}
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
@@ -144,17 +165,23 @@ func deleteScanHandler(w http.ResponseWriter, r *http.Request) {
 
 	_, err = db.Exec("DELETE FROM scan_results WHERE scan_id = ?", scanId)
 	if err != nil {
-		log.Printf("Error deleting from scan_results table: %s", err)
+		if *debug {
+			fmt.Println(color.Ize(color.Red, "[Debug] Error deleting from scan_results table: "+err.Error()))
+		}
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
 	_, err = db.Exec("DELETE FROM scans WHERE scan_id = ?", scanId)
 	if err != nil {
-		log.Printf("Error deleting from scans table: %s", err)
+		if *debug {
+			fmt.Println(color.Ize(color.Red, "[Debug] Error deleting from scans table: "+err.Error()))
+		}
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
-	fmt.Fprintf(w, "Scan with ID %s deleted successfully", scanId)
+	if *verbose {
+		fmt.Fprintf(w, "Scan with ID %s deleted successfully", scanId)
+	}
 }
