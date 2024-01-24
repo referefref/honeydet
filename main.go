@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"github.com/TwiN/go-color"
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/tomsteele/go-shodan"
+	"gopkg.in/yaml.v2"
 	"log"
 	"net/http"
 	"os"
@@ -19,25 +21,50 @@ import (
 )
 
 var (
-	host            = flag.String("host", "", "Single host or range of hosts to scan (i.e. 1.1.1.1, 10.1.1.1/24, 172.16.10.20-172.16.10.30)")
+	host            = flag.String("host", "", "Single host or range of hosts to scan (i.e. 1.1.1.1, 10.1.1.1/24, 1.2.37.10.20-1.2.37.10.30)")
+	hostShort       = flag.String("h", "", "Short form of -host")
 	hostFile        = flag.String("hostfile", "", "File containing a list of hosts to scan")
+	hostFileShort   = flag.String("H", "", "Short form of -hostfile")
 	port            = flag.String("port", "22", "Target port(s) to scan, single (22), range (22-80), or list (22,80,443)")
+	portShort       = flag.String("p", "22", "Short form of -port")
 	bypassPortCheck = flag.Bool("bypassPortCheck", false, "Bypass port match checking and run all signatures against all ports")
+	bypassShort     = flag.Bool("b", false, "Short form of -bypassPortCheck")
 	proto           = flag.String("proto", "tcp", "Protocol (tcp or udp)")
+	protoShort      = flag.String("P", "tcp", "Short form of -proto")
 	username        = flag.String("username", "", "Username for authentication")
+	usernameShort   = flag.String("u", "", "Short form of -username")
 	password        = flag.String("password", "", "Password for authentication")
+	passwordShort   = flag.String("pw", "", "Short form of -password")
 	signatureFile   = flag.String("signatures", "signatures.yaml", "File with signatures")
+	signatureShort  = flag.String("s", "signatures.yaml", "Short form of -signatures")
 	verbose         = flag.Bool("verbose", false, "Enable verbose output")
+	verboseShort    = flag.Bool("v", false, "Short form of -verbose")
+	debug           = flag.Bool("debug", false, "Enable extra verbose (debug) output")
+	debugShort      = flag.Bool("vv", false, "Enable extra verbose (debug) output")
 	delay           = flag.Int("delay", 0, "Delay in milliseconds between requests to a single host")
+	delayShort      = flag.Int("d", 0, "Short form of -delay")
 	threads         = flag.Int("threads", 1, "Number of concurrent threads")
+	threadsShort    = flag.Int("t", 1, "Short form of -threads")
 	reportType      = flag.String("report", "none", "Type of report to generate (none, json, csv)")
+	reportShort     = flag.String("r", "none", "Short form of -report")
 	timeout         = flag.Int("timeout", 5, "Connection timeout in seconds")
+	timeoutShort    = flag.Int("T", 5, "Short form of -timeout")
 	checkPing       = flag.Bool("checkPing", false, "Check if the host responds to ping before scanning")
+	checkPingShort  = flag.Bool("c", false, "Short form of -checkPing")
 	output          = flag.String("output", "", "Output file for the report (default is stdout)")
+	outputShort     = flag.String("o", "", "Short form of -output")
 	webserver       = flag.Bool("webserver", false, "Run as a web server on port 8080")
+	webserverShort  = flag.Bool("w", false, "Short form of -webserver")
+	useShodan       = flag.Bool("shodan", false, "Enable Shodan API enrichment")
+	shodanClient    *shodan.Client
 )
 
+type Config struct {
+	ShodanAPIKey string `yaml:"shodan_api_key"`
+}
+
 type HoneypotSignature struct {
+	ID         string `yaml:"id"`
 	Name       string `yaml:"name"`
 	Port       string `yaml:"port"`
 	Proto      string `yaml:"proto"`
@@ -51,6 +78,7 @@ type Step struct {
 	Input           string `yaml:"input"`
 	OutputMatchType string `yaml:"output_match_type"`
 	Output          string `yaml:"output"`
+	InvertMatch     string `yaml:"invert_match"`
 }
 
 type Signatures struct {
@@ -65,6 +93,7 @@ type DetectionResult struct {
 	Confidence    string
 	Comment       string
 	DetectionTime time.Time
+	ShodanInfo    *shodan.Host
 }
 
 type Scan struct {
@@ -79,15 +108,15 @@ func enhancedHelpOutput() {
 	fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s:\n", os.Args[0])
 	flag.PrintDefaults()
 	fmt.Println("\nExamples:")
-	fmt.Println(color.Ize(color.White, "  Scan a single host on port 2822 in verbose mode: ./honeydet -host 192.168.1.1 -port 2822 -verbose"))
+	fmt.Println(color.Ize(color.White, "  Scan a single host on port 2822 in verbose mode: ./honeydet -host 1.2.378.1.1 -port 2822 -verbose"))
 	fmt.Println(color.Ize(color.White, "  Scan hosts from a file with 100 threads checking for a ping before scanning, with a 5 second timeout, and create a json report as report.json: ./honeydet -hostfile hosts.txt -threads 100 -timeout 5 -checkping -report json -output report.json"))
-	fmt.Println(color.Ize(color.White, "  Run in webserver mode to expose an API endpoint: ./honeydet -webserver"))
-	fmt.Println(color.Ize(color.Blue, "                         curl 'http://localhost:8080/scan?host=192.168.1.1/24'"))
+	fmt.Println(color.Ize(color.White, "  Run in webserver mode to expose an API endpoint: ./honeydet -webserveri -vv"))
+	fmt.Println(color.Ize(color.Blue, "                         curl 'http://localhost:8080/scan?host=1.2.378.1.1/24'"))
 	fmt.Println(color.Ize(color.Blue, "                         interface 'http://localhost:8080/'"))
 }
 
 func logo() {
-	fmt.Println(color.Ize(color.Red, `                                                        ~+
+	fmt.Println(color.Ize(color.Yellow, `                                                        ~+
                                                         I7
   ,                                                   ~II7II,
  ?I  II                          jamesbrine.com.au    =?II,
@@ -109,13 +138,61 @@ func logo() {
   I+ :I+=I+  7I =I+ I7   I7~ :I?   +I,    II,II  I7~ :I?=I=
       =, I7III: =I= I7    IIIII    +I,     II7I   IIIII ~I+
 
-      Go Honeypot Detector, Dec 2023, Version 1.1.100
+      Go Honeypot Detector, Jan 2024, Version 1.2.37
 `))
+}
+
+func selectFlagValue[T comparable](long, short T, defaultVal T) T {
+	if short != defaultVal {
+		return short
+	}
+	return long
+}
+
+func readConfig(filePath string) (*Config, error) {
+	var config Config
+	file, err := os.ReadFile(filePath)
+	if err != nil {
+		return nil, err
+	}
+	err = yaml.Unmarshal(file, &config)
+	return &config, err
 }
 
 func main() {
 	flag.Usage = enhancedHelpOutput
 	flag.Parse()
+
+	*host = selectFlagValue(*host, *hostShort, "")
+	*hostFile = selectFlagValue(*hostFile, *hostFileShort, "")
+	*port = selectFlagValue(*port, *portShort, "22")
+	*bypassPortCheck = selectFlagValue(*bypassPortCheck, *bypassShort, false)
+	*proto = selectFlagValue(*proto, *protoShort, "tcp")
+	*username = selectFlagValue(*username, *usernameShort, "")
+	*password = selectFlagValue(*password, *passwordShort, "")
+	*signatureFile = selectFlagValue(*signatureFile, *signatureShort, "signatures.yaml")
+	*verbose = selectFlagValue(*verbose, *verboseShort, false)
+	*delay = selectFlagValue(*delay, *delayShort, 0)
+	*threads = selectFlagValue(*threads, *threadsShort, 1)
+	*reportType = selectFlagValue(*reportType, *reportShort, "none")
+	*timeout = selectFlagValue(*timeout, *timeoutShort, 5)
+	*checkPing = selectFlagValue(*checkPing, *checkPingShort, false)
+	*output = selectFlagValue(*output, *outputShort, "")
+	*webserver = selectFlagValue(*webserver, *webserverShort, false)
+	*debug = selectFlagValue(*debug, *debugShort, false)
+
+	if *debug && !*verbose {
+		*verbose = true
+	}
+
+	if *useShodan {
+		config, err := readConfig("config.yaml")
+		if err != nil {
+			log.Fatalf("Error reading config: %s", err)
+		}
+
+		shodanClient = shodan.New(config.ShodanAPIKey)
+	}
 
 	logo()
 
@@ -140,7 +217,7 @@ func main() {
 		http.HandleFunc("/getScans", func(w http.ResponseWriter, r *http.Request) {
 			scans, err := getScans(db)
 			if err != nil {
-				log.Printf("Error retrieving scans: %s", err)
+				fmt.Sprintf("Error retrieving scans: %s", err)
 				http.Error(w, "Internal server error", http.StatusInternalServerError)
 				return
 			}
@@ -203,27 +280,35 @@ func main() {
 	var responsiveHostsMutex sync.Mutex
 	var responsiveHosts []string
 	if *checkPing {
-		log.Printf(color.Ize(color.Blue, "Ping check enabled. Starting to ping hosts."))
+		if *verbose {
+			fmt.Println(color.Ize(color.Yellow, "[Debug] Ping check enabled. Starting to ping hosts."))
+		}
 		var pingWg sync.WaitGroup
 		for _, host := range allHosts {
 			pingWg.Add(1)
 			go func(h string) {
 				defer pingWg.Done()
-				log.Printf(color.Ize(color.Blue, "Pinging host: "+h))
+				if *debug {
+					fmt.Println(color.Ize(color.Blue, "[Debug] Pinging host: "+h))
+				}
 				if hostRespondsToPing(h, *timeout) {
 					responsiveHostsMutex.Lock()
 					responsiveHosts = append(responsiveHosts, h)
 					responsiveHostsMutex.Unlock()
-					if *verbose {
-						log.Printf(color.Ize(color.Green, "Host "+h+" responds to ping"))
+					if *debug {
+						fmt.Println(color.Ize(color.Green, "\n[Debug] Host "+h+" responds to ping"))
 					}
 				} else {
-					log.Printf(color.Ize(color.Yellow, "No response from host: "+h))
+					if *debug {
+						fmt.Println(color.Ize(color.Yellow, "\n[Debug] No response from host: "+h))
+					}
 				}
 			}(host)
 		}
 		pingWg.Wait()
-		log.Printf(color.Ize(color.Blue, "Ping check completed."))
+		if *verbose {
+			fmt.Println(color.Ize(color.Blue, "\n[Verbose] Ping check completed."))
+		}
 	} else {
 		responsiveHosts = allHosts
 	}
@@ -253,18 +338,18 @@ func main() {
 					host := allHosts[hostIndex]
 					port := portList[portIndex]
 					if *verbose {
-						fmt.Println(color.Ize(color.Blue, fmt.Sprintf("[Verbose] Processing host: %s on port %d", host, port)))
+						fmt.Println(color.Ize(color.White, fmt.Sprintf("[Verbose] Processing host: %s on port %d", host, port)))
 					}
 					if *checkPing && !responsiveHostsMap[host] {
 						if *verbose {
-							fmt.Printf("[Verbose] Host %s does not respond to ping, skipping\n", host)
+							fmt.Sprintf("[Verbose] Host %s does not respond to ping, skipping\n", host)
 						}
 						continue
 					}
-					results := detectHoneypot(host, []int{port}, *proto, signatures, *timeout, *bypassPortCheck)
+					results := detectHoneypot(host, []int{port}, *proto, signatures, *timeout, *bypassPortCheck, shodanClient)
 					for _, result := range results {
 						if *verbose {
-							log.Printf(color.Ize(color.Green, fmt.Sprintf("[Verbose] Result for host %s on port %d: IsHoneypot=%t, HoneypotType=%s", result.Host, result.Port, result.IsHoneypot, result.HoneypotType)))
+							fmt.Println(color.Ize(color.Green, fmt.Sprintf("[Verbose] Result for host %s on port %d: IsHoneypot=%t, HoneypotType=%s", result.Host, result.Port, result.IsHoneypot, result.HoneypotType)))
 						}
 					}
 					combinedResults = append(combinedResults, results...)
@@ -283,10 +368,12 @@ func main() {
 	}
 
 	if *verbose {
-		fmt.Println(color.Ize(color.Green, "[Verbose] Scan completed, compiling results"))
-		log.Println(color.Ize(color.Green, "[Verbose] Final aggregated scan results:"))
+		log.Println(color.Ize(color.White, "[Verbose] Final aggregated scan results:"))
 		for _, result := range finalResults {
-			log.Printf(color.Ize(color.Yellow, fmt.Sprintf("[Verbose] Host: %s, Port: %d, IsHoneypot: %t, HoneypotType: %s", result.Host, result.Port, result.IsHoneypot, result.HoneypotType)))
+			fmt.Println(color.Ize(color.White, fmt.Sprintf("[Verbose] Host: %s, Port: %d, IsHoneypot: %t, HoneypotType: %s", result.Host, result.Port, result.IsHoneypot, result.HoneypotType)))
+			if result.ShodanInfo != nil {
+				fmt.Printf("Shodan Info: Org: %s, ISP: %s, Country: %s\n", result.ShodanInfo.Org, result.ShodanInfo.Isp, result.ShodanInfo.CountryName)
+			}
 		}
 	}
 
