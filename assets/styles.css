@@ -37,23 +37,23 @@ body {
 }
 
 .form-row {
-    margin-bottom: 5px; /* Adjust space between rows */
+	margin-bottom: 5px; /* Adjust space between rows */
 }
 
 .form-group {
-    display: flex;
-    align-items: center;
+	display: flex;
+	align-items: center;
 }
 
 .form-label {
-    margin-right: 10px; /* Space between label and checkbox */
-    flex-grow: 1;
+	margin-right: 10px; /* Space between label and checkbox */
+	flex-grow: 1;
 }
 
 .form-checkbox {
-    flex-shrink: 0;
-    width: 10px; /* Adjust checkbox size */
-    height: 10px; /* Adjust checkbox size */
+	flex-shrink: 0;
+	width: 10px; /* Adjust checkbox size */
+	height: 10px; /* Adjust checkbox size */
 }
 
 .row {
@@ -66,6 +66,18 @@ body {
 
 .btn {
 	padding: 5px 15px;
+}
+
+.shodan-info-container {
+    max-width: 100%; 
+    overflow-x: auto; 
+    white-space: pre-wrap; 
+    text-align: left;
+}
+
+.shodan-info td {
+	white-space: pre-wrap;
+	text-align: left;
 }
 
 .table thead th {
@@ -90,12 +102,71 @@ body {
 	color: #eee; /* Lighter text color */
 }
 
-.table th {
+.table th, .table td {
 	cursor: pointer;
+        text-align: center;
+        vertical-align: middle;
 }
 
+.table .port-col, .table .honeypot-col, .table .confidence-col {
+    width: 80px;
+}
+
+.table .host-col {
+	width: 130px;
+}
+
+.table .time-col {
+	width: 200px;
+}
+
+.table .type-col {
+    width: 150px;
+}
+
+.table .comment-col {
+    max-width: 250px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.table .comment-col:hover {
+    width: 250px;
+    overflow: visible;
+    white-space: normal;
+    position: absolute;
+    background-color: #f2f2f2; 
+    z-index: 1;
+}
+	
 #resultsTable {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 	margin-bottom: 80px;
+	table-layout: fixed;
+	width; 100%;
+}
+
+#resultsTable td {
+	word-wrap: break-word;
+	overflow-wrap: break-word;
+}
+
+.wrap-cell {
+    overflow: hidden;
+    white-space: normal;
+    word-wrap: break-word;
+}
+
+.shodan-info td {
+    white-space: pre-wrap; /* Allows formatted JSON to wrap */
+}
+
+.table-responsive {
+    max-width: 100%;
+    overflow-x: auto;
 }
 
 .alert-honeypot {
