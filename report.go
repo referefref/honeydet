@@ -16,8 +16,8 @@ func generateReport(results []DetectionResult, reportType string) {
 	case "csv":
 		reportCSV(results)
 	default:
-		if *verbose {
-			fmt.Println(color.Ize(color.Red, "[Verbose] Invalid report type specified. No report generated."))
+		if *debug {
+			fmt.Println(color.Ize(color.Red, "[Debug] Invalid report type specified. No report generated."))
 		}
 	}
 }

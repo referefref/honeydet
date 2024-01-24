@@ -51,7 +51,9 @@ func sendModbusRequest(client *modbus.ModbusClient, step Step) (string, error) {
 			}
 			return "", err
 		}
+
 		response = fmt.Sprintf("%v", value)
+	} else {
 	}
 
 	if *verbose {

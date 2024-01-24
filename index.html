@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-	<title>Honeydet Scanner - Version 1.1.100</title>
+	<title>Honeydet Scanner - Version 1.2.37</title>
 	<link rel="stylesheet" href="/assets/styles.css">
 	<script src="https://cdn.amcharts.com/lib/5/index.js"></script>
 	<script src="https://cdn.amcharts.com/lib/5/percent.js"></script>
@@ -21,7 +21,7 @@
 <body>
 	<div class="header d-flex justify-content-between align-items-center px-3">
 		<img src="assets/logo.png" alt="Honeydet Logo">
-		Honeydet (Go Honeypot Detector Tool - Version 1.1.100)
+		Honeydet (Go Honeypot Detector Tool - Version 1.2.37)
 		<div>
 			<button id="darkModeToggle" class="btn btn-dark ml-2"><i class="fas fa-moon"></i></button>
 			<a href="https://github.com/referefref/honeydet" class="ml-2"><i class="fab fa-github"></i></a>
@@ -196,25 +196,34 @@
 		            </select>
 		        </div>
 		    </div>
-		
+	
+		    <div class="table-responsive">
 		    <table id="resultsTable" class="table table-dark mt-2">
 		        <thead>
 		            <tr>
-		                <th>Scan Time</th>
-		                <th>Host</th>
-		                <th>Port</th>
-		                <th>Honeypot</th>
-		                <th>Type</th>
-		                <th>Confidence</th>
-		                <th>Comment</th>
-		            </tr>
+				<th class="time-col">Scan Time</th>
+		                <th class="host-col">Host</th>
+		                <th class="port-col">Port</th>
+		                <th class="honeypot-col">Honeypot</th>
+			        <th class="type-col">Type</th>
+			        <th class="confidence-col">Confidence</th>
+				<th class="comment-col">Comment</th>
+			    </tr>
 		        </thead>
-		        <tbody></tbody>
+		        <tbody>
+    <tr onclick="toggleShodanInfo(this)">
+    </tr>
+    <tr class="shodan-info" style="display: none;">
+        <td colspan="7">
+        </td>
+    </tr>
+			</tbody>
 		    </table>
+		    </div>
 		</div>
 
 	<div class="footer">
-		Honeydet v1.1.100 - jamesbrine.com.au
+		Honeydet v1.2.37 - jamesbrine.com.au
 	</div>
 </body>
 </html>
