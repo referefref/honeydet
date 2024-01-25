@@ -1,0 +1,10 @@
+version: '3.8'
+
+services:
+  honeydet:
+    image: honeydet
+    ports:
+      - "8888:8888"
+    command: ["/root/honeydet", "-w"]
+    volumes:
+      - ./data:/root/data
