@@ -9,7 +9,7 @@ honeydet is a signature based, multi-step, high interaction, multi-threaded hone
 It can detect honeypots based upon the premise that, given a set of specifically crafted requests they will generate a unique and identifying response.
 It can be run either as a web server, a command line tool, or as a web API.
 Signatures support multi-step, hex, string and regex detection on TCP and UDP.
-Features a SQL backend for persistent scans which can be managed throuhg the web interface.
+Features a SQL backend for persistent scans which can be managed through the web interface.
 Shodan API integration for non-private IPs, automatically adds shodan host information when the flag is set (currently CLI only)
 
 ### Signatures
