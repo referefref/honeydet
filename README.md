@@ -24,7 +24,7 @@ The signature list is growing as I run through different methods of fuzzing, rev
 - Remove individual scans and clear database functionality
 
 ### Wish-list/To-do
-* Docker image and docker-compose file for simple installation
+* ~~Docker image and docker-compose file for simple installation~~
 * SSL
 * JA4+, HASSH, and other fingerprinting support
 * Add shodan flag to frontend
