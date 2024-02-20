@@ -47,7 +47,8 @@ go build
 #### Use docker compose
 ```
 # Note that scans.db will persist in the docker-compose file directory, if you need to map this somewhere else, edit the docker compose file
-wget https://raw.githubusercontent.com/referefref/honeydet/main/docker-compose.yml
+git clone https://github.com/referefref/honeydet.git
+cd honeydet
 docker compose up
 ```
 
