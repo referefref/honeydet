@@ -231,3 +231,29 @@ signatures:
         output: ""
         invert_match: false
     confidence: "High"
+
+  - name: "AMTHoneypot"
+    id: 19
+    port: 16992
+    proto: TCP
+    steps:
+     - input_type: string
+       input: "GET /invalid.htm HTTP/1.0\nHost: localhost\n\n"
+       output_match_type: string
+       output: "Content-Length: 767"
+       invert_match: false
+    confidence: "High"
+    comment: "Hardcoded login failure message without login failure"
+
+  - name: "Confluence Generic"
+    id: 20
+    port: "web-ports"
+    proto: TCP
+    steps:
+      - input_type: string
+        input: ""
+        output_match_type: string
+        output: "JSESSIONID=145DF9C4CDE560B2699212"
+        invert_match: false
+    confidence: "High"
+    comment: "Common JSESSIONID detected as per blog: https://vulncheck.com/blog/too-many-honeypots"
