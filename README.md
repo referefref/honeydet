@@ -1,4 +1,6 @@
 [![Active Development](https://img.shields.io/badge/Maintenance%20Level-Actively%20Developed-brightgreen.svg)](https://gist.github.com/cheerfulstoic/d107229326a01ff0f333a1d3476e068d)
+[![contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/dwyl/esta/issues)
+![GitHub commits since latest release](https://img.shields.io/github/commits-since/referefref/honeydet/latest)
 
 # honeydet Go Honeypot Detector
 ![image](https://github.com/referefref/honeydet/assets/56499429/563eacf3-8b3b-42d5-962a-bfc2e42f420f)
@@ -37,7 +39,7 @@ The signature list is growing as I run through different methods of fuzzing, rev
 ### Installation
 
 #### Build from source
-```
+```bash
 git clone https://github.com/referefref/honeydet.git
 cd honeydet
 go get honeydet
@@ -45,7 +47,7 @@ go build
 ```
 
 #### Use docker compose
-```
+```bash
 # Note that scans.db will persist in the docker-compose file directory, if you need to map this somewhere else, edit the docker compose file
 git clone https://github.com/referefref/honeydet.git
 cd honeydet
@@ -145,7 +147,7 @@ Any contibutions to the signatures and detection logic are welcomed and will be 
 Unique signature id's will be allocated upon collation of submitted signatures. If there's enough interest, i'll add author and reference url fields to the signature.
 
 Add a new section to signatures.yaml or create a new signature yaml file with the following format
-```
+```yaml
 signatures:
   - name: "signature name"
     id: 1337
