@@ -261,10 +261,10 @@ signatures:
   - name: "ElasticpotPY"
     id: 21
     port: 9200
-    proto: TCP
+    proto: "GET"
     steps:
      - input_type: string
-       input: "GET /api/search HTTP/1.0\nHost: localhost\n\n"
+       input: "GET /api/search HTTP/1.0\n\n"
        output_match_type: string
        output: "{\"error\":{\"root_cause\":[{\"type\":\"index_not_found_exception\",\"reason\":\"no such index\",\"resource.type\":\"index_or_alias\",\"resource.id\":\"test\",\"index\":\"test\"}],\"type\":\"index_not_found_exception\",\"reason\":\"no such index\",\"resource.type\":\"index_or_alias\",\"resource.id\":\"test\",\"index\":\"test\"},\"status\":404}"
        invert_match: false
