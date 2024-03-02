@@ -257,3 +257,16 @@ signatures:
         invert_match: false
     confidence: "High"
     comment: "Common JSESSIONID detected as per blog: https://vulncheck.com/blog/too-many-honeypots"
+
+  - name: "ElasticpotPY"
+    id: 21
+    port: 9200
+    proto: TCP
+    steps:
+     - input_type: string
+       input: "GET /api/search HTTP/1.0\nHost: localhost\n\n"
+       output_match_type: string
+       output: "{\"error\":{\"root_cause\":[{\"type\":\"index_not_found_exception\",\"reason\":\"no such index\",\"resource.type\":\"index_or_alias\",\"resource.id\":\"test\",\"index\":\"test\"}],\"type\":\"index_not_found_exception\",\"reason\":\"no such index\",\"resource.type\":\"index_or_alias\",\"resource.id\":\"test\",\"index\":\"test\"},\"status\":404}"
+       invert_match: false
+    confidence: "Low"
+    comment: "Hardcoded index name, and resource id."
