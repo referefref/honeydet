@@ -283,4 +283,16 @@ signatures:
        invert_match: false
     confidence: "High"
     comment: "Hardcoded owa index in template."
-   
+
+  - name: "phpMyAdmin_honeypot"
+    id: 23
+    port: "web-ports"
+    proto: "GET"
+    steps:
+     - input_type: string
+       input: "GET /login.php HTTP/1.0\n\n"
+       output_match_type: string
+       output: "name=\"subject\" value=\"phpmyadmin login attempt on\""
+       invert_match: false
+    confidence: "High"
+    comment: "Abornmal field in template."
