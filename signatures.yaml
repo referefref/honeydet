@@ -296,3 +296,16 @@ signatures:
        invert_match: false
     confidence: "High"
     comment: "Abornmal field in template."
+
+  - name: "phpMyAdmin_honeypot-2"
+    id: 24
+    port: "web-ports"
+    proto: "GET"
+    steps:
+     - input_type: string
+       input: "GET /login.php HTTP/1.0\n\n"
+       output_match_type: string
+       output: "error -- permission denied : 0x42-0839475"
+       invert_match: false
+    confidence: "High"
+    comment: "Hardcoded error message script alert tag."
