@@ -270,3 +270,17 @@ signatures:
        invert_match: false
     confidence: "Low"
     comment: "Hardcoded index name, and resource id."
+
+  - name: "OWA-Honeypot"
+    id: 22
+    port: "web-ports"
+    proto: "GET"
+    steps:
+     - input_type: string
+       input: "GET /owa/auth/logon.aspx HTTP/1.0\n\n"
+       output_match_type: string
+       output: "https://webmail.vfmc.vic.gov.au/owa/"
+       invert_match: false
+    confidence: "High"
+    comment: "Hardcoded owa index in template."
+   
