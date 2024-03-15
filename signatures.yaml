@@ -309,3 +309,16 @@ signatures:
        invert_match: false
     confidence: "High"
     comment: "Hardcoded error message script alert tag."
+
+  - name: "conpot-siemens-simatic-S7-200"
+    id: 25
+    port: 80
+    proto: "GET"
+    steps:
+     - input_type: string
+       input: "GET / HTTP/1.0\n\n"
+       output_match_type: string
+       output: "Overview - Siemens, SIMATIC, S7-200"
+       invert_match: false
+    confidence: "High"
+    comment: "Hardcoded Siemens title tag default"
