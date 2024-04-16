@@ -322,3 +322,16 @@ signatures:
        invert_match: false
     confidence: "High"
     comment: "Hardcoded Siemens title tag default"
+
+  - name: "Glastopf"
+    id: 26
+    port: "web-ports"
+    proto: "GET"
+    steps:
+     - input_type: string
+       input: "GET / HTTP/1.0\n\n"
+       output_match_type: string
+       output: "<textarea name=\"comment\" id=\"comment\" rows=\"4\" columns=\"300\"></textarea>"
+       invert_match: false
+    confidence: "Medium"
+    comment: "Common HTML in Default Template"
