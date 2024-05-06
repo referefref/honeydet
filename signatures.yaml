@@ -335,3 +335,16 @@ signatures:
        invert_match: false
     confidence: "Medium"
     comment: "Common HTML in Default Template"
+
+   - name: "oh-my-honeypot"
+    id: 27
+    port: "web-ports"
+    proto: TCP
+    steps:
+     - input_type: string
+       input: "GET /invalid.htm HTTP/1.0\nHost: localhost\n\n"
+       output_match_type: string
+       output: "PHP/4.1.0"
+       invert_match: false
+    confidence: "Low"
+    comment: "Hardcoded outdated PHP version in headers. https://github.com/l3montree-dev/oh-my-honeypot/blob/main/packages/honeypot/http.go"   
