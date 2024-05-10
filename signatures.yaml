@@ -347,4 +347,17 @@ signatures:
        output: "PHP/4.1.0"
        invert_match: false
     confidence: "Low"
-    comment: "Hardcoded outdated PHP version in headers. https://github.com/l3montree-dev/oh-my-honeypot/blob/main/packages/honeypot/http.go"   
+    comment: "Hardcoded outdated PHP version in headers. https://github.com/l3montree-dev/oh-my-honeypot/blob/main/packages/honeypot/http.go"
+
+   - name: "mailoney"
+    id: 28
+    port: 25
+    proto: TCP
+    steps:
+     - input_type: string
+       input: '"'
+       output_match_type: string
+       output: "not implementedd"
+       invert_match: false
+    confidence: "High"
+    comment: "Typographic error in error message when sending double-quote"
