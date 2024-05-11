@@ -361,3 +361,16 @@ signatures:
        invert_match: false
     confidence: "High"
     comment: "Typographic error in error message when sending double-quote"
+
+   - name: "Mail-SMTP-Honeypot"
+    id: 29
+    port: 25
+    proto: TCP
+    steps:
+     - input_type: string
+       input: 'DATA'
+       output_match_type: string
+       output: "421 Service not available, closing transmission channel"
+       invert_match: false
+    confidence: "High"
+    comment: "Deliberate 421 error when DATA command provided. Ref: https://metacpan.org/pod/Mail::SMTP::Honeypot"
