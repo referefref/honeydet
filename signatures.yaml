@@ -424,4 +424,17 @@ signatures:
        output: "354 go ahead"
        invert_match: false
     confidence: "High"
-    comment: "Uncommon response to DATA, no NOOP or STARTTLS. https://sourceforge.net/projects/spamhole"
+    comment: "Uncommon response to DATA, no NOOP or STARTTLS. Ref: https://sourceforge.net/projects/spamhole"
+
+   - name: "Medpot"
+    id: 32
+    port: 2575
+    proto: TCP
+    steps:
+     - input_type: string
+       input: 'A'
+       output_match_type: string
+       output: "00007FFF1751E851"
+       invert_match: false
+    confidence: "High"
+    comment: "Hardcoded error message in template dummyerror.xml. Ref:  https://github.com/schmalle/medpot/blob/master/template/dummyerror.xml"
