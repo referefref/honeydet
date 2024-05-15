@@ -374,3 +374,16 @@ signatures:
        invert_match: false
     confidence: "High"
     comment: "Deliberate 421 error when DATA command provided. Ref: https://metacpan.org/pod/Mail::SMTP::Honeypot"
+
+   - name: "Spamhole"
+    id: 30
+    port: 25
+    proto: TCP
+    steps:
+     - input_type: string
+       input: 'starttls'
+       output_match_type: string
+       output: "502 Nope we use cleartext"
+       invert_match: false
+    confidence: "High"
+    comment: "Amusing but non-standard responses to SMTP commands. Ref: https://git.dkia.at/dkia-oss/spamhole/-/blob/master/index.ts"
