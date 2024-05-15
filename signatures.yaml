@@ -387,3 +387,41 @@ signatures:
        invert_match: false
     confidence: "High"
     comment: "Amusing but non-standard responses to SMTP commands. Ref: https://git.dkia.at/dkia-oss/spamhole/-/blob/master/index.ts"
+
+   - name: "Spamhole-C"
+    id: 31
+    port: 25
+    proto: TCP
+    steps:
+     - input_type: string
+       input: 'EHLO honeypot.net.au'
+       output_match_type: string
+       output: "250"
+       invert_match: false
+     - input_type: string
+       input: 'NOOP'
+       output_match_type: string
+       output: "502 unimplemented (#5.5.1)"
+       invert_match: false
+     - input_type: string
+       input: 'starttls'
+       output_match_type: string
+       output: "502 unimplemented (#5.5.1)"
+       invert_match: false
+     - input_type: string
+       input: 'MAIL FROM:<test@honeypot.net.au>'
+       output_match_type: string
+       output: "250 ok"
+       invert_match: false
+     - input_type: string
+       input: 'RCPT TO:<test@honeypot.net.au>'
+       output_match_type: string
+       output: "250 ok"
+       invert_match: false
+     - input_type: string
+       input: 'DATA'
+       output_match_type: string
+       output: "354 go ahead"
+       invert_match: false
+    confidence: "High"
+    comment: "Uncommon response to DATA, no NOOP or STARTTLS. https://sourceforge.net/projects/spamhole"
