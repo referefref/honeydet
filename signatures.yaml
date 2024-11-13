@@ -328,28 +328,28 @@ signatures:
     port: "web-ports"
     proto: "GET"
     steps:
-     - input_type: string
-       input: "GET / HTTP/1.0\n\n"
-       output_match_type: string
-       output: "<textarea name=\"comment\" id=\"comment\" rows=\"4\" columns=\"300\"></textarea>"
-       invert_match: false
+      - input_type: string
+        input: "GET / HTTP/1.0\n\n"
+        output_match_type: string
+        output: "<textarea name=\"comment\" id=\"comment\" rows=\"4\" columns=\"300\"></textarea>"
+        invert_match: false
     confidence: "Medium"
     comment: "Common HTML in Default Template"
 
-   - name: "oh-my-honeypot"
+  - name: "oh-my-honeypot"
     id: 27
     port: "web-ports"
     proto: TCP
     steps:
-     - input_type: string
-       input: "GET /invalid.htm HTTP/1.0\nHost: localhost\n\n"
-       output_match_type: string
-       output: "PHP/4.1.0"
-       invert_match: false
+      - input_type: string
+        input: "GET /invalid.htm HTTP/1.0\nHost: localhost\n\n"
+        output_match_type: string
+        output: "PHP/4.1.0"
+        invert_match: false
     confidence: "Low"
     comment: "Hardcoded outdated PHP version in headers. https://github.com/l3montree-dev/oh-my-honeypot/blob/main/packages/honeypot/http.go"
 
-   - name: "mailoney"
+  - name: "mailoney"
     id: 28
     port: 25
     proto: TCP
@@ -362,7 +362,7 @@ signatures:
     confidence: "High"
     comment: "Typographic error in error message when sending double-quote"
 
-   - name: "Mail-SMTP-Honeypot"
+  - name: "Mail-SMTP-Honeypot"
     id: 29
     port: 25
     proto: TCP
@@ -375,7 +375,7 @@ signatures:
     confidence: "High"
     comment: "Deliberate 421 error when DATA command provided. Ref: https://metacpan.org/pod/Mail::SMTP::Honeypot"
 
-   - name: "Spamhole"
+  - name: "Spamhole"
     id: 30
     port: 25
     proto: TCP
@@ -388,7 +388,7 @@ signatures:
     confidence: "High"
     comment: "Amusing but non-standard responses to SMTP commands. Ref: https://git.dkia.at/dkia-oss/spamhole/-/blob/master/index.ts"
 
-   - name: "Spamhole-C"
+  - name: "Spamhole-C"
     id: 31
     port: 25
     proto: TCP
@@ -426,7 +426,7 @@ signatures:
     confidence: "High"
     comment: "Uncommon response to DATA, no NOOP or STARTTLS. Ref: https://sourceforge.net/projects/spamhole"
 
-   - name: "Medpot"
+  - name: "Medpot"
     id: 32
     port: 2575
     proto: TCP
