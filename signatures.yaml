@@ -538,3 +538,85 @@ signatures:
         invert_match: "false"
     confidence: "High"
     comment: "Qeeqbox IMAP honeypot with hardcoded Exchange 2003 banner"
+
+  - name: "honeygrove-pop3"
+    id: 38
+    port: 110
+    proto: tcp
+    steps:
+      - input_type: "string"
+        input: "USER test\r\n"
+        output_match_type: "string"
+        output: "+OK Please enter password"
+        invert_match: "false"
+      - input_type: "string"
+        input: "PASS test\r\n"
+        output_match_type: "string"
+        output: "-ERR POP3 Authentication unsuccessful/Bad username or password"
+        invert_match: "false"
+      - input_type: "string"
+        input: "STAT\r\n"
+        output_match_type: "string"
+        output: "-ERR POP3 Authentication unsuccessful/Bad username or password"
+        invert_match: "false"
+    confidence: "High"
+    comment: "HoneyGrove POP3 honeypot with distinctive error messages and static response patterns"
+
+  - name: "honeygrove-modbus"
+    id: 39
+    port: 502
+    proto: tcp
+    steps:
+      - input_type: "hex"
+        input: "000100000006010300000001"
+        output_match_type: "hex"
+        output: "0001000000050103020011"
+        invert_match: "false"
+      - input_type: "hex"
+        input: "000200000006010100000001"
+        output_match_type: "hex"
+        output: "0002000000050101020001"
+        invert_match: "false"
+    confidence: "High"
+    comment: "HoneyGrove Modbus honeypot with static slave contexts and fixed response values"
+    
+  - name: "honeygrove-s7comm"
+    id: 40
+    port: 102
+    proto: tcp
+    steps:
+      - input_type: "hex"
+        input: "0300001611e00000000400c1020100c2020102c0010a"
+        output_match_type: "hex"
+        output: "030000130ed00000000000c1020000c2020000"
+        invert_match: "false"
+      - input_type: "hex"
+        input: "0300001902f08032010000000000080000f0000001000101e0"
+        output_match_type: "regex"
+        output: "ml\\.machine_memory.*16685318144.*transform\\.node.*true"
+        invert_match: "false"
+    confidence: "High"
+    comment: "HoneyGrove S7comm honeypot with hardcoded memory values and static device attributes"
+
+  - name: "honeygrove-ssh"
+    id: 41
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: "string"
+        input: "ls -la"
+        output_match_type: "string"
+        output: "total"
+        invert_match: "false"
+      - input_type: "string"
+        input: "rm -rf /"
+        output_match_type: "no-response"
+        output: ""
+        invert_match: "false"
+      - input_type: "string"
+        input: "cat /etc/passwd"
+        output_match_type: "string"
+        output: "File or directory not found"
+        invert_match: "false"
+    confidence: "High"
+    comment: "HoneyGrove SSH honeypot with fake filesystem and specific command behaviors"
