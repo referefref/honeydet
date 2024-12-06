@@ -438,3 +438,49 @@ signatures:
        invert_match: false
     confidence: "High"
     comment: "Hardcoded error message in template dummyerror.xml. Ref:  https://github.com/schmalle/medpot/blob/master/template/dummyerror.xml"
+
+  - name: "qeeqbox-pjl"
+    id: 33
+    port: 9100
+    proto: tcp
+    steps:
+      - input_type: "string"
+        input: "@pjl echo test"
+        output_match_type: "string"
+        output: "@PJL test"
+        invert_match: "false"
+      - input_type: "string"
+        input: "@pjl info id"
+        output_match_type: "string"
+        output: "Brother HL-L2360"
+        invert_match: "false"
+      - input_type: "string"
+        input: "@pjl prodinfo"
+        output_match_type: "string"
+        output: "ProductName = Brother HL-L2360"
+        invert_match: "false"
+    confidence: "High"
+    comment: "Qeeqbox PJL honeypot with hardcoded Brother printer responses"
+
+  - name: "qeeqbox-memcache"
+    id: 34
+    port: 11211
+    proto: tcp
+    steps:
+      - input_type: "string"
+        input: "stats\r\n"
+        output_match_type: "string"
+        output: "version 1.5.6"
+        invert_match: "false"
+      - input_type: "string"
+        input: "set test 0 0 5\r\nhello\r\n"
+        output_match_type: "string"
+        output: "STORED"
+        invert_match: "false"
+      - input_type: "string"
+        input: "get test\r\n"
+        output_match_type: "regex"
+        output: "VALUE test 0 [0-9]+\r\n[0-9]+\r\nEND"
+        invert_match: "false"
+    confidence: "High"
+    comment: "Qeeqbox Memcache honeypot with hardcoded version and predictable response patterns"
