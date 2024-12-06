@@ -484,3 +484,57 @@ signatures:
         invert_match: "false"
     confidence: "High"
     comment: "Qeeqbox Memcache honeypot with hardcoded version and predictable response patterns"
+
+  - name: "qeeqbox-mssql"
+    id: 35
+    port: 1433
+    proto: tcp
+    steps:
+      - input_type: "hex"
+        input: "1201000000000000001500060100"
+        output_match_type: "hex"
+        output: "0401002500000100000015000601001b000102001c000103001d0000ff11000000"
+        invert_match: "false"
+      - input_type: "hex"
+        input: "100100"
+        output_match_type: "string"
+        output: "Login Failed"
+        invert_match: "false"
+    confidence: "High"
+    comment: "Qeeqbox MSSQL honeypot with hardcoded version 11.0 and static error response"
+
+  - name: "qeeqbox-elastic"
+    id: 36
+    port: 9200
+    proto: tcp
+    steps:
+      - input_type: "string"
+        input: "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n"
+        output_match_type: "string"
+        output: "045dffec8b60"
+        invert_match: "false"
+      - input_type: "string"
+        input: "GET /_nodes HTTP/1.1\r\nHost: localhost\r\n\r\n"
+        output_match_type: "string"
+        output: "R&DBackup"
+        invert_match: "false"
+    confidence: "High"
+    comment: "Qeeqbox Elasticsearch honeypot with hardcoded cluster name and node ID"
+
+  - name: "qeeqbox-imap"
+    id: 37
+    port: 143
+    proto: tcp
+    steps:
+      - input_type: "string"
+        input: ""
+        output_match_type: "string"
+        output: "OK Microsoft Exchange Server 2003 IMAP4rev1 server version 6.5.6944.0 DC9 ready"
+        invert_match: "false"
+      - input_type: "string"
+        input: "A001 CAPABILITY\r\n"
+        output_match_type: "string"
+        output: "* CAPABILITY IMAP4rev1"
+        invert_match: "false"
+    confidence: "High"
+    comment: "Qeeqbox IMAP honeypot with hardcoded Exchange 2003 banner"
