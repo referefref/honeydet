@@ -1,139 +1,138 @@
+---
 signatures:
-  - name: "conpot-siemens"
+  - name: conpot-siemens
     id: 1
     port: 102
     proto: udp
     steps:
       - input_type: hex
-        input: "0300001611e00000000400c1020100c2020102c0010a"
+        input: 0300001611e00000000400c1020100c2020102c0010a
         output_match_type: hex
-        output: "030000130ed00000000000c1020000c2020000"
+        output: 030000130ed00000000000c1020000c2020000
         invert_match: false
-    confidence: "High"
-    comment: "Detected Siemens specific conpot instance"
-
-  - name: "express-honeypot"
+    confidence: High
+    comment: Detected Siemens specific conpot instance
+  - name: express-honeypot
     id: 2
     port: 3001
     proto: TCP
     steps:
-     - input_type: string
-       input: "GET /beekeeper.jpg HTTP/1.0\nHost: localhost\n\n"
-       output_match_type: string
-       output: "Canon PowerShot A710"
-    confidence: "High"
-    comment: "Default image included in listing page"
+      - input_type: string
+        input: |+
+          GET /beekeeper.jpg HTTP/1.0
+          Host: localhost
 
-  - name: "node-ftp-honeypot"
+        output_match_type: string
+        output: Canon PowerShot A710
+    confidence: High
+    comment: Default image included in listing page
+  - name: node-ftp-honeypot
     id: 3
     port: 2121
     proto: tcp
     steps:
-     - input_type: string
-       input: ""
-       output_match_type: string
-       output: "Welcome to VOFTP a very open FTP Server."
-       invert_match: false
-     - input_type: string
-       input: ""
-       output_match_type: string
-       output: "220"
-       invert_match: false
-     - input_type: string
-       input: "USER"
-       output_match_type: string
-       output: "501 Must provide username"
-       invert_match: false
-    confidence: "High"
-    comment: "Uncommon error message matches node-ftp-honeypot: https://github.com/christophe77/node-ftp-honeypot"
-
-  - name: "FTPHoney"
+      - input_type: string
+        input: ""
+        output_match_type: string
+        output: Welcome to VOFTP a very open FTP Server.
+        invert_match: false
+      - input_type: string
+        input: ""
+        output_match_type: string
+        output: "220"
+        invert_match: false
+      - input_type: string
+        input: USER
+        output_match_type: string
+        output: 501 Must provide username
+        invert_match: false
+    confidence: High
+    comment: "Uncommon error message matches node-ftp-honeypot:
+      https://github.com/christophe77/node-ftp-honeypot"
+  - name: FTPHoney
     id: 4
     port: 2121
     proto: tcp
     steps:
-     - input_type: string
-       input: "."
-       output_match_type: string
-       output: "220 (vsFTPd 3.0.3)"
-       invert_match: false
-    confidence: "High"
-    comment: "Mishandled character matches Golang FTP honeypot, likely FTPHoney https://github.com/farinap5/FTPHoney"
-
-  - name: "twisted-ftp"
+      - input_type: string
+        input: .
+        output_match_type: string
+        output: 220 (vsFTPd 3.0.3)
+        invert_match: false
+    confidence: High
+    comment: Mishandled character matches Golang FTP honeypot, likely FTPHoney
+      https://github.com/farinap5/FTPHoney
+  - name: twisted-ftp
     id: 5
     port: 2121
     proto: tcp
     steps:
-     - input_type: string
-       input: "."
-       output_match_type: regex
-       output: "220 Twisted .+ FTP Server"
-       invert_match: false
-    confidence: "Low"
-    comment: "Generic Twisted FTP Server - May be https://github.com/alexbredo/honeypot-ftp"
-
-  - name: "BearFTP"
+      - input_type: string
+        input: .
+        output_match_type: regex
+        output: 220 Twisted .+ FTP Server
+        invert_match: false
+    confidence: Low
+    comment: Generic Twisted FTP Server - May be
+      https://github.com/alexbredo/honeypot-ftp
+  - name: BearFTP
     id: 6
     port: 21
     proto: tcp
     steps:
-     - input_type: string
-       input: ""
-       output_match_type: regex
-       output: "220"
-       invert_match: false
-     - input_type: string
-       input: "overflowoverflowoverflowoverflowoverflowoverflowoverflowoverflowoverflowoverflowoverflowoverflowoverflowoverflowoverflowoverflowoverflowoverflowoverflowoverflowoverflowoverflowoverflowoverflowoverflowoverflowoverflowoverflowoverflow"
-       output_match_type: string
-       output: "Input line is too long; login aborted."
-       invert_match: false
-    confidence: "Medium"
-    comment: "Response to long line is uncommon - May be https://github.com/kolya5544/BearFTP"
-
-  - name: "smtp-honey"
+      - input_type: string
+        input: ""
+        output_match_type: regex
+        output: "220"
+        invert_match: false
+      - input_type: string
+        input: overflowoverflowoverflowoverflowoverflowoverflowoverflowoverflowoverflowoverflowoverflowoverflowoverflowoverflowoverflowoverflowoverflowoverflowoverflowoverflowoverflowoverflowoverflowoverflowoverflowoverflowoverflowoverflowoverflow
+        output_match_type: string
+        output: Input line is too long; login aborted.
+        invert_match: false
+    confidence: Medium
+    comment: Response to long line is uncommon - May be
+      https://github.com/kolya5544/BearFTP
+  - name: smtp-honey
     id: 7
     port: 1993
     proto: tcp
     steps:
-     - input_type: string
-       input: ""
-       output_match_type: regex
-       output: "!ZZZ"
-       invert_match: false
-     - input_type: string
-       input: "HELP"
-       output_match_type: string
-       output: "334 UGFzc3dvcmQ6"
-       invert_match: false
-    confidence: "Medium"
-    comment: "https://github.com/yvesago/imap-honey"
-
-  - name: "cowrie"
+      - input_type: string
+        input: ""
+        output_match_type: regex
+        output: "!ZZZ"
+        invert_match: false
+      - input_type: string
+        input: HELP
+        output_match_type: string
+        output: 334 UGFzc3dvcmQ6
+        invert_match: false
+    confidence: Medium
+    comment: https://github.com/yvesago/imap-honey
+  - name: cowrie
     id: 8
     port: 22
     proto: tcp
     steps:
-     - input_type: string
-       input: "SSH-1111-OpenSSH_9.0\r\n"
-       output_match_type: string
-       output: "bad version 1111"
-       invert_match: false
-    confidence: "High"
-
-  - name: "cisco-asa"
+      - input_type: string
+        input: "SSH-1111-OpenSSH_9.0\r\n"
+        output_match_type: string
+        output: bad version 1111
+        invert_match: false
+    confidence: High
+  - name: cisco-asa
     id: 9
-    port: "web-ports"
-    proto: "GET"
+    port: web-ports
+    proto: GET
     steps:
       - input_type: string
-        input: "/+CSCOE+/logon.html?fcadbadd=1"
+        input: /+CSCOE+/logon.html?fcadbadd=1
         output_match_type: string
         output: "font-weight: bold; cursor: pointer;"
         invert_match: false
-    confidence: "High"
-
-  - name: "dionaea-ftp"
+    confidence: High
+  - name: dionaea-ftp
     id: 10
     port: 21
     proto: tcp
@@ -143,22 +142,20 @@ signatures:
         output_match_type: string
         output: "500 Syntax error: PASS requires an argument"
         invert_match: false
-    confidence: "High"
-
-  - name: "dionaea-mongodb"
+    confidence: High
+  - name: dionaea-mongodb
     id: 11
     port: 27017
     proto: tcp
     steps:
       - input_type: hex
-        input: "3b0000003c300000ffffffffd40700000000000061646d696e2e24636d640000000000ffffffff14000000106275696c64696e666f000100000000"
+        input: 3b0000003c300000ffffffffd40700000000000061646d696e2e24636d640000000000ffffffff14000000106275696c64696e666f000100000000
         output_match_type: regex
         output: |
           "([A-Za-z:0-9.]+)"
         invert_match: false
-    confidence: "High"
-
-  - name: "opencanary-redis"
+    confidence: High
+  - name: opencanary-redis
     id: 12
     port: 6379
     proto: tcp
@@ -166,12 +163,12 @@ signatures:
       - input_type: string
         input: "[[,[["
         output_match_type: string
-        output: "-ERR unknown command '[[,[['"
+        output: -ERR unknown command '[[,[['
         invert_match: false
-    confidence: "High"
-    comment: "Opencanary's Redis honeypot does not handle special characters in the same way that a real Redis server does."
-
-  - name: "mailoney"
+    confidence: High
+    comment: Opencanary's Redis honeypot does not handle special characters in the
+      same way that a real Redis server does.
+  - name: mailoney
     id: 13
     port: 25
     proto: tcp
@@ -181,442 +178,460 @@ signatures:
         output_match_type: string
         output: "502 Error: cmomand"
         invert_match: false
-    confidence: "High"
-
-  - name: "redis-honeypot (beehive redis)"
+    confidence: High
+  - name: redis-honeypot (beehive redis)
     id: 14
     port: 6379
     proto: tcp
     steps:
       - input_type: string
-        input: "DBSIZE"
+        input: DBSIZE
         output_match_type: string
-        output: "-ERR unknown command ''"
+        output: -ERR unknown command ''
         invert_match: false
-    confidence: "High"
-
-  - name: "snare"
+    confidence: High
+  - name: snare
     id: 15
-    port: "web-ports"
-    proto: "GET"
+    port: web-ports
+    proto: GET
     steps:
       - input_type: string
-        input: "/ HTTP/1337\nHost: nuggets"
+        input: |-
+          / HTTP/1337
+          Host: nuggets
         output_match_type: string
-        output: "Bad status line"
+        output: Bad status line
         invert_match: false
-    confidence: "High"
-
-  - name: "generic-snmp-honeypot"
+    confidence: High
+  - name: generic-snmp-honeypot
     id: 16
     port: "161"
-    proto: "GET"
+    proto: GET
     steps:
       - input_type: string
-        input: "1.3.6.1.2.1.1.3.0"
+        input: 1.3.6.1.2.1.1.3.0
         output_match_type: regex
         output: |
           \D
         invert_match: false
-    confidence: "Medium"
-
-  - name: "opencanary-snmp"
+    confidence: Medium
+  - name: opencanary-snmp
     id: 17
     port: "161"
-    proto: "GET"
+    proto: GET
     steps:
       - input_type: string
-        input: "1.3.6.1.2.1.1.3.0"
-        output_match_type: "no-response"
+        input: 1.3.6.1.2.1.1.3.0
+        output_match_type: no-response
         output: ""
         invert_match: false
-    confidence: "High"
-
-  - name: "AMTHoneypot"
+    confidence: High
+  - name: AMTHoneypot
     id: 19
     port: 16992
     proto: TCP
     steps:
-     - input_type: string
-       input: "GET /invalid.htm HTTP/1.0\nHost: localhost\n\n"
-       output_match_type: string
-       output: "Content-Length: 767"
-       invert_match: false
-    confidence: "High"
-    comment: "Hardcoded login failure message without login failure"
+      - input_type: string
+        input: |+
+          GET /invalid.htm HTTP/1.0
+          Host: localhost
 
-  - name: "Confluence Generic"
+        output_match_type: string
+        output: "Content-Length: 767"
+        invert_match: false
+    confidence: High
+    comment: Hardcoded login failure message without login failure
+  - name: Confluence Generic
     id: 20
-    port: "web-ports"
+    port: web-ports
     proto: TCP
     steps:
       - input_type: string
         input: ""
         output_match_type: string
-        output: "JSESSIONID=145DF9C4CDE560B2699212"
+        output: JSESSIONID=145DF9C4CDE560B2699212
         invert_match: false
-    confidence: "High"
-    comment: "Common JSESSIONID detected as per blog: https://vulncheck.com/blog/too-many-honeypots"
-
-  - name: "ElasticpotPY"
+    confidence: High
+    comment: "Common JSESSIONID detected as per blog:
+      https://vulncheck.com/blog/too-many-honeypots"
+  - name: ElasticpotPY
     id: 21
     port: 9200
-    proto: "GET"
+    proto: GET
     steps:
-     - input_type: string
-       input: "GET /api/search HTTP/1.0\n\n"
-       output_match_type: string
-       output: "{\"error\":{\"root_cause\":[{\"type\":\"index_not_found_exception\",\"reason\":\"no such index\",\"resource.type\":\"index_or_alias\",\"resource.id\":\"test\",\"index\":\"test\"}],\"type\":\"index_not_found_exception\",\"reason\":\"no such index\",\"resource.type\":\"index_or_alias\",\"resource.id\":\"test\",\"index\":\"test\"},\"status\":404}"
-       invert_match: false
-    confidence: "Low"
-    comment: "Hardcoded index name, and resource id."
+      - input_type: string
+        input: |+
+          GET /api/search HTTP/1.0
 
-  - name: "OWA-Honeypot"
+        output_match_type: string
+        output: '{"error":{"root_cause":[{"type":"index_not_found_exception","reason":"no
+          such
+          index","resource.type":"index_or_alias","resource.id":"test","index":"test"}],"type":"index_not_found_exception","reason":"no
+          such
+          index","resource.type":"index_or_alias","resource.id":"test","index":"test"},"status":404}'
+        invert_match: false
+    confidence: Low
+    comment: Hardcoded index name, and resource id.
+  - name: OWA-Honeypot
     id: 22
-    port: "web-ports"
-    proto: "GET"
+    port: web-ports
+    proto: GET
     steps:
-     - input_type: string
-       input: "GET /owa/auth/logon.aspx HTTP/1.0\n\n"
-       output_match_type: string
-       output: "https://webmail.vfmc.vic.gov.au/owa/"
-       invert_match: false
-    confidence: "High"
-    comment: "Hardcoded owa index in template."
+      - input_type: string
+        input: |+
+          GET /owa/auth/logon.aspx HTTP/1.0
 
-  - name: "phpMyAdmin_honeypot"
+        output_match_type: string
+        output: https://webmail.vfmc.vic.gov.au/owa/
+        invert_match: false
+    confidence: High
+    comment: Hardcoded owa index in template.
+  - name: phpMyAdmin_honeypot
     id: 23
-    port: "web-ports"
-    proto: "GET"
+    port: web-ports
+    proto: GET
     steps:
-     - input_type: string
-       input: "GET /login.php HTTP/1.0\n\n"
-       output_match_type: string
-       output: "name=\"subject\" value=\"phpmyadmin login attempt on\""
-       invert_match: false
-    confidence: "High"
-    comment: "Abornmal field in template."
+      - input_type: string
+        input: |+
+          GET /login.php HTTP/1.0
 
-  - name: "phpMyAdmin_honeypot-2"
+        output_match_type: string
+        output: name="subject" value="phpmyadmin login attempt on"
+        invert_match: false
+    confidence: High
+    comment: Abornmal field in template.
+  - name: phpMyAdmin_honeypot-2
     id: 24
-    port: "web-ports"
-    proto: "GET"
+    port: web-ports
+    proto: GET
     steps:
-     - input_type: string
-       input: "GET /login.php HTTP/1.0\n\n"
-       output_match_type: string
-       output: "error -- permission denied : 0x42-0839475"
-       invert_match: false
-    confidence: "High"
-    comment: "Hardcoded error message script alert tag."
+      - input_type: string
+        input: |+
+          GET /login.php HTTP/1.0
 
-  - name: "conpot-siemens-simatic-S7-200"
+        output_match_type: string
+        output: "error -- permission denied : 0x42-0839475"
+        invert_match: false
+    confidence: High
+    comment: Hardcoded error message script alert tag.
+  - name: conpot-siemens-simatic-S7-200
     id: 25
     port: 80
-    proto: "GET"
+    proto: GET
     steps:
-     - input_type: string
-       input: "GET / HTTP/1.0\n\n"
-       output_match_type: string
-       output: "Overview - Siemens, SIMATIC, S7-200"
-       invert_match: false
-    confidence: "High"
-    comment: "Hardcoded Siemens title tag default"
+      - input_type: string
+        input: |+
+          GET / HTTP/1.0
 
-  - name: "Glastopf"
+        output_match_type: string
+        output: Overview - Siemens, SIMATIC, S7-200
+        invert_match: false
+    confidence: High
+    comment: Hardcoded Siemens title tag default
+  - name: Glastopf
     id: 26
-    port: "web-ports"
-    proto: "GET"
+    port: web-ports
+    proto: GET
     steps:
-     - input_type: string
-       input: "GET / HTTP/1.0\n\n"
-       output_match_type: string
-       output: "<textarea name=\"comment\" id=\"comment\" rows=\"4\" columns=\"300\"></textarea>"
-       invert_match: false
-    confidence: "Medium"
-    comment: "Common HTML in Default Template"
+      - input_type: string
+        input: |+
+          GET / HTTP/1.0
 
-   - name: "oh-my-honeypot"
+        output_match_type: string
+        output: <textarea name="comment" id="comment" rows="4" columns="300"></textarea>
+        invert_match: false
+    confidence: Medium
+    comment: Common HTML in Default Template
+  - name: oh-my-honeypot
     id: 27
-    port: "web-ports"
+    port: web-ports
     proto: TCP
     steps:
-     - input_type: string
-       input: "GET /invalid.htm HTTP/1.0\nHost: localhost\n\n"
-       output_match_type: string
-       output: "PHP/4.1.0"
-       invert_match: false
-    confidence: "Low"
-    comment: "Hardcoded outdated PHP version in headers. https://github.com/l3montree-dev/oh-my-honeypot/blob/main/packages/honeypot/http.go"
+      - input_type: string
+        input: |+
+          GET /invalid.htm HTTP/1.0
+          Host: localhost
 
-   - name: "mailoney"
+        output_match_type: string
+        output: PHP/4.1.0
+        invert_match: false
+    confidence: Low
+    comment: Hardcoded outdated PHP version in headers.
+      https://github.com/l3montree-dev/oh-my-honeypot/blob/main/packages/honeypot/http.go
+  - name: mailoney
     id: 28
     port: 25
     proto: TCP
     steps:
-     - input_type: string
-       input: '"'
-       output_match_type: string
-       output: "not implementedd"
-       invert_match: false
-    confidence: "High"
-    comment: "Typographic error in error message when sending double-quote"
-
-   - name: "Mail-SMTP-Honeypot"
+      - input_type: string
+        input: '"'
+        output_match_type: string
+        output: not implementedd
+        invert_match: false
+    confidence: High
+    comment: Typographic error in error message when sending double-quote
+  - name: Mail-SMTP-Honeypot
     id: 29
     port: 25
     proto: TCP
     steps:
-     - input_type: string
-       input: 'DATA'
-       output_match_type: string
-       output: "421 Service not available, closing transmission channel"
-       invert_match: false
-    confidence: "High"
-    comment: "Deliberate 421 error when DATA command provided. Ref: https://metacpan.org/pod/Mail::SMTP::Honeypot"
-
-   - name: "Spamhole"
+      - input_type: string
+        input: DATA
+        output_match_type: string
+        output: 421 Service not available, closing transmission channel
+        invert_match: false
+    confidence: High
+    comment: "Deliberate 421 error when DATA command provided. Ref:
+      https://metacpan.org/pod/Mail::SMTP::Honeypot"
+  - name: Spamhole
     id: 30
     port: 25
     proto: TCP
     steps:
-     - input_type: string
-       input: 'starttls'
-       output_match_type: string
-       output: "502 Nope we use cleartext"
-       invert_match: false
-    confidence: "High"
-    comment: "Amusing but non-standard responses to SMTP commands. Ref: https://git.dkia.at/dkia-oss/spamhole/-/blob/master/index.ts"
-
-   - name: "Spamhole-C"
+      - input_type: string
+        input: starttls
+        output_match_type: string
+        output: 502 Nope we use cleartext
+        invert_match: false
+    confidence: High
+    comment: "Amusing but non-standard responses to SMTP commands. Ref:
+      https://git.dkia.at/dkia-oss/spamhole/-/blob/master/index.ts"
+  - name: Spamhole-C
     id: 31
     port: 25
     proto: TCP
     steps:
-     - input_type: string
-       input: 'EHLO honeypot.net.au'
-       output_match_type: string
-       output: "250"
-       invert_match: false
-     - input_type: string
-       input: 'NOOP'
-       output_match_type: string
-       output: "502 unimplemented (#5.5.1)"
-       invert_match: false
-     - input_type: string
-       input: 'starttls'
-       output_match_type: string
-       output: "502 unimplemented (#5.5.1)"
-       invert_match: false
-     - input_type: string
-       input: 'MAIL FROM:<test@honeypot.net.au>'
-       output_match_type: string
-       output: "250 ok"
-       invert_match: false
-     - input_type: string
-       input: 'RCPT TO:<test@honeypot.net.au>'
-       output_match_type: string
-       output: "250 ok"
-       invert_match: false
-     - input_type: string
-       input: 'DATA'
-       output_match_type: string
-       output: "354 go ahead"
-       invert_match: false
-    confidence: "High"
-    comment: "Uncommon response to DATA, no NOOP or STARTTLS. Ref: https://sourceforge.net/projects/spamhole"
-
-   - name: "Medpot"
+      - input_type: string
+        input: EHLO honeypot.net.au
+        output_match_type: string
+        output: "250"
+        invert_match: false
+      - input_type: string
+        input: NOOP
+        output_match_type: string
+        output: 502 unimplemented (#5.5.1)
+        invert_match: false
+      - input_type: string
+        input: starttls
+        output_match_type: string
+        output: 502 unimplemented (#5.5.1)
+        invert_match: false
+      - input_type: string
+        input: MAIL FROM:<test@honeypot.net.au>
+        output_match_type: string
+        output: 250 ok
+        invert_match: false
+      - input_type: string
+        input: RCPT TO:<test@honeypot.net.au>
+        output_match_type: string
+        output: 250 ok
+        invert_match: false
+      - input_type: string
+        input: DATA
+        output_match_type: string
+        output: 354 go ahead
+        invert_match: false
+    confidence: High
+    comment: "Uncommon response to DATA, no NOOP or STARTTLS. Ref:
+      https://sourceforge.net/projects/spamhole"
+  - name: Medpot
     id: 32
     port: 2575
     proto: TCP
     steps:
-     - input_type: string
-       input: 'A'
-       output_match_type: string
-       output: "00007FFF1751E851"
-       invert_match: false
-    confidence: "High"
-    comment: "Hardcoded error message in template dummyerror.xml. Ref:  https://github.com/schmalle/medpot/blob/master/template/dummyerror.xml"
-
-  - name: "qeeqbox-pjl"
+      - input_type: string
+        input: A
+        output_match_type: string
+        output: 00007FFF1751E851
+        invert_match: false
+    confidence: High
+    comment: "Hardcoded error message in template dummyerror.xml.
+      Ref:  https://github.com/schmalle/medpot/blob/master/template/dummyerror.\
+      xml"
+  - name: qeeqbox-pjl
     id: 33
     port: 9100
     proto: tcp
     steps:
-      - input_type: "string"
+      - input_type: string
         input: "@pjl echo test"
-        output_match_type: "string"
+        output_match_type: string
         output: "@PJL test"
         invert_match: "false"
-      - input_type: "string"
+      - input_type: string
         input: "@pjl info id"
-        output_match_type: "string"
-        output: "Brother HL-L2360"
+        output_match_type: string
+        output: Brother HL-L2360
         invert_match: "false"
-      - input_type: "string"
+      - input_type: string
         input: "@pjl prodinfo"
-        output_match_type: "string"
-        output: "ProductName = Brother HL-L2360"
+        output_match_type: string
+        output: ProductName = Brother HL-L2360
         invert_match: "false"
-    confidence: "High"
-    comment: "Qeeqbox PJL honeypot with hardcoded Brother printer responses"
-
-  - name: "qeeqbox-memcache"
+    confidence: High
+    comment: Qeeqbox PJL honeypot with hardcoded Brother printer responses
+  - name: qeeqbox-memcache
     id: 34
     port: 11211
     proto: tcp
     steps:
-      - input_type: "string"
+      - input_type: string
         input: "stats\r\n"
-        output_match_type: "string"
-        output: "version 1.5.6"
+        output_match_type: string
+        output: version 1.5.6
         invert_match: "false"
-      - input_type: "string"
+      - input_type: string
         input: "set test 0 0 5\r\nhello\r\n"
-        output_match_type: "string"
-        output: "STORED"
+        output_match_type: string
+        output: STORED
         invert_match: "false"
-      - input_type: "string"
+      - input_type: string
         input: "get test\r\n"
-        output_match_type: "regex"
+        output_match_type: regex
         output: "VALUE test 0 [0-9]+\r\n[0-9]+\r\nEND"
         invert_match: "false"
-    confidence: "High"
-    comment: "Qeeqbox Memcache honeypot with hardcoded version and predictable response patterns"
-
-  - name: "qeeqbox-mssql"
+    confidence: High
+    comment: Qeeqbox Memcache honeypot with hardcoded version and predictable
+      response patterns
+  - name: qeeqbox-mssql
     id: 35
     port: 1433
     proto: tcp
     steps:
-      - input_type: "hex"
+      - input_type: hex
         input: "1201000000000000001500060100"
-        output_match_type: "hex"
-        output: "0401002500000100000015000601001b000102001c000103001d0000ff11000000"
+        output_match_type: hex
+        output: 0401002500000100000015000601001b000102001c000103001d0000ff11000000
         invert_match: "false"
-      - input_type: "hex"
+      - input_type: hex
         input: "100100"
-        output_match_type: "string"
-        output: "Login Failed"
+        output_match_type: string
+        output: Login Failed
         invert_match: "false"
-    confidence: "High"
-    comment: "Qeeqbox MSSQL honeypot with hardcoded version 11.0 and static error response"
-
-  - name: "qeeqbox-elastic"
+    confidence: High
+    comment: Qeeqbox MSSQL honeypot with hardcoded version 11.0 and static error
+      response
+  - name: qeeqbox-elastic
     id: 36
     port: 9200
     proto: tcp
     steps:
-      - input_type: "string"
-        input: "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n"
-        output_match_type: "string"
-        output: "045dffec8b60"
-        invert_match: "false"
-      - input_type: "string"
-        input: "GET /_nodes HTTP/1.1\r\nHost: localhost\r\n\r\n"
-        output_match_type: "string"
-        output: "R&DBackup"
-        invert_match: "false"
-    confidence: "High"
-    comment: "Qeeqbox Elasticsearch honeypot with hardcoded cluster name and node ID"
+      - input_type: string
+        input: "GET / HTTP/1.1\r
 
-  - name: "qeeqbox-imap"
+          Host: localhost\r
+
+          \r\n"
+        output_match_type: string
+        output: 045dffec8b60
+        invert_match: "false"
+      - input_type: string
+        input: "GET /_nodes HTTP/1.1\r
+
+          Host: localhost\r
+
+          \r\n"
+        output_match_type: string
+        output: R&DBackup
+        invert_match: "false"
+    confidence: High
+    comment: Qeeqbox Elasticsearch honeypot with hardcoded cluster name and node ID
+  - name: qeeqbox-imap
     id: 37
     port: 143
     proto: tcp
     steps:
-      - input_type: "string"
+      - input_type: string
         input: ""
-        output_match_type: "string"
-        output: "OK Microsoft Exchange Server 2003 IMAP4rev1 server version 6.5.6944.0 DC9 ready"
+        output_match_type: string
+        output: OK Microsoft Exchange Server 2003 IMAP4rev1 server version 6.5.6944.0
+          DC9 ready
         invert_match: "false"
-      - input_type: "string"
+      - input_type: string
         input: "A001 CAPABILITY\r\n"
-        output_match_type: "string"
+        output_match_type: string
         output: "* CAPABILITY IMAP4rev1"
         invert_match: "false"
-    confidence: "High"
-    comment: "Qeeqbox IMAP honeypot with hardcoded Exchange 2003 banner"
-
-  - name: "honeygrove-pop3"
+    confidence: High
+    comment: Qeeqbox IMAP honeypot with hardcoded Exchange 2003 banner
+  - name: honeygrove-pop3
     id: 38
     port: 110
     proto: tcp
     steps:
-      - input_type: "string"
+      - input_type: string
         input: "USER test\r\n"
-        output_match_type: "string"
-        output: "+OK Please enter password"
+        output_match_type: string
+        output: +OK Please enter password
         invert_match: "false"
-      - input_type: "string"
+      - input_type: string
         input: "PASS test\r\n"
-        output_match_type: "string"
-        output: "-ERR POP3 Authentication unsuccessful/Bad username or password"
+        output_match_type: string
+        output: -ERR POP3 Authentication unsuccessful/Bad username or password
         invert_match: "false"
-      - input_type: "string"
+      - input_type: string
         input: "STAT\r\n"
-        output_match_type: "string"
-        output: "-ERR POP3 Authentication unsuccessful/Bad username or password"
+        output_match_type: string
+        output: -ERR POP3 Authentication unsuccessful/Bad username or password
         invert_match: "false"
-    confidence: "High"
-    comment: "HoneyGrove POP3 honeypot with distinctive error messages and static response patterns"
-
-  - name: "honeygrove-modbus"
+    confidence: High
+    comment: HoneyGrove POP3 honeypot with distinctive error messages and static
+      response patterns
+  - name: honeygrove-modbus
     id: 39
     port: 502
     proto: tcp
     steps:
-      - input_type: "hex"
+      - input_type: hex
         input: "000100000006010300000001"
-        output_match_type: "hex"
+        output_match_type: hex
         output: "0001000000050103020011"
         invert_match: "false"
-      - input_type: "hex"
+      - input_type: hex
         input: "000200000006010100000001"
-        output_match_type: "hex"
+        output_match_type: hex
         output: "0002000000050101020001"
         invert_match: "false"
-    confidence: "High"
-    comment: "HoneyGrove Modbus honeypot with static slave contexts and fixed response values"
-    
-  - name: "honeygrove-s7comm"
+    confidence: High
+    comment: HoneyGrove Modbus honeypot with static slave contexts and fixed
+      response values
+  - name: honeygrove-s7comm
     id: 40
     port: 102
     proto: tcp
     steps:
-      - input_type: "hex"
-        input: "0300001611e00000000400c1020100c2020102c0010a"
-        output_match_type: "hex"
-        output: "030000130ed00000000000c1020000c2020000"
+      - input_type: hex
+        input: 0300001611e00000000400c1020100c2020102c0010a
+        output_match_type: hex
+        output: 030000130ed00000000000c1020000c2020000
         invert_match: "false"
-      - input_type: "hex"
-        input: "0300001902f08032010000000000080000f0000001000101e0"
-        output_match_type: "regex"
-        output: "ml\\.machine_memory.*16685318144.*transform\\.node.*true"
+      - input_type: hex
+        input: 0300001902f08032010000000000080000f0000001000101e0
+        output_match_type: regex
+        output: ml\.machine_memory.*16685318144.*transform\.node.*true
         invert_match: "false"
-    confidence: "High"
-    comment: "HoneyGrove S7comm honeypot with hardcoded memory values and static device attributes"
-
-  - name: "honeygrove-ssh"
+    confidence: High
+    comment: HoneyGrove S7comm honeypot with hardcoded memory values and static
+      device attributes
+  - name: honeygrove-ssh
     id: 41
     port: 22
     proto: tcp
     steps:
-      - input_type: "string"
-        input: "ls -la"
-        output_match_type: "string"
-        output: "total"
+      - input_type: string
+        input: ls -la
+        output_match_type: string
+        output: total
         invert_match: "false"
-      - input_type: "string"
-        input: "rm -rf /"
-        output_match_type: "no-response"
+      - input_type: string
+        input: rm -rf /
+        output_match_type: no-response
         output: ""
         invert_match: "false"
-      - input_type: "string"
-        input: "cat /etc/passwd"
-        output_match_type: "string"
-        output: "File or directory not found"
+      - input_type: string
+        input: cat /etc/passwd
+        output_match_type: string
+        output: File or directory not found
         invert_match: "false"
-    confidence: "High"
-    comment: "HoneyGrove SSH honeypot with fake filesystem and specific command behaviors"
+    confidence: High
+    comment: HoneyGrove SSH honeypot with fake filesystem and specific command behaviors
