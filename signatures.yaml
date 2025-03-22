@@ -635,3 +635,58 @@ signatures:
         invert_match: "false"
     confidence: High
     comment: HoneyGrove SSH honeypot with fake filesystem and specific command behaviors
+  - name: wordpot
+    id: 42
+    port: web-ports
+    proto: GET
+    steps:
+      - input_type: string
+        input: |+
+          GET /wp-content/plugins/any-plugin/recent-backups HTTP/1.0
+          Host: localhost
+
+        output_match_type: string
+        output: root:x:0:0:root:/root:/bin/bash
+        invert_match: false
+      - input_type: string
+        input: |+
+          GET /wp-content/themes/any-theme/timthumbzz.php HTTP/1.0
+          Host: localhost
+
+        output_match_type: string
+        output: no image specified
+        invert_match: false
+      - input_type: string
+        input: |+
+          POST /wp-login.php HTTP/1.0
+          Host: localhost
+          Content-Type: application/x-www-form-urlencoded
+          Content-Length: 47
+
+          log=admin&pwd=password1&wp-submit=Log+In
+
+        output_match_type: string
+        output: <div id="login_error">
+        invert_match: false
+      - input_type: string
+        input: |+
+          POST /wp-login.php HTTP/1.0
+          Host: localhost
+          Content-Type: application/x-www-form-urlencoded
+          Content-Length: 47
+
+          log=admin&pwd=password2&wp-submit=Log+In
+
+        output_match_type: string
+        output: <div id="login_error">
+        invert_match: false
+      - input_type: string
+        input: |+
+          GET /?author=1 HTTP/1.0
+          Host: localhost
+
+        output_match_type: string
+        output: class="page-title author">Author Archives:
+        invert_match: false
+    confidence: High
+    comment: "Wordpot WordPress honeypot detection. Tests for 1) leaked passwd content in recent-backups, 2) simplified TimThumb pattern matching, 3) identical login error responses to different credentials, and 4) templated author pages. Wordpot uses Flask rather than PHP and implements simplified responses that differ from genuine WordPress."
