@@ -156,6 +156,7 @@ signatures:
           "([A-Za-z:0-9.]+)"
         invert_match: false
     confidence: High
+    comment: "Does not match the dinotools/dionaea 0.11.0 image (no reply to this query); kept for older builds."
   - name: opencanary-redis
     id: 12
     port: 6379
@@ -775,3 +776,104 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: "Requires -u/-pw (Cowrie accepts any root password except root/123456). Hard-coded BusyBox 1.20.2 banner (2012) on a host claiming a 2024 Debian 12 kernel."
+  - name: dionaea-mysql-static-greeting
+    id: 50
+    port: 3306
+    proto: tcp
+    steps:
+      - input_type: string
+        input: ""
+        output_match_type: hex
+        output: "352e372e313600000012676161616161616161"
+        invert_match: false
+    confidence: High
+    comment: "MySQL greeting is identical on every connection: version 5.7.16, connection id 18, scramble 'gaaaaaaaa'. Real servers increment the id and randomise the scramble."
+  - name: dionaea-memcached-no-version-command
+    id: 51
+    port: 11211
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "stats\r"
+        output_match_type: regex
+        output: 'STAT version 1\.4\.25'
+        invert_match: false
+      - input_type: string
+        input: "version\r"
+        output_match_type: string
+        output: "ERROR"
+        invert_match: false
+    confidence: High
+    comment: "stats claims memcached 1.4.25, but the version command (supported by every real memcached) returns ERROR."
+  - name: dionaea-memcached-impossible-counters
+    id: 52
+    port: 11211
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "stats\r"
+        output_match_type: regex
+        output: 'STAT curr_items 390\r?\nSTAT total_items 370'
+        invert_match: false
+    confidence: Medium
+    comment: "Static stats where current items (390) exceed total items ever stored (370), which is impossible on a real server."
+  - name: dionaea-http-ascii-no-date
+    id: 53
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.0\r\n\r"
+        output_match_type: regex
+        output: 'Server: nginx\r\nContent-Type: text/html; charset=ascii'
+        invert_match: false
+    confidence: High
+    comment: "Unversioned 'Server: nginx' followed directly by 'charset=ascii' and no Date header. Real nginx sends its version (unless hidden) and always a Date header."
+  - name: dionaea-ftp-diskstation-banner
+    id: 54
+    port: 21
+    proto: tcp
+    steps:
+      - input_type: string
+        input: ""
+        output_match_type: string
+        output: "220 DiskStation FTP server ready."
+        invert_match: false
+    confidence: Medium
+    comment: "Default Dionaea FTP banner imitating a Synology DiskStation. Configurable."
+  - name: dionaea-smb-homeuser
+    id: 55
+    port: 445
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "000000a4ff534d4272000000000801400000000000000000000000000000400600000100008100025043204e4554574f524b2050524f4752414d20312e3000024d4943524f534f4654204e4554574f524b5320312e303300024d4943524f534f4654204e4554574f524b5320332e3000024c414e4d414e312e3000024c4d312e3258303032000253616d626100024e54204c414e4d414e20312e3000024e54204c4d20302e313200"
+        output_match_type: hex
+        output: "48004f004d00450055005300450052002d003300410046003600460045"
+        invert_match: false
+    confidence: High
+    comment: "SMB1 negotiate is accepted and the reply names the default server HOMEUSER-3AF6FE in domain WORKGROUP. Modern Samba and Windows reject SMB1."
+  - name: dionaea-mssql-static-prelogin
+    id: 56
+    port: 1433
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "1201003400000000000015000601001b000102001c000c0300280004ff080001550000004d5353514c53657276657200480f0000"
+        output_match_type: hex
+        output: "0401002b0000000000001a00060100200001020021000103002200000400220001ff080002100000020000"
+        invert_match: false
+    confidence: High
+    comment: "Fixed 43-byte TDS pre-login reply (SQL Server 8.0 version field) regardless of the request."
+  - name: dionaea-pjl-laserjet-4ml
+    id: 57
+    port: 9100
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "1b252d31323334355840504a4c20494e464f2049440d0a1b252d31323334355820"
+        output_match_type: string
+        output: "HP LASERJET 4ML"
+        invert_match: false
+    confidence: Medium
+    comment: "Printer emulation answers @PJL INFO ID as an HP LaserJet 4ML (1993)."
