@@ -686,7 +686,7 @@ signatures:
           Host: localhost
 
         output_match_type: string
-        output: class="page-title author">Author Archives:
+        output: 'class="page-title author">Author Archives:'
         invert_match: false
     confidence: High
     comment: "Wordpot WordPress honeypot detection. Tests for 1) leaked passwd content in recent-backups, 2) simplified TimThumb pattern matching, 3) identical login error responses to different credentials, and 4) templated author pages. Wordpot uses Flask rather than PHP and implements simplified responses that differ from genuine WordPress."
