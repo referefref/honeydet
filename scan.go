@@ -194,7 +194,12 @@ func detectHoneypot(host string, ports []int, proto string, signatures Signature
 							if *debug {
 								fmt.Println(color.Ize(color.Red, fmt.Sprintf("[Debug] SNMP request failed for signature '%s' on host %s:%d: %s", signature.Name, host, port, err)))
 							}
-							// Treat as no response: only no-response steps can match
+							// A refused port (ICMP unreachable) is closed, not silent: fail the signature.
+							// Otherwise (timeout) treat as no response, so only no-response steps can match
+							if strings.Contains(err.Error(), "connection refused") {
+								signatureMatched = false
+								break
+							}
 							response = ""
 						}
 					} else if isModbus {
