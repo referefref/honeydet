@@ -110,7 +110,7 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: https://github.com/yvesago/imap-honey
-  - name: cowrie
+  - name: twisted-conch-ssh-bad-version (opencanary, cowrie before 3.x)
     id: 8
     port: 22
     proto: tcp
@@ -121,7 +121,7 @@ signatures:
         output: bad version 1111
         invert_match: false
     confidence: High
-    comment: "Does not match Cowrie 3.1.3+, which now replies 'Invalid SSH identification string.' like OpenSSH. See ids 43-49."
+    comment: "Twisted Conch rejects the malformed version with 'bad version'. Matches OpenCanary 0.9.10 and Cowrie before 3.x; Cowrie 3.1.3 replies 'Invalid SSH identification string.' like OpenSSH (see ids 43-49)."
   - name: cisco-asa
     id: 9
     port: web-ports
@@ -163,13 +163,12 @@ signatures:
     proto: tcp
     steps:
       - input_type: string
-        input: "[[,[["
+        input: "AUTH wrongpass\r"
         output_match_type: string
-        output: -ERR unknown command '[[,[['
+        output: "-NOAUTH Authentication required."
         invert_match: false
     confidence: High
-    comment: Opencanary's Redis honeypot does not handle special characters in the
-      same way that a real Redis server does.
+    comment: "OpenCanary answers every command, including AUTH, with NOAUTH. A password-protected Redis answers a wrong AUTH with WRONGPASS (or invalid password on older versions); an open Redis with an error about no password being set."
   - name: mailoney
     id: 13
     port: 25
@@ -228,6 +227,7 @@ signatures:
         output: ""
         invert_match: false
     confidence: High
+    comment: "OpenCanary logs SNMP requests but never replies. A closed port (ICMP unreachable) does not match; a firewall that silently drops 161/udp will."
   - name: AMTHoneypot
     id: 19
     port: 16992
@@ -877,3 +877,116 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: "Printer emulation answers @PJL INFO ID as an HP LaserJet 4ML (1993)."
+  - name: opencanary-ssh-no-kexinit
+    id: 58
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "SSH-2.0-OpenSSH_9.6\r"
+        output_match_type: regex
+        output: '^SSH-2\.0-[^\r\n]*$'
+        invert_match: false
+    confidence: High
+    comment: "After the client identification, OpenCanary sends only its banner and never its KEXINIT. Genuine SSH servers send KEXINIT immediately. Run without -u/-pw (raw mode)."
+  - name: opencanary-ssh-default-banner
+    id: 59
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "SSH-2.0-OpenSSH_9.6\r"
+        output_match_type: string
+        output: "SSH-2.0-OpenSSH_5.1p1 Debian-4"
+        invert_match: false
+    confidence: Medium
+    comment: "Default ssh.version (OpenSSH 5.1p1, 2008). Configurable."
+  - name: opencanary-http-apache-template
+    id: 60
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /hd-not-found HTTP/1.0\r\n\r"
+        output_match_type: regex
+        output: '<address>Apache/[0-9.]+ \([A-Za-z]+\) Server</address>'
+        invert_match: false
+    confidence: High
+    comment: "404 page footer names Apache without 'at <host> Port <n>', which genuine Apache always includes when the signature is shown. Response is also HTTP/1.0."
+  - name: opencanary-squid-407
+    id: 61
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET http://example.com/ HTTP/1.0\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.0 407 Proxy Authentication Required\r\nServer: squid/'
+        invert_match: false
+    confidence: High
+    comment: "Squid-style 407 sent as HTTP/1.0 with no Date header. Genuine Squid replies HTTP/1.1 with Date."
+  - name: opencanary-git-no-such-repository
+    id: 62
+    port: 9418
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "303032356769742d75706c6f61642d7061636b202f746573742e67697400686f73743d7800"
+        output_match_type: string
+        output: "ERR no such repository: test.git"
+        invert_match: false
+    confidence: High
+    comment: "git-daemon emulation replies 'no such repository' with the leading slash stripped. Genuine git-daemon replies 'access denied or repository not exported: /test.git'."
+  - name: opencanary-rdp-unoffered-protocol
+    id: 63
+    port: 3389
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "030000130ee000000000000100080001000000"
+        output_match_type: hex
+        output: "0209080002000000"
+        invert_match: false
+    confidence: High
+    comment: "Client offers only SSL; OpenCanary selects CredSSP (2), a protocol the client did not offer, with flags 0x09. Genuine servers pick an offered protocol or return a failure."
+  - name: opencanary-ftp-sorry-auth-failed
+    id: 64
+    port: 21
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "USER anonymous\r"
+        output_match_type: string
+        output: "331 Guest login ok"
+        invert_match: false
+      - input_type: string
+        input: "PASS a@b.c\r"
+        output_match_type: string
+        output: "530 Sorry, Authentication failed."
+        invert_match: false
+    confidence: High
+    comment: "Offers a guest login, then rejects every password with '530 Sorry, Authentication failed.' No empty first step: the Twisted FTP server buffers a bare newline into the next command."
+  - name: opencanary-telnet-negotiation
+    id: 65
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: string
+        input: ""
+        output_match_type: hex
+        output: "fffb01fffb03fffb00fffd00fffd1f"
+        invert_match: false
+    confidence: Medium
+    comment: "Option negotiation WILL ECHO, WILL SGA, WILL BINARY, DO BINARY, DO NAWS before the Cisco-style prompt. Not compared with a genuine Cisco device."
+  - name: opencanary-mysql-default-version
+    id: 66
+    port: 3306
+    proto: tcp
+    steps:
+      - input_type: string
+        input: ""
+        output_match_type: string
+        output: "5.5.43-0ubuntu0.14.04.1"
+        invert_match: false
+    confidence: Medium
+    comment: "Default mysql.banner (MySQL 5.5.43 on Ubuntu 14.04). Configurable; greeting is otherwise realistic."
