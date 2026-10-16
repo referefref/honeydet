@@ -340,24 +340,26 @@ func readResponse(conn net.Conn) (string, error) {
 	buffer := make([]byte, 16048)
 	for {
 		n, err := conn.Read(buffer)
-		if err != nil {
-			if err != io.EOF {
-				if *debug {
-					fmt.Println(color.Ize(color.Red, fmt.Sprintf("[Debug] Error reading response: %s", err)))
-				}
-				return "", err
+		if n > 0 {
+			response.Write(buffer[:n])
+			if *debug {
+				fmt.Println(color.Ize(color.Purple, fmt.Sprintf("[Debug] Partial Response received: %s", string(buffer[:n]))))
 			}
-			break
+			// Services often send a reply in several packets (one per line), so keep
+			// reading until the connection has been idle briefly
+			conn.SetReadDeadline(time.Now().Add(300 * time.Millisecond))
 		}
-
-		response.Write(buffer[:n])
-
-		if *debug {
-			fmt.Println(color.Ize(color.Purple, fmt.Sprintf("[Debug] Partial Response received: %s", string(buffer[:n]))))
-		}
-
-		if n < len(buffer) {
-			break
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			if netErr, ok := err.(net.Error); ok && netErr.Timeout() && response.Len() > 0 {
+				break
+			}
+			if *debug {
+				fmt.Println(color.Ize(color.Red, fmt.Sprintf("[Debug] Error reading response: %s", err)))
+			}
+			return "", err
 		}
 	}
 
