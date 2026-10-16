@@ -7,7 +7,6 @@ import (
 	"flag"
 	"fmt"
 	"github.com/TwiN/go-color"
-	_ "github.com/mattn/go-sqlite3"
 	"github.com/tomsteele/go-shodan"
 	"gopkg.in/yaml.v2"
 	"log"
@@ -53,7 +52,7 @@ var (
 	checkPingShort  = flag.Bool("c", false, "Short form of -checkPing")
 	output          = flag.String("output", "", "Output file for the report (default is stdout)")
 	outputShort     = flag.String("o", "", "Short form of -output")
-	webserver       = flag.Bool("webserver", false, "Run as a web server on port 8080")
+	webserver       = flag.Bool("webserver", false, "Run as a web server on port 8888")
 	webserverShort  = flag.Bool("w", false, "Short form of -webserver")
 	useShodan       = flag.Bool("shodan", false, "Enable Shodan API enrichment")
 	shodanClient    *shodan.Client
@@ -111,8 +110,8 @@ func enhancedHelpOutput() {
 	fmt.Println(color.Ize(color.White, "  Scan a single host on port 2822 in verbose mode: ./honeydet -host 1.2.378.1.1 -port 2822 -verbose"))
 	fmt.Println(color.Ize(color.White, "  Scan hosts from a file with 100 threads checking for a ping before scanning, with a 5 second timeout, and create a json report as report.json: ./honeydet -hostfile hosts.txt -threads 100 -timeout 5 -checkping -report json -output report.json"))
 	fmt.Println(color.Ize(color.White, "  Run in webserver mode to expose an API endpoint: ./honeydet -webserveri -vv"))
-	fmt.Println(color.Ize(color.Blue, "                         curl 'http://localhost:8080/scan?host=1.2.378.1.1/24'"))
-	fmt.Println(color.Ize(color.Blue, "                         interface 'http://localhost:8080/'"))
+	fmt.Println(color.Ize(color.Blue, "                         curl 'http://localhost:8888/scan?host=1.2.378.1.1/24'"))
+	fmt.Println(color.Ize(color.Blue, "                         interface 'http://localhost:8888/'"))
 }
 
 func logo() {
@@ -138,7 +137,7 @@ func logo() {
   I+ :I+=I+  7I =I+ I7   I7~ :I?   +I,    II,II  I7~ :I?=I=
       =, I7III: =I= I7    IIIII    +I,     II7I   IIIII ~I+
 
-      Go Honeypot Detector, Jan 2024, Version 1.2.37
+      Go Honeypot Detector, Oct 2026, Version 1.3.0
 `))
 }
 
@@ -217,7 +216,7 @@ func main() {
 		http.HandleFunc("/getScans", func(w http.ResponseWriter, r *http.Request) {
 			scans, err := getScans(db)
 			if err != nil {
-				fmt.Sprintf("Error retrieving scans: %s", err)
+				fmt.Printf("Error retrieving scans: %s\n", err)
 				http.Error(w, "Internal server error", http.StatusInternalServerError)
 				return
 			}
@@ -342,7 +341,7 @@ func main() {
 					}
 					if *checkPing && !responsiveHostsMap[host] {
 						if *verbose {
-							fmt.Sprintf("[Verbose] Host %s does not respond to ping, skipping\n", host)
+							fmt.Printf("[Verbose] Host %s does not respond to ping, skipping\n", host)
 						}
 						continue
 					}

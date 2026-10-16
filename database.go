@@ -1,18 +1,18 @@
 package main
 
 import (
+	_ "modernc.org/sqlite"
 	"database/sql"
 	"encoding/json"
 	"fmt"
 	"github.com/TwiN/go-color"
-	_ "github.com/mattn/go-sqlite3"
 	"log"
 	"net/http"
 	"time"
 )
 
 func initializeDatabase() (*sql.DB, error) {
-	db, err := sql.Open("sqlite3", "./scans.db")
+	db, err := sql.Open("sqlite", "./scans.db")
 	if err != nil {
 		return nil, err
 	}
@@ -61,7 +61,7 @@ func insertScanResults(db *sql.DB, scanID int64, results []DetectionResult) erro
 	for _, result := range results {
 		shodanInfoJSON, _ := json.Marshal(result.ShodanInfo)
 		if *debug {
-			log.Printf(color.Ize(color.Cyan, fmt.Sprintf("[Debug] Inserting result into database: ScanID=%d, Host=%s, Port=%d, IsHoneypot=%t, HoneypotType=%s, Confidence=%s, Comment=%s, DetectionTime=%s, ShodanInfo=%s", scanID, result.Host, result.Port, result.IsHoneypot, result.HoneypotType, result.Confidence, result.Comment, result.DetectionTime, string(shodanInfoJSON))))
+			log.Print(color.Ize(color.Cyan, fmt.Sprintf("[Debug] Inserting result into database: ScanID=%d, Host=%s, Port=%d, IsHoneypot=%t, HoneypotType=%s, Confidence=%s, Comment=%s, DetectionTime=%s, ShodanInfo=%s", scanID, result.Host, result.Port, result.IsHoneypot, result.HoneypotType, result.Confidence, result.Comment, result.DetectionTime, string(shodanInfoJSON))))
 
 		}
 		_, err := stmt.Exec(scanID, result.Host, result.Port, result.IsHoneypot, result.HoneypotType, result.Confidence, result.Comment, result.DetectionTime, string(shodanInfoJSON))

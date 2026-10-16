@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/TwiN/go-color"
-	_ "github.com/mattn/go-sqlite3"
 	"log"
 	"net/http"
 	"strconv"
@@ -85,14 +84,14 @@ func getScans(db *sql.DB) ([]map[string]interface{}, error) {
 func scanHandler(w http.ResponseWriter, r *http.Request) {
 	db, err := initializeDatabase()
 	if err != nil {
-		log.Printf(color.Ize(color.Red, fmt.Sprintf("Error initializing database: %s", err)))
+		log.Print(color.Ize(color.Red, fmt.Sprintf("Error initializing database: %s", err)))
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 	defer db.Close()
 
 	if *verbose {
-		log.Printf(color.Ize(color.White, "Received request: "+r.URL.String()))
+		log.Print(color.Ize(color.White, "Received request: "+r.URL.String()))
 	}
 
 	checkPing, _ := strconv.ParseBool(r.URL.Query().Get("checkPing"))
@@ -104,13 +103,13 @@ func scanHandler(w http.ResponseWriter, r *http.Request) {
 
 	hosts, err := parseHostInput(r.URL.Query().Get("host"))
 	if err != nil {
-		log.Printf(color.Ize(color.Red, "Error parsing host input: "+err.Error()))
+		log.Print(color.Ize(color.Red, "Error parsing host input: "+err.Error()))
 		return
 	}
 
 	ports, err := parsePortInput(r.URL.Query().Get("port"))
 	if err != nil {
-		log.Printf(color.Ize(color.Red, "Error parsing port input: "+err.Error()))
+		log.Print(color.Ize(color.Red, "Error parsing port input: "+err.Error()))
 		return
 	}
 
@@ -122,31 +121,31 @@ func scanHandler(w http.ResponseWriter, r *http.Request) {
 
 	signatures, err := readSignatures(*signatureFile)
 	if err != nil {
-		log.Printf(color.Ize(color.Red, "Error reading signatures: "+err.Error()))
+		log.Print(color.Ize(color.Red, "Error reading signatures: "+err.Error()))
 		return
 	}
 
 	var responsiveHosts []string
 	if checkPing {
-		log.Printf(color.Ize(color.Blue, "Ping check enabled. Starting to ping hosts."))
+		log.Print(color.Ize(color.Blue, "Ping check enabled. Starting to ping hosts."))
 		var pingWg sync.WaitGroup
 		for _, host := range hosts {
 			pingWg.Add(1)
 			go func(h string) {
 				defer pingWg.Done()
-				log.Printf(color.Ize(color.Blue, "Pinging host: "+h))
+				log.Print(color.Ize(color.Blue, "Pinging host: "+h))
 				if hostRespondsToPing(h, timeout) {
 					responsiveHosts = append(responsiveHosts, h)
 					if *verbose {
-						log.Printf(color.Ize(color.Green, "Host "+h+" responds to ping"))
+						log.Print(color.Ize(color.Green, "Host "+h+" responds to ping"))
 					}
 				} else {
-					log.Printf(color.Ize(color.Yellow, "No response from host: "+h))
+					log.Print(color.Ize(color.Yellow, "No response from host: "+h))
 				}
 			}(host)
 		}
 		pingWg.Wait()
-		log.Printf(color.Ize(color.Blue, "Ping check completed."))
+		log.Print(color.Ize(color.Blue, "Ping check completed."))
 	} else {
 		responsiveHosts = hosts
 	}
@@ -172,7 +171,7 @@ func scanHandler(w http.ResponseWriter, r *http.Request) {
 					host := responsiveHosts[hostIndex]
 					port := ports[portIndex]
 					if *verbose {
-						log.Printf(color.Ize(color.Blue, "Processing host: "+host+" on port "+strconv.Itoa(port)))
+						log.Print(color.Ize(color.Blue, "Processing host: "+host+" on port "+strconv.Itoa(port)))
 					}
 					results := detectHoneypot(host, []int{port}, proto, signatures, timeout, bypassPortCheck, shodanClient)
 					combinedResults = append(combinedResults, results...)
@@ -194,14 +193,14 @@ func scanHandler(w http.ResponseWriter, r *http.Request) {
 	scanParameters := r.URL.String()
 	scanID, err := insertScanData(db, startTime, scanParameters)
 	if err != nil {
-		log.Printf(color.Ize(color.Red, "Error inserting scan data: "+err.Error()))
+		log.Print(color.Ize(color.Red, "Error inserting scan data: "+err.Error()))
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
 	err = insertScanResults(db, scanID, finalResults)
 	if err != nil {
-		log.Printf(color.Ize(color.Red, "Error inserting scan results: "+err.Error()))
+		log.Print(color.Ize(color.Red, "Error inserting scan results: "+err.Error()))
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
@@ -209,7 +208,7 @@ func scanHandler(w http.ResponseWriter, r *http.Request) {
 	endTime := time.Now()
 	err = updateScanStatus(db, scanID, endTime)
 	if err != nil {
-		log.Printf(color.Ize(color.Red, "Error updating scan status: "+err.Error()))
+		log.Print(color.Ize(color.Red, "Error updating scan status: "+err.Error()))
 	}
 
 	w.Header().Set("Content-Type", "application/json")

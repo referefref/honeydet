@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/TwiN/go-color"
 	"github.com/gosnmp/gosnmp"
-	_ "github.com/mattn/go-sqlite3"
 	"github.com/simonvetter/modbus"
 	"github.com/tomsteele/go-shodan"
 	"golang.org/x/crypto/ssh"
@@ -305,7 +304,7 @@ func sendRequest(conn net.Conn, step Step, timeout int) error {
 		if *debug {
 			fmt.Println(color.Ize(color.Red, fmt.Sprintf("[Debug] %s", errMsg)))
 		}
-		return fmt.Errorf(errMsg)
+		return fmt.Errorf("%s", errMsg)
 	}
 
 	if *debug {

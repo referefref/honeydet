@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/TwiN/go-color"
-	_ "github.com/mattn/go-sqlite3"
 	"os"
 )
 

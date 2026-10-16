@@ -4,37 +4,32 @@ on:
   push:
     tags:
       - "*"
-      
+
 permissions:
-   contents: write
- 
-jobs:      
+  contents: write
+
+jobs:
   build:
     name: honeydet release
-    strategy:
-       matrix:
-         os: [ ubuntu-latest ]
-    runs-on: ${{ matrix.os }}
-
+    runs-on: ubuntu-latest
     steps:
-      - name: Check out code into the Go module directory
-        uses: actions/checkout@v3
+      - name: Check out code
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Set up Go 1.20
-        uses: actions/setup-go@v4
-      - name: Test
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Vet and test
         run: |
-            go version
-            go get -u golang.org/x/crypto/ssh
-            go get github.com/TwiN/go-color
-            go get github.com/simonvetter/modbus
-            go get github.com/tomsteele/go-shodan        
+          go vet ./...
+          go test ./...
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v5
+        uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
-          version: latest
-          args: release --clean --skip-validate
+          version: "~> v2"
+          args: release --clean
         env:
-          GITHUB_TOKEN: ${{ secrets.GO_RELEASER_GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
