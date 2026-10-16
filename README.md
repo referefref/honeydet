@@ -16,6 +16,10 @@ Signatures support multi-step, hex, string and regex detection on TCP and UDP.
 Features a SQL backend for persistent scans which can be managed through the web interface.
 Shodan API integration for non-private IPs, automatically adds shodan host information when the flag is set (currently CLI only)
 
+### What's new in 1.4.2
+- New OpenCanary signatures (ids 58-66).
+- Improved Redis (id 12) and SNMP (id 17) signatures.
+
 ### What's new in 1.4.1
 - Responses that arrive in more than one packet are now read in full.
 - New Dionaea signatures (ids 50-57).
