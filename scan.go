@@ -156,6 +156,22 @@ func detectHoneypot(host string, ports []int, proto string, signatures Signature
 					defer conn.Close()
 				}
 
+				// Some SSH honeypots (e.g. Cowrie) drop the connection after an exec
+				// from the Go client, so use a fresh connection per signature
+				if isSSH {
+					if sshClient != nil {
+						sshClient.Close()
+					}
+					sshClient, err = authenticateSSH(host, port, *username, *password, timeout)
+					if err != nil {
+						if *debug {
+							fmt.Println(color.Ize(color.Red, fmt.Sprintf("[Debug] SSH re-authentication failed for signature '%s': %s", signature.Name, err)))
+						}
+						sshClient = nil
+						continue
+					}
+				}
+
 				signatureMatched := true
 				for _, step := range signature.Steps {
 					var response string
@@ -183,7 +199,11 @@ func detectHoneypot(host string, ports []int, proto string, signatures Signature
 							if *debug {
 								fmt.Println(color.Ize(color.Red, fmt.Sprintf("[Debug] Error executing SSH command: %s", err)))
 							}
-							break
+							// Match on any output received; fail the signature only if there was none
+							if response == "" {
+								signatureMatched = false
+								break
+							}
 						}
 					} else {
 						err = sendRequest(conn, step, timeout)
@@ -204,12 +224,17 @@ func detectHoneypot(host string, ports []int, proto string, signatures Signature
 						}
 					}
 
-					invertMatch, err := strconv.ParseBool(step.InvertMatch)
-					if err != nil {
-						if *debug {
-							fmt.Println(color.Ize(color.Red, fmt.Sprintf("[Debug] Error parsing InvertMatch: %s", err)))
+					// Default to false when invert_match is omitted, rather than skipping the check
+					invertMatch := false
+					if step.InvertMatch != "" {
+						invertMatch, err = strconv.ParseBool(step.InvertMatch)
+						if err != nil {
+							if *debug {
+								fmt.Println(color.Ize(color.Red, fmt.Sprintf("[Debug] Error parsing InvertMatch: %s", err)))
+							}
+							signatureMatched = false
+							break
 						}
-						continue
 					}
 					if !isResponseMatch(response, step.OutputMatchType, step.Output, invertMatch) {
 						signatureMatched = false
