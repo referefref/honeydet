@@ -121,6 +121,7 @@ signatures:
         output: bad version 1111
         invert_match: false
     confidence: High
+    comment: "Does not match Cowrie 3.1.3+, which now replies 'Invalid SSH identification string.' like OpenSSH. See ids 43-49."
   - name: cisco-asa
     id: 9
     port: web-ports
@@ -690,3 +691,87 @@ signatures:
         invert_match: false
     confidence: High
     comment: "Wordpot WordPress honeypot detection. Tests for 1) leaked passwd content in recent-backups, 2) simplified TimThumb pattern matching, 3) identical login error responses to different credentials, and 4) templated author pages. Wordpot uses Flask rather than PHP and implements simplified responses that differ from genuine WordPress."
+  - name: cowrie-no-pid-expansion
+    id: 43
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "echo $$"
+        output_match_type: regex
+        output: '^\$\$$'
+        invert_match: false
+    confidence: High
+    comment: "Requires -u/-pw (Cowrie accepts any root password except root/123456). Cowrie's shell does not expand $$; a real shell prints its PID. Behavioural, survives config changes."
+  - name: cowrie-no-arithmetic-expansion
+    id: 44
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "echo $((6*7))"
+        output_match_type: string
+        output: "6*7: command not found"
+        invert_match: false
+    confidence: High
+    comment: "Requires -u/-pw (Cowrie accepts any root password except root/123456). Cowrie treats $((6*7)) as a command; a real POSIX shell prints 42. Behavioural."
+  - name: cowrie-exec-format-error
+    id: 45
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "df -h"
+        output_match_type: string
+        output: "cannot execute binary file: Exec format error"
+        invert_match: false
+    confidence: High
+    comment: "Requires -u/-pw (Cowrie accepts any root password except root/123456). Binaries present in the fake filesystem but not implemented as commands return Exec format error (shell/protocol.py)."
+  - name: cowrie-invalid-ipv6-link-local
+    id: 46
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "ifconfig eth0"
+        output_match_type: regex
+        output: 'inet6 addr: fe([0-7][0-9a-f]|8[1-9a-f]|9[0-9a-f]|[a-f][0-9a-f])::'
+        invert_match: false
+    confidence: High
+    comment: "Requires -u/-pw (Cowrie accepts any root password except root/123456). commands/ifconfig.py builds the link-local address as fe<random byte>::; real link-local is always fe80::. Wrong in 255 of 256 process starts."
+  - name: cowrie-default-user-phil
+    id: 47
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "cat /etc/passwd"
+        output_match_type: string
+        output: "Phil California"
+        invert_match: false
+    confidence: Medium
+    comment: "Requires -u/-pw (Cowrie accepts any root password except root/123456). Default fake /etc/passwd contains user phil (Phil California). Removed if the operator rebuilds fs.pickle."
+  - name: cowrie-default-hostname
+    id: 48
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "hostname"
+        output_match_type: regex
+        output: '^svr04$'
+        invert_match: false
+    confidence: Medium
+    comment: "Requires -u/-pw (Cowrie accepts any root password except root/123456). Default hostname in cowrie.cfg.dist is svr04."
+  - name: cowrie-busybox-1-20-2
+    id: 49
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "busybox"
+        output_match_type: string
+        output: "BusyBox v1.20.2 (Debian 1:1.20.0-7)"
+        invert_match: false
+    confidence: Medium
+    comment: "Requires -u/-pw (Cowrie accepts any root password except root/123456). Hard-coded BusyBox 1.20.2 banner (2012) on a host claiming a 2024 Debian 12 kernel."
