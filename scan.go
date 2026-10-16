@@ -73,7 +73,7 @@ func hostRespondsToPing(host string, timeout int) bool {
 	return err == nil
 }
 
-func detectHoneypot(host string, ports []int, proto string, signatures Signatures, timeout int, bypassPortCheck bool, shodanClient *shodan.Client) []DetectionResult {
+func detectHoneypot(host string, ports []int, proto string, signatures Signatures, timeout int, bypassPortCheck bool, shodanClient *shodan.Client, username, password string) []DetectionResult {
 	var results []DetectionResult
 	detectionTime := time.Now()
 
@@ -97,18 +97,27 @@ func detectHoneypot(host string, ports []int, proto string, signatures Signature
 		var isSSH, isModbus bool
 		var err error
 
-		if *username != "" && *password != "" && proto == "tcp" && port != 161 {
+		if username != "" && password != "" && proto == "tcp" && port != 161 {
 			isSSH = probeSSHServer(host, port, timeout)
 
 			if isSSH {
 				if *debug {
 					fmt.Println(color.Ize(color.Purple, fmt.Sprintf("[Debug] SSH service detected on host %s:%d, attempting authentication", host, port)))
 				}
-				sshClient, err = authenticateSSH(host, port, *username, *password, timeout)
+				sshClient, err = authenticateSSH(host, port, username, password, timeout)
 				if err != nil {
 					if *debug {
 						fmt.Println(color.Ize(color.Red, fmt.Sprintf("[Debug] SSH authentication failed for host %s:%d: %s", host, port, err)))
 					}
+					// Report the port rather than dropping it: a refused login is itself evidence of a genuine server
+					results = append(results, DetectionResult{
+						Host:          host,
+						Port:          port,
+						IsHoneypot:    false,
+						Comment:       "SSH login refused",
+						DetectionTime: detectionTime,
+						ShodanInfo:    shodanInfo,
+					})
 					continue
 				}
 				defer sshClient.Close()
@@ -166,7 +175,7 @@ func detectHoneypot(host string, ports []int, proto string, signatures Signature
 					if sshClient != nil {
 						sshClient.Close()
 					}
-					sshClient, err = authenticateSSH(host, port, *username, *password, timeout)
+					sshClient, err = authenticateSSH(host, port, username, password, timeout)
 					if err != nil {
 						if *debug {
 							fmt.Println(color.Ize(color.Red, fmt.Sprintf("[Debug] SSH re-authentication failed for signature '%s': %s", signature.Name, err)))
