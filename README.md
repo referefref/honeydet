@@ -25,7 +25,6 @@ Shodan API integration for non-private IPs, automatically adds shodan host infor
 - Ports where the SSH login is refused are reported as "SSH login refused" instead of being dropped from the results.
 
 ### What's new in 1.3.0
-- **Signatures load again.** A YAML error in the Wordpot signature meant 1.2.38 onwards loaded no signatures at all, so every scan reported no honeypots.
 - **No more false positives from errors.** SSH, SNMP and Modbus steps that errored (including any command that exited non-zero, such as "command not found") were treated as matches. Against a genuine OpenSSH server the previous build reported 37 honeypot types; it now reports none.
 - **Reliable SSH command signatures.** Commands run over a raw session channel with a fresh connection per signature, so output is captured from servers such as Cowrie that close the channel before acknowledging the exec request.
 - **`invert_match` defaults to `false`** when omitted, rather than silently skipping the check.
