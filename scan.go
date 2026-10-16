@@ -140,6 +140,11 @@ func detectHoneypot(host string, ports []int, proto string, signatures Signature
 
 		for _, signature := range signatures.Signatures {
 			if bypassPortCheck || isPortMatch(port, signature.Port) {
+				// SNMP (161) and Modbus (502) signatures send OIDs and register requests rather
+				// than raw payloads, so only run them where the protocol client is in use
+				if (signature.Port == "161" && port != 161) || (signature.Port == "502" && port != 502) {
+					continue
+				}
 				if *verbose {
 					fmt.Println(color.Ize(color.Green, fmt.Sprintf("[Verbose] Testing signature '%s' on host %s:%d", signature.Name, host, port)))
 				}
@@ -181,7 +186,8 @@ func detectHoneypot(host string, ports []int, proto string, signatures Signature
 							if *debug {
 								fmt.Println(color.Ize(color.Red, fmt.Sprintf("[Debug] SNMP request failed for signature '%s' on host %s:%d: %s", signature.Name, host, port, err)))
 							}
-							break
+							// Treat as no response: only no-response steps can match
+							response = ""
 						}
 					} else if isModbus {
 						var modbusResponse string
@@ -190,7 +196,8 @@ func detectHoneypot(host string, ports []int, proto string, signatures Signature
 							if *debug {
 								fmt.Println(color.Ize(color.Red, fmt.Sprintf("[Debug] Modbus request failed for signature '%s' on host %s:%d: %s", signature.Name, host, port, err)))
 							}
-							break
+							// Treat as no response: only no-response steps can match
+							modbusResponse = ""
 						}
 						response = modbusResponse
 					} else if isSSH && sshClient != nil {
