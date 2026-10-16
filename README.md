@@ -16,6 +16,14 @@ Signatures support multi-step, hex, string and regex detection on TCP and UDP.
 Features a SQL backend for persistent scans which can be managed through the web interface.
 Shodan API integration for non-private IPs, automatically adds shodan host information when the flag is set (currently CLI only)
 
+### What's new in 1.4.0
+- **New web interface.** A self-contained page (no external libraries or CDNs) built into the binary, so it now works from release downloads.
+- Results grouped per host, with the most likely honeypot family, a confidence breakdown, and the probe and reason for each matched signature.
+- SSH credentials entered in the web form now reach the scan engine, with an option to generate a random password.
+- Signature library: search, filters, YAML view and a per-signature test against a host (new `/signatures` and `/testSignature` endpoints).
+- Scan history with view, re-run and delete; JSON and CSV export; light and dark themes; works at phone width.
+- Ports where the SSH login is refused are reported as "SSH login refused" instead of being dropped from the results.
+
 ### What's new in 1.3.0
 - **Signatures load again.** A YAML error in the Wordpot signature meant 1.2.38 onwards loaded no signatures at all, so every scan reported no honeypots.
 - **No more false positives from errors.** SSH, SNMP and Modbus steps that errored (including any command that exited non-zero, such as "command not found") were treated as matches. Against a genuine OpenSSH server the previous build reported 37 honeypot types; it now reports none.
