@@ -16,6 +16,17 @@ Signatures support multi-step, hex, string and regex detection on TCP and UDP.
 Features a SQL backend for persistent scans which can be managed through the web interface.
 Shodan API integration for non-private IPs, automatically adds shodan host information when the flag is set (currently CLI only)
 
+### What's new in 1.3.0
+- **Signatures load again.** A YAML error in the Wordpot signature meant 1.2.38 onwards loaded no signatures at all, so every scan reported no honeypots.
+- **No more false positives from errors.** SSH, SNMP and Modbus steps that errored (including any command that exited non-zero, such as "command not found") were treated as matches. Against a genuine OpenSSH server the previous build reported 37 honeypot types; it now reports none.
+- **Reliable SSH command signatures.** Commands run over a raw session channel with a fresh connection per signature, so output is captured from servers such as Cowrie that close the channel before acknowledging the exec request.
+- **`invert_match` defaults to `false`** when omitted, rather than silently skipping the check.
+- **SNMP and Modbus signatures only run on 161 and 502**, and the generic SNMP signature now checks for a non-numeric sysUpTime.
+- **New Cowrie 3.x signatures** (ids 43-49). Id 8 no longer matches Cowrie 3.1.3.
+- **Pure-Go SQLite** (modernc.org/sqlite): every release binary now has a working scan database, with no CGO required.
+- **IPv6 targets** now work (host:port addresses were built with "%s:%d").
+- Built with Go 1.26 and all dependencies updated to current releases (golang.org/x/crypto 0.58.0, gosnmp 1.45, modbus 1.6.4, go.yaml.in/yaml/v3 replacing the deprecated gopkg.in/yaml.v2). Requires Go 1.26+ to build.
+
 ### Signatures
 The signature list is growing as I run through different methods of fuzzing, reverse engineering and comparing real protocols and servers to their emulated counterparts. I continue to add features to the signature format as required, and will extend the applications support of protocols using additional libraries as needed for things like DICOM and Modbus.
 
@@ -40,11 +51,14 @@ The signature list is growing as I run through different methods of fuzzing, rev
 
 ### Installation
 
+#### Download a release
+Pre-built binaries for Linux, macOS and Windows (amd64, arm64, 386) are on the [releases page](https://github.com/referefref/honeydet/releases).
+
 #### Build from source
+Requires Go 1.26 or later. No C compiler is needed.
 ```bash
 git clone https://github.com/referefref/honeydet.git
 cd honeydet
-go get honeydet
 go build
 ```
 
@@ -123,7 +137,7 @@ docker compose up
     	Enable extra verbose (debug) output
   -w	Short form of -webserver
   -webserver
-    	Run as a web server on port 8080
+    	Run as a web server on port 8888
 ```
 ### Examples
 * Scan a single host on port 2822 in verbose mode:
@@ -141,7 +155,7 @@ docker compose up
 * Run in verbose webserver mode to expose an API endpoint:
 ```
 ./honeydet -webserver -verbose
-curl 'http://localhost:8080/scan?targets=10.1.1.1/24&report=json&port=3389'
+curl 'http://localhost:8888/scan?host=10.1.1.1/24&report=json&port=3389'
 ```
 
 ## How to write a signature
@@ -153,19 +167,52 @@ Add a new section to signatures.yaml or create a new signature yaml file with th
 signatures:
   - name: "signature name"
     id: 1337
-    port: port number
-    proto: udp/tcp
+    port: 22
+    proto: tcp
     steps:
-      - input_type: string/hex
+      - input_type: string
         input: "input string or hex value"
-        output_match_type: string/hex/regex
+        output_match_type: regex
         output: "output match string, hex value or regex expression"
         invert_match: false
-      - input_type: string/hex
+      - input_type: string
         input: "second step input"
-        output_match_type: string/hex/regex
+        output_match_type: string
         output: "output match string for step 2"
         invert_match: false
-  confidence: "High/Medium/Low"
-  comment: "Comment explaining the signature and its detection mechanism"
+    confidence: "High"
+    comment: "Comment explaining the signature and its detection mechanism"
 ```
+
+**Fields**
+- `input_type`: `string` (a newline is appended) or `hex` (raw bytes). `GET`/`POST` send a request for `/`.
+- `output_match_type`: `string` (contains), `hex` (hex of the response contains), `regex` (Go RE2 syntax, matched against the trimmed response), `no-response` or `not-equals`.
+- `invert_match`: optional, defaults to `false`. Set `true` to match when the pattern is absent.
+- All steps must match for the signature to match. Quote values containing `: ` or a leading special character, otherwise the YAML will not parse and no signatures load.
+
+**Authenticated SSH signatures**
+
+When `-username` and `-password` are supplied and the port presents an SSH banner, each step's `input` is run as a command over an authenticated SSH session, and the output (stdout and stderr) is matched. Each signature gets a fresh connection. Example from the Cowrie set:
+```yaml
+  - name: cowrie-no-pid-expansion
+    id: 43
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "echo $$"
+        output_match_type: regex
+        output: '^\$\$$'
+        invert_match: false
+    confidence: High
+    comment: "Cowrie's shell does not expand $$; a real shell prints its PID."
+```
+Many SSH honeypots accept any password, so `-u root -pw <random>` is itself a useful test: a genuine server rejects it. Without credentials, steps are sent over a raw TCP connection.
+
+**SNMP and Modbus**
+
+Port 161 steps are sent as SNMP GET requests (the `input` is an OID) and port 502 steps as Modbus requests. Signatures for these ports only run on them, even with `-bypassPortCheck`.
+
+**Testing a signature**
+
+Before submitting, run it against the honeypot (it should match) and against a genuine instance of the same service (it should not), and include both outputs as proof with the PR.

@@ -7,34 +7,24 @@ on:
     branches: [ "main" ]
 
 jobs:
-
   build:
     strategy:
-       matrix:
-         os: [ ubuntu-latest, macos-latest, windows-latest ]
+      matrix:
+        os: [ ubuntu-latest, macos-latest, windows-latest ]
     runs-on: ${{ matrix.os }}
     steps:
-    - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-    - name: Set up Go
-      uses: actions/setup-go@v4
-      with:
-        go-version: '1.20'
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
 
-    - name: Build
-      run: |
-         go version
-            go get -u golang.org/x/crypto/ssh
-            go get github.com/TwiN/go-color
-            go get github.com/simonvetter/modbus
-            go get github.com/tomsteele/go-shodan
-         go build -v ./...
+      - name: Vet
+        run: go vet ./...
 
-    - name: Test
-      run: |
-         go version
-            go get -u golang.org/x/crypto/ssh
-            go get github.com/TwiN/go-color
-            go get github.com/simonvetter/modbus
-            go get github.com/tomsteele/go-shodan
-         go test -v ./...
+      - name: Build
+        run: go build -v ./...
+
+      - name: Test
+        run: go test -v ./...

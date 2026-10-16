@@ -3,8 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/TwiN/go-color"
-	_ "github.com/mattn/go-sqlite3"
-	"gopkg.in/yaml.v2"
+	"go.yaml.in/yaml/v3"
 	"os"
 )
 

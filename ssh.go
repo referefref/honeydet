@@ -5,6 +5,7 @@ import (
 	"io"
 	"golang.org/x/crypto/ssh"
 	"net"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -14,7 +15,7 @@ func probeSSHServer(host string, port int, timeout int) bool {
 		fmt.Printf("[Verbose] Checking if the service is an SSH server on host %s:%d\n", host, port)
 	}
 
-	address := fmt.Sprintf("%s:%d", host, port)
+	address := net.JoinHostPort(host, strconv.Itoa(port))
 	conn, err := net.DialTimeout("tcp", address, time.Duration(timeout)*time.Second)
 	if err != nil {
 		if *verbose {
@@ -59,7 +60,7 @@ func authenticateSSH(host string, port int, username, password string, timeout i
 		fmt.Printf("[Verbose] SSH client configuration set. Dialing TCP connection to %s:%d\n", host, port)
 	}
 
-	address := fmt.Sprintf("%s:%d", host, port)
+	address := net.JoinHostPort(host, strconv.Itoa(port))
 	client, err := ssh.Dial("tcp", address, config)
 	if err != nil {
 		if *verbose {
