@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/TwiN/go-color"
-	"gopkg.in/yaml.v2"
+	"go.yaml.in/yaml/v3"
 	"os"
 )
 

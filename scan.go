@@ -27,7 +27,7 @@ func isPublicIP(ip string) bool {
 }
 
 func connectToNetworkService(host string, port int, proto string, timeout int) (net.Conn, error) {
-	address := fmt.Sprintf("%s:%d", host, port)
+	address := net.JoinHostPort(host, strconv.Itoa(port))
 	var conn net.Conn
 	var err error
 

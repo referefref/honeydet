@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"github.com/TwiN/go-color"
 	"github.com/tomsteele/go-shodan"
-	"gopkg.in/yaml.v2"
+	"go.yaml.in/yaml/v3"
 	"log"
 	"net/http"
 	"os"

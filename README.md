@@ -24,7 +24,8 @@ Shodan API integration for non-private IPs, automatically adds shodan host infor
 - **SNMP and Modbus signatures only run on 161 and 502**, and the generic SNMP signature now checks for a non-numeric sysUpTime.
 - **New Cowrie 3.x signatures** (ids 43-49). Id 8 no longer matches Cowrie 3.1.3.
 - **Pure-Go SQLite** (modernc.org/sqlite): every release binary now has a working scan database, with no CGO required.
-- Dependencies updated (golang.org/x/crypto 0.48.0); requires Go 1.24+ to build.
+- **IPv6 targets** now work (host:port addresses were built with "%s:%d").
+- Built with Go 1.26 and all dependencies updated to current releases (golang.org/x/crypto 0.58.0, gosnmp 1.45, modbus 1.6.4, go.yaml.in/yaml/v3 replacing the deprecated gopkg.in/yaml.v2). Requires Go 1.26+ to build.
 
 ### Signatures
 The signature list is growing as I run through different methods of fuzzing, reverse engineering and comparing real protocols and servers to their emulated counterparts. I continue to add features to the signature format as required, and will extend the applications support of protocols using additional libraries as needed for things like DICOM and Modbus.
@@ -54,7 +55,7 @@ The signature list is growing as I run through different methods of fuzzing, rev
 Pre-built binaries for Linux, macOS and Windows (amd64, arm64, 386) are on the [releases page](https://github.com/referefref/honeydet/releases).
 
 #### Build from source
-Requires Go 1.24 or later. No C compiler is needed.
+Requires Go 1.26 or later. No C compiler is needed.
 ```bash
 git clone https://github.com/referefref/honeydet.git
 cd honeydet
