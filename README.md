@@ -38,13 +38,13 @@ Shodan API integration for non-private IPs, automatically adds shodan host infor
 ### Signatures
 The signature list is growing as I run through different methods of fuzzing, reverse engineering and comparing real protocols and servers to their emulated counterparts. I continue to add features to the signature format as required, and will extend the applications support of protocols using additional libraries as needed for things like DICOM and Modbus.
 
-### Frontend Features:
-- Multi-threaded, and now super fast. /24 single port scan in around 1 second
-- Supports single and multiple targets with csv, range, and CIDR
-- Supports single and multiple ports with range and csv list
-- Adjust execution options to ignore signature port mapping, pingtest host before test, threads, timeout and delay
-- Pagination, table search and export
-- Remove individual scans and clear database functionality
+### Web Interface Features
+- Run `honeydet -webserver` and browse to http://localhost:8888/ (the interface is built into the binary)
+- Multi-threaded scans of single hosts, ranges, CIDR blocks and lists, across single ports, ranges or lists, with presets for common services
+- SSH credentials for authenticated signatures, with an option to generate a random password
+- Results grouped per host, showing the most likely honeypot, a confidence breakdown, and the probe and reason for each matched signature
+- Signature library with search, filters, the YAML for each signature, and a test against any host
+- Scan history with view, re-run and delete; JSON and CSV export; light and dark themes; works on mobile
 
 ### Wish-list/To-do
 * ~~Docker image and docker-compose file for simple installation~~
@@ -55,7 +55,17 @@ The signature list is growing as I run through different methods of fuzzing, rev
 * Active port detection (without requiring root), and passive port detection using Shodan API in place of specific ports or ranges
 
 ### Web Interface
-![image](https://github.com/referefref/honeydet/assets/56499429/fdb710ea-9389-45b9-b56d-6fa1e2009efa)
+Scan results: Cowrie detected by its authenticated SSH signatures, with genuine servers reported as login refused.
+
+![honeydet web interface showing scan results](docs/screenshots/web-ui-scan-results.png)
+
+Signature library: each signature's definition, tested against a honeypot (match) and a genuine server (no match).
+
+![honeydet signature library with a signature test](docs/screenshots/web-ui-signature-library.png)
+
+Light theme:
+
+![honeydet web interface in the light theme](docs/screenshots/web-ui-light-theme.png)
 
 ### Installation
 
