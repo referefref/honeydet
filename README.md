@@ -16,6 +16,10 @@ Signatures support multi-step, hex, string and regex detection on TCP and UDP.
 Features a SQL backend for persistent scans which can be managed through the web interface.
 Shodan API integration for non-private IPs, automatically adds shodan host information when the flag is set (currently CLI only)
 
+### What's new in 1.4.1
+- Responses that arrive in more than one packet are now read in full.
+- New Dionaea signatures (ids 50-57).
+
 ### What's new in 1.4.0
 - **New web interface.** A self-contained page (no external libraries or CDNs) built into the binary, so it now works from release downloads.
 - Results grouped per host, with the most likely honeypot family, a confidence breakdown, and the probe and reason for each matched signature.

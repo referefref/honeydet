@@ -140,7 +140,7 @@ func logo() {
   I+ :I+=I+  7I =I+ I7   I7~ :I?   +I,    II,II  I7~ :I?=I=
       =, I7III: =I= I7    IIIII    +I,     II7I   IIIII ~I+
 
-      Go Honeypot Detector, Oct 2026, Version 1.4.0
+      Go Honeypot Detector, Oct 2026, Version 1.4.1
 `))
 }
 
