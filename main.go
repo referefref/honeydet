@@ -1,6 +1,7 @@
 package main
 
 import (
+	_ "embed"
 	"bytes"
 	"encoding/csv"
 	"encoding/json"
@@ -12,7 +13,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -102,6 +102,9 @@ type Scan struct {
 	Parameters string
 }
 
+
+//go:embed index.html
+var indexHTML []byte
 func enhancedHelpOutput() {
 	logo()
 	fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s:\n", os.Args[0])
@@ -227,9 +230,12 @@ func main() {
 			}
 			json.NewEncoder(w).Encode(scans)
 		})
+		http.HandleFunc("/signatures", signaturesHandler)
+		http.HandleFunc("/testSignature", testSignatureHandler)
 		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 			if r.URL.Path == "/" {
-				http.ServeFile(w, r, filepath.Join(".", "index.html"))
+				w.Header().Set("Content-Type", "text/html; charset=utf-8")
+				w.Write(indexHTML)
 			} else {
 				http.NotFound(w, r)
 			}
@@ -345,7 +351,7 @@ func main() {
 						}
 						continue
 					}
-					results := detectHoneypot(host, []int{port}, *proto, signatures, *timeout, *bypassPortCheck, shodanClient)
+					results := detectHoneypot(host, []int{port}, *proto, signatures, *timeout, *bypassPortCheck, shodanClient, *username, *password)
 					for _, result := range results {
 						if *verbose {
 							fmt.Println(color.Ize(color.Green, fmt.Sprintf("[Verbose] Result for host %s on port %d: IsHoneypot=%t, HoneypotType=%s", result.Host, result.Port, result.IsHoneypot, result.HoneypotType)))

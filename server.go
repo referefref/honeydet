@@ -7,6 +7,7 @@ import (
 	"github.com/TwiN/go-color"
 	"log"
 	"net/http"
+	"net"
 	"strconv"
 	"sync"
 	"time"
@@ -114,6 +115,11 @@ func scanHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	proto := r.URL.Query().Get("proto")
+	if proto == "" {
+		proto = "tcp"
+	}
+	username := r.URL.Query().Get("username")
+	password := r.URL.Query().Get("password")
 	timeout, _ := strconv.Atoi(r.URL.Query().Get("timeout"))
 	if timeout == 0 {
 		timeout = 5
@@ -173,7 +179,7 @@ func scanHandler(w http.ResponseWriter, r *http.Request) {
 					if *verbose {
 						log.Print(color.Ize(color.Blue, "Processing host: "+host+" on port "+strconv.Itoa(port)))
 					}
-					results := detectHoneypot(host, []int{port}, proto, signatures, timeout, bypassPortCheck, shodanClient)
+					results := detectHoneypot(host, []int{port}, proto, signatures, timeout, bypassPortCheck, shodanClient, username, password)
 					combinedResults = append(combinedResults, results...)
 				}
 			}
@@ -213,4 +219,54 @@ func scanHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(finalResults)
+}
+
+// signaturesHandler returns the loaded signatures as JSON for the web interface
+func signaturesHandler(w http.ResponseWriter, r *http.Request) {
+	signatures, err := readSignatures(*signatureFile)
+	if err != nil {
+		http.Error(w, "Error reading signatures: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(signatures.Signatures)
+}
+
+// testSignatureHandler runs a single signature against one host and port, without
+// saving to the database, so a signature can be checked against a honeypot and a
+// genuine service before it is submitted
+func testSignatureHandler(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+	signatures, err := readSignatures(*signatureFile)
+	if err != nil {
+		http.Error(w, "Error reading signatures: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	var selected Signatures
+	for _, s := range signatures.Signatures {
+		if s.ID == q.Get("id") {
+			selected.Signatures = append(selected.Signatures, s)
+		}
+	}
+	if len(selected.Signatures) == 0 {
+		http.Error(w, "Unknown signature id", http.StatusNotFound)
+		return
+	}
+	port, err := strconv.Atoi(q.Get("port"))
+	if err != nil || port <= 0 || port > 65535 {
+		http.Error(w, "Invalid port", http.StatusBadRequest)
+		return
+	}
+	host := q.Get("host")
+	if net.ParseIP(host) == nil {
+		http.Error(w, "Invalid host (IP address required)", http.StatusBadRequest)
+		return
+	}
+	timeout, _ := strconv.Atoi(q.Get("timeout"))
+	if timeout <= 0 {
+		timeout = 5
+	}
+	results := detectHoneypot(host, []int{port}, "tcp", selected, timeout, true, nil, q.Get("username"), q.Get("password"))
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(results)
 }
