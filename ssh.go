@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"golang.org/x/crypto/ssh"
 	"net"
 	"strings"
@@ -76,41 +77,60 @@ func authenticateSSH(host string, port int, username, password string, timeout i
 
 func executeSSHCommand(client *ssh.Client, command string) (string, error) {
 	if *verbose {
-		fmt.Printf("[Verbose] Creating new SSH session to execute command\n")
+		fmt.Printf("[Verbose] Opening SSH session channel to execute command\n")
 	}
 
-	session, err := client.NewSession()
+	// Use a raw channel and send exec without want-reply. Some honeypots (e.g. Cowrie)
+	// send output and close the channel before replying to the exec request, which makes
+	// session.Run/CombinedOutput return EOF and discard the output.
+	channel, requests, err := client.OpenChannel("session", nil)
 	if err != nil {
 		if *verbose {
-			fmt.Printf("[Verbose] Failed to create SSH session: %s\n", err)
+			fmt.Printf("[Verbose] Failed to open SSH session channel: %s\n", err)
 		}
 		return "", err
 	}
-	defer session.Close()
+	defer channel.Close()
+	go ssh.DiscardRequests(requests)
 
 	if *verbose {
-		fmt.Printf("[Verbose] SSH session created. Executing command: %s\n", command)
+		fmt.Printf("[Verbose] SSH channel open. Executing command: %s\n", command)
 	}
 
-	output, err := session.CombinedOutput(command)
-	if err != nil {
-		netErr, ok := err.(net.Error)
-		if ok && netErr.Timeout() {
+	payload := ssh.Marshal(struct{ Command string }{command})
+	if _, err := channel.SendRequest("exec", false, payload); err != nil {
+		return "", err
+	}
+
+	type readResult struct {
+		data []byte
+		err  error
+	}
+	stdoutCh := make(chan readResult, 1)
+	stderrCh := make(chan readResult, 1)
+	go func() { d, e := io.ReadAll(channel); stdoutCh <- readResult{d, e} }()
+	go func() { d, e := io.ReadAll(channel.Stderr()); stderrCh <- readResult{d, e} }()
+
+	var output strings.Builder
+	deadline := time.After(10 * time.Second)
+	for i := 0; i < 2; i++ {
+		select {
+		case r := <-stdoutCh:
+			output.Write(r.data)
+		case r := <-stderrCh:
+			output.Write(r.data)
+		case <-deadline:
+			channel.Close()
 			if *verbose {
-				fmt.Printf("[Verbose] SSH command timed out: %s\n", err)
+				fmt.Printf("[Verbose] SSH command timed out\n")
 			}
-			return "SSH command timed out", err
+			return output.String(), fmt.Errorf("SSH command timed out")
 		}
-
-		if *verbose {
-			fmt.Printf("[Verbose] Error executing command via SSH: %s\n", err)
-		}
-		return "", err
 	}
 
 	if *verbose {
-		fmt.Printf("[Verbose] Command executed. Output: %s\n", string(output))
+		fmt.Printf("[Verbose] Command executed. Output: %s\n", output.String())
 	}
 
-	return string(output), nil
+	return output.String(), nil
 }
