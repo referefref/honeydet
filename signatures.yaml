@@ -990,3 +990,51 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: "Default mysql.banner (MySQL 5.5.43 on Ubuntu 14.04). Configurable; greeting is otherwise realistic."
+  - name: h0neytr4p-empty-200-for-anything
+    id: 67
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "FOO /hd-check HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 200 OK\r\nDate: [^\r]+\r\nContent-Length: 0\r\nConnection: close$'
+        invert_match: false
+    confidence: High
+    comment: "Any request that does not match a trap, even an invalid method, gets 200 OK with an empty body and no Server or Content-Type header. Genuine servers return 404, 405 or 501."
+  - name: h0neytr4p-200-with-404-page
+    id: 68
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /cgi-bin/ml-draw.py HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 200 OK[\s\S]*<h1> 404 Not found </h1>'
+        invert_match: false
+    confidence: High
+    comment: "Default trap page: status 200 with a body reading '404 Not found'."
+  - name: h0neytr4p-default-env-trap
+    id: 69
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /.env HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: string
+        output: "DB_PASS=s1mpl3"
+        invert_match: false
+    confidence: Medium
+    comment: "Default .env trap content. Changed if the operator edits traps/assets/config_files/env.txt."
+  - name: h0neytr4p-static-jenkins-crumb
+    id: 70
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /jenkins HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: string
+        output: 'data-crumb-value="0d1ddaef7459e170bb4bd33823a9369523cbfa65e78c0013bbe3c538d51ae713"'
+        invert_match: false
+    confidence: High
+    comment: "Jenkins dashboard trap with a fixed CSRF crumb; genuine Jenkins issues a new crumb per session."
