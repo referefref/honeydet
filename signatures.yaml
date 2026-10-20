@@ -273,6 +273,7 @@ signatures:
           index","resource.type":"index_or_alias","resource.id":"test","index":"test"},"status":404}'
         invert_match: false
     confidence: Low
+    comment: "Does not match current ElasticpotPY (73fff67), which returns HTTP 500 to requests without User-Agent and Accept headers. See ids 130-139."
     comment: Hardcoded index name, and resource id.
   - name: OWA-Honeypot
     id: 22
@@ -1038,3 +1039,804 @@ signatures:
         invert_match: false
     confidence: High
     comment: "Jenkins dashboard trap with a fixed CSRF crumb; genuine Jenkins issues a new crumb per session."
+  - name: delilah-tornado-elasticsearch-banner
+    id: 100
+    port: 9200
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 200 OK\r\nServer: TornadoServer/[^\r]+\r\nContent-Type: application/json[\s\S]*"tagline": "You Know, for Search"'
+        invert_match: false
+    confidence: High
+    comment: "Elasticsearch banner (tagline 'You Know, for Search') served by the Tornado web framework with a 'Server: TornadoServer' header. Genuine Elasticsearch sends no Server header."
+  - name: delilah-fixed-build-hash-banner
+    id: 101
+    port: 9200
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '\{"name": "[^"]*", "cluster_name": "[^"]*", "version": \{"number": "[^"]*", "build_hash": "89d3241d670db65f994242c8e838b169779e2d4", "build_snapshot": false, "lucene_version": "4\.10\.2"\}, "tagline"'
+        invert_match: false
+    confidence: High
+    comment: "Banner with a hard-coded 39-character build hash and Lucene 4.10.2 whatever version is configured, and no status, build_timestamp or cluster_uuid fields."
+  - name: delilah-html-404-for-es-api
+    id: 102
+    port: 9200
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /_cluster/health HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 404 Not Found\r\nServer: TornadoServer/[\s\S]*<html><title>404: Not Found</title><body>404: Not Found</body></html>$'
+        invert_match: false
+    confidence: High
+    comment: "Only /, /_nodes and /_search are emulated: standard APIs such as /_cluster/health get Tornado's HTML 404 page. Genuine Elasticsearch answers in JSON."
+  - name: delilah-head-405
+    id: 103
+    port: 9200
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "HEAD / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 405 Method Not Allowed\r\nServer: TornadoServer/'
+        invert_match: false
+    confidence: High
+    comment: "HEAD / (used by Elasticsearch clients as a ping) returns 405 from Tornado. Genuine Elasticsearch returns 200."
+  - name: delilah-search-kibana-decoy
+    id: 104
+    port: 9200
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /_search HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '"hits": \[\{"_index": "\.kibana", "_type": "index-pattern", "_id": "logstash-\*", "_score": 1\.0'
+        invert_match: false
+    confidence: High
+    comment: "Every /_search returns the same single .kibana logstash-* index-pattern hit with a random shard count, regardless of the query."
+  - name: delilah-exposed-event-log
+    id: 105
+    port: 9200
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /thisshouldbelongandsecret.json HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 200 OK\r\nServer: TornadoServer/[^\r]+\r\nContent-Type: text/html[\s\S]*?\r\n\r\n\[(\]|\[null, \d+, ")'
+        invert_match: false
+    confidence: Medium
+    comment: "Default statusURI: the sensor's event database is readable without authentication as a JSON array. Configurable (statusURI in Delilah.ini)."
+  - name: delilah-nodes-unformatted-address
+    id: 106
+    port: 9200
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /_nodes HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: string
+        output: '"primary_interface": {"address": "%s", "name": "eth0", "mac_address": "08:01:c7:3F:15:DD"}'
+        invert_match: false
+    confidence: High
+    comment: "/_nodes reports a literal '%s' as the interface address and a fixed MAC address (the macaddress setting is not used)."
+  - name: espot-express-elasticsearch-banner
+    id: 110
+    port: 9200
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 200 OK\r\nX-Powered-By: Express\r\n[\s\S]*"tagline": ?"You Know, for Search"'
+        invert_match: false
+    confidence: High
+    comment: "Elasticsearch banner (tagline 'You Know, for Search') served by the Node.js Express framework with an 'X-Powered-By: Express' header. Genuine Elasticsearch sends no such header."
+  - name: espot-no-handler-url-for-es-api
+    id: 111
+    port: 9200
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /_cluster/health HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 200 OK\r\n[\s\S]*?\r\n\r\nNo handler found for url \[/_cluster/health\] and method \[GET\]$'
+        invert_match: false
+    confidence: High
+    comment: "Only GET /, /_search and document PUT/POST are emulated: /_cluster/health returns 200 with an imitation 'No handler found for url [...]' text. Genuine Elasticsearch returns cluster health in JSON, and its own message says 'uri' and comes with 400."
+  - name: espot-search-canned-script-hit
+    id: 112
+    port: 9200
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /_search?source=%7B%22script_fields%22%3A%7B%22hd%22%3A%7B%22script%22%3A%221%22%7D%7D%7D HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '"hits": ?\[\s*\{\s*"_index": ?"tmb",\s*"_type": ?"post",\s*"_id": ?"9",\s*"_score": ?1,\s*"fields": ?\{\s*"hd": ?\[\s*""\s*\]'
+        invert_match: false
+    confidence: High
+    comment: "Any search with script_fields (benign script '1' here, nothing is executed) returns the same canned hit (index tmb, type post, id 9, total 10) with an empty field value. Genuine Elasticsearch returns real (here empty) results or a scripting error."
+  - name: espot-express-json-banner-format
+    id: 113
+    port: 9200
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '\r\n\r\n\{(\n  )?("ok": ?true,(\n  )?)?"status": ?200,(\n  )?"name": ?"[^"]*",(\n  )?"version": ?\{'
+        invert_match: false
+    confidence: High
+    comment: "Banner re-serialised by Express (JSON.stringify: '\"key\": value', no cluster_name) for every bundled version profile. Genuine Elasticsearch formats the banner as '\"key\" : value' and 1.4+ adds cluster_name."
+  - name: espot-head-html-46
+    id: 114
+    port: 9200
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "HEAD / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 200 OK\r\n(X-Powered-By: Express\r\n)?Content-Type: text/html; charset=utf-8\r\nContent-Length: 46\r\n'
+        invert_match: false
+    confidence: High
+    comment: "HEAD / (the Elasticsearch client ping) falls through to the catch-all route: text/html with the length of 'No handler found for url [/] and method [HEAD]' (46 bytes). Genuine Elasticsearch returns an empty text/plain or JSON response."
+  - name: espot-bundled-node-identity
+    id: 115
+    port: 9200
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '"name": ?"(Fault Zone|ElasticSearch\.Prod6|Arabian Knight|Lightspeed|Headlok|Skyhawk)",(\n  )?"version": ?\{(\n    )?"number": ?"(0\.90\.0|0\.90\.5|1\.1\.1|1\.2\.1|1\.2\.2|1\.3\.1)"'
+        invert_match: false
+    confidence: Medium
+    comment: "One of the six bundled banner profiles (default 1.1.1 'Arabian Knight'), each with a fixed node name. Configurable (default_response, or a custom view file)."
+  - name: elasticpot-apache-server-es-banner
+    id: 120
+    port: 9200
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 200 OK\r\n[\s\S]*?Server: Apache\r\n[\s\S]*?\r\n\r\n[\s\S]*"tagline" ?: ?"You Know, for Search"'
+        invert_match: false
+    confidence: High
+    comment: "Elasticsearch banner (tagline 'You Know, for Search') delivered with a 'Server: Apache' header, which ElasticPot sets on every emulated response. Genuine Elasticsearch sends no Server header."
+  - name: elasticpot-sorted-banner-keys
+    id: 121
+    port: 9200
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '\r\n\r\n\{\n  "cluster_name" : "[^"]*",\n  "name" : "[^"]*",\n  "status" : 200,\n  "tagline" : "You Know, for Search",\n  "version" : \{\n    "build_hash" : '
+        invert_match: false
+    confidence: High
+    comment: "Banner keys serialised in alphabetical order (cluster_name, name, status, tagline, version; build_hash first inside version). Genuine Elasticsearch starts with status (1.x) or name (2.x and later) and ends with tagline."
+  - name: elasticpot-index-missing-with-200
+    id: 122
+    port: 9200
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /robots.txt HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 200 OK\r\n[\s\S]*?\r\n\r\n\{"error":\{"index":"robots\.txt","index_uuid":"_na_","reason":"no such index \[robots\.txt\]"[\s\S]*"status":404\}$'
+        invert_match: false
+    confidence: High
+    comment: "Unknown path answered with HTTP status 200 carrying a modern index_not_found_exception body (keys sorted) that itself says status 404. Genuine Elasticsearch returns 404 (or 400 'No handler found' in 1.3) with the error object in its natural key order."
+  - name: elasticpot-twisted-501-huh
+    id: 123
+    port: 9200
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "OPTIONS / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 501 Not Implemented\r\n[\s\S]*?Server: TwistedWeb/[\s\S]*<title>501 - Huh\?</title>'
+        invert_match: false
+    confidence: High
+    comment: "Only GET, HEAD and POST are implemented; OPTIONS (also PUT and DELETE) reaches the Twisted Web default: 501 'Huh?' HTML page with a 'Server: TwistedWeb/<version>' header. Genuine Elasticsearch answers OPTIONS with 200."
+  - name: elasticpot-sorted-canned-search
+    id: 124
+    port: 9200
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /_search HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '\r\n\r\n\{"_shards":\{"failed":0,"successful":\d+,"total":\d+\},"hits":\{"hits":\['
+        invert_match: false
+    confidence: High
+    comment: "Search results serialised with sorted keys (_shards first, shards failed/successful/total) instead of Elasticsearch's 'took' first; the bundled hit is a .kibana logstash-* index pattern with a random shard count. Genuine Elasticsearch starts the response with took."
+  - name: elasticpot-head-json-empty
+    id: 125
+    port: 9200
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "HEAD / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 200 OK\r\n[\s\S]*?Content-Length: 0\r\nContent-Type: application/json; charset=UTF-8\s*$'
+        invert_match: false
+    confidence: High
+    comment: "HEAD / (the client ping) returns Content-Length 0 with an application/json type. Genuine 1.x returns empty text/plain; 7.x and 8.x return application/json with the banner's length."
+  - name: elasticpot-cluster-health-sorted
+    id: 126
+    port: 9200
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /_cluster/health HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '\r\n\r\n\{"active_primary_shards":\d+,"active_shards":\d+,"active_shards_percent_as_number":'
+        invert_match: false
+    confidence: High
+    comment: "Cluster health from a bundled file, serialised with sorted keys (active_primary_shards first). Genuine Elasticsearch always starts with cluster_name and status."
+  - name: elasticpot-bundled-indices
+    id: 127
+    port: 9200
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /_cat/indices HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: 'Content-Type: application/json; charset=UTF-8\r\n\r\n[a-z]+ open 1cf0aa9d61f185b59f643939f862c01f89b21360 d_g1c8IASCGdhuFwcEh5WA '
+        invert_match: false
+    confidence: Medium
+    comment: "Bundled _cat/indices text (index 1cf0aa9d61f185b59f643939f862c01f89b21360, uuid d_g1c8IASCGdhuFwcEh5WA) sent as application/json. Genuine _cat output is text/plain. The index list is an editable response file."
+  - name: elasticpot-default-identity
+    id: 128
+    port: 9200
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '"name" ?: ?"Green Goblin"[\s\S]*"build_hash" ?: ?"b88f43fc40b0bcd7f173a1f9ee2e97816de80b19"[\s\S]*"number" ?: ?"1\.4\.1"'
+        invert_match: false
+    confidence: Medium
+    comment: "Default identity: node 'Green Goblin' reporting version 1.4.1 with build hash b88f43fc, a July 2015 build timestamp and Lucene 4.10.4 (1.7 series details). Name and version are configurable (instance_name, spoofed_version); the build hash comes from responses/banner.json."
+  - name: elasticpotpy-wsgiref-es-banner
+    id: 130
+    port: 9200
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.0 200 OK\r\n[\s\S]*?Server: WSGIServer/[\d.]+ CPython/[\s\S]*?\r\n\r\n[\s\S]*"tagline" ?: ?"You Know, for Search"'
+        invert_match: false
+    confidence: High
+    comment: "Elasticsearch banner (tagline 'You Know, for Search') served over HTTP/1.0 by Python's wsgiref development server (Bottle's default), with a 'Server: WSGIServer/0.2 CPython/3.x' header. Genuine Elasticsearch answers with HTTP/1.1 and no Server header."
+  - name: elasticpotpy-broken-banner-json
+    id: 131
+    port: 9200
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '"number" ?: ?"[^"]*","\s*\n\s*"build_hash"'
+        invert_match: false
+    confidence: Medium
+    comment: "The banner template (templates/index.txt) contains a stray quote after the version number, so the root response is not valid JSON and any Elasticsearch client fails to parse it. Genuine banners are valid JSON. The template is an editable file."
+  - name: elasticpotpy-critical-error-500
+    id: 132
+    port: 9200
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /robots.txt HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.0 500 INTERNAL SERVER ERROR\r\n[\s\S]*?\r\n\r\n<h1>Critical error while processing request: /robots\.txt</h1>'
+        invert_match: false
+    confidence: High
+    comment: "An unknown path requested without User-Agent and Accept headers makes the 404 handler fail while it rebuilds the raw request, and Bottle returns its bare 'Critical error while processing request' page with status 500 over HTTP/1.0. Genuine Elasticsearch answers 404 or 400 with a JSON or text error."
+  - name: elasticpotpy-bottle-500-page
+    id: 133
+    port: 9200
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /_cat/indices HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.0 500 Internal Server Error\r\n[\s\S]*?<title>Error: 500 Internal Server Error</title>'
+        invert_match: false
+    confidence: High
+    comment: "/_cat/indices (also /_search and /_plugin/head) requested without User-Agent and Accept headers returns Bottle's default HTML 'Error: 500 Internal Server Error' page. Genuine Elasticsearch returns the index list as text/plain."
+  - name: elasticpotpy-bottle-405
+    id: 134
+    port: 9200
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "OPTIONS / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.0 405 Method Not Allowed\r\n[\s\S]*?Allow: GET\r\n[\s\S]*?<title>Error: 405 Method Not Allowed</title>'
+        invert_match: false
+    confidence: High
+    comment: "Only GET is routed for '/', so OPTIONS (also PUT, DELETE and unknown methods) gets Bottle's HTML 405 page with 'Allow: GET'. Genuine Elasticsearch answers OPTIONS / with 200, and PUT or DELETE / with a 400 error."
+  - name: elasticpotpy-empty-search
+    id: 135
+    port: 9200
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /_search HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nAccept: */*\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.0 200 OK\r\n[\s\S]*?Content-Length: 0\r\nContent-Type: text/html; charset=UTF-8\s*$'
+        invert_match: false
+    confidence: High
+    comment: "/_search (GET or POST) is logged as a possible attack and answered with an empty text/html body. Genuine Elasticsearch returns JSON search results starting with took."
+  - name: elasticpotpy-empty-favicon
+    id: 136
+    port: 9200
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /favicon.ico HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nAccept: */*\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.0 200 OK\r\n[\s\S]*?Content-Length: 0\r\nContent-Type: text/html; charset=UTF-8\s*$'
+        invert_match: false
+    confidence: High
+    comment: "/favicon.ico returns 200 with an empty text/html body. Elasticsearch 1.x returns a 400 or 404 error; 7.x and 8.x serve a PNG icon as image/x-icon."
+  - name: elasticpotpy-bundled-indices
+    id: 137
+    port: 9200
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /_cat/indices HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nAccept: */*\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: 'Content-Type: text/html; charset=UTF-8\r\n\r\nhealth status index +pri rep docs\.count[\s\S]*\nyellow open +ews +5 +1 +15 +2 '
+        invert_match: false
+    confidence: Medium
+    comment: "Bundled index list (templates/getindeces.txt): a header row even without ?v, and indices 'ews' and 'dummy', sent as text/html. Genuine _cat/indices prints a header only with ?v and uses text/plain. The list is an editable template."
+  - name: elasticpotpy-fixed-404-test-index
+    id: 138
+    port: 9200
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /hdmissing/x HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nAccept: */*\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.0 404 Not Found\r\n[\s\S]*?Content-Type: text/html; charset=UTF-8\r\n\r\n\{"error":\{"root_cause":\[\{"type":"index_not_found_exception"[\s\S]*"resource\.id":"test","index":"test"\}'
+        invert_match: false
+    confidence: Medium
+    comment: "Every unknown path returns the same index_not_found_exception for an index called 'test' (templates/404.txt), as text/html. Genuine Elasticsearch names the index actually requested, or answers 400 or 405 for paths like this one."
+  - name: elasticpotpy-default-identity
+    id: 139
+    port: 9200
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '"name" ?: ?"Flake"[\s\S]*"number" ?: ?"1\.4\.1"[\s\S]*"build_hash" ?: ?"b88f43fc40b0bcd7f173a1f9ee2e97816de80b19"'
+        invert_match: false
+    confidence: Medium
+    comment: "Default identity in templates/index.txt: node 'Flake' reporting version 1.4.1 with build hash b88f43fc, a July 2015 build timestamp and Lucene 4.10.4 (details of the 1.7 series). Editable template."
+  - name: elastichoney-go-text-plain-banner
+    id: 140
+    port: 9200
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 200 OK\r\nDate: [^\r]+GMT\r\nContent-Length: \d+\r\nContent-Type: text/plain; charset=utf-8\r\n[\s\S]*?\r\n\r\n[\s\S]*"tagline" ?: ?"You Know, for Search"'
+        invert_match: false
+    confidence: High
+    comment: "Elasticsearch banner served by Go's net/http with a Date header and Content-Type text/plain; charset=utf-8 (the handler sets application/json only after the status line has been written, so Go's content sniffing decides). Genuine Elasticsearch sends application/json and no Date header."
+  - name: elastichoney-catch-all-banner
+    id: 141
+    port: 9200
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /hdmissing/_search HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 200 OK\r\n[\s\S]*?\r\n\r\n[\s\S]*"tagline" ?: ?"You Know, for Search"'
+        invert_match: false
+    confidence: High
+    comment: "Every path other than /_nodes and /_search is answered with the node banner and status 200, so a search on a missing index returns the tagline. Genuine Elasticsearch returns 404 index missing (index_not_found_exception)."
+  - name: elastichoney-banner-for-put
+    id: 142
+    port: 9200
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "PUT / HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nContent-Length: 7\r\nConnection: close\r\n\r\n{\"a\":1}"
+        output_match_type: regex
+        output: '^HTTP/1\.1 200 OK\r\n[\s\S]*?\r\n\r\n[\s\S]*"tagline" ?: ?"You Know, for Search"'
+        invert_match: false
+    confidence: High
+    comment: "Handlers ignore the HTTP method, so PUT / (also DELETE, OPTIONS and invented methods) returns the banner with 200. Genuine Elasticsearch answers PUT / with 400 'No handler found' (1.x) or 405 (7.x, 8.x)."
+  - name: elastichoney-nodes-invalid-json
+    id: 143
+    port: 9200
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /_nodes HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '"transport_address" ?: ?"inet\[/\n\t+[^"]*:9300\]"'
+        invert_match: false
+    confidence: High
+    comment: "The /_nodes template breaks the transport_address string across a line (newline and tabs inside the string), so the response is not valid JSON. Genuine Elasticsearch returns valid JSON."
+  - name: elastichoney-nodes-fixed-identity
+    id: 144
+    port: 9200
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /_nodes HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '"x1JG6g9PRHy6ClCOO2-C4g"[\s\S]*"host" ?: ?"elk"[\s\S]*"ip" ?: ?"127\.0\.1\.1"[\s\S]*"mac_address" ?: ?"08:01:c7:3F:15:DD"'
+        invert_match: false
+    confidence: High
+    comment: "Hard-coded /_nodes details in the code: node id x1JG6g9PRHy6ClCOO2-C4g, host 'elk', ip 127.0.1.1, JVM 1.7.0_65, 24 cores in 48 sockets and MAC address 08:01:c7:3F:15:DD. None of these can be changed in the configuration."
+  - name: elastichoney-nodes-anonymous-address
+    id: 145
+    port: 9200
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /_nodes HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '"http_address" ?: ?"inet\[/1\.1\.1\.1:9200\]"'
+        invert_match: false
+    confidence: Medium
+    comment: "With anonymous mode on, the sensor address is set to 1.1.1.1 and appears in every address field of /_nodes. With anonymous mode off, the public address looked up at start-up appears instead."
+  - name: elastichoney-fixed-kibana-search
+    id: 146
+    port: 9200
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /_search HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '\r\n\r\n\n\t\{\n +"took" ?: ?6,[\s\S]*"_index" ?: ?"\.kibana",\n +"_type" ?: ?"index-pattern",\n +"_id" ?: ?"logstash-\*"'
+        invert_match: false
+    confidence: High
+    comment: "Every /_search request (any method or query) returns the same hard-coded result: took 6, six shards and one .kibana index-pattern document for logstash-*, preceded by a newline and a tab. Genuine Elasticsearch returns results for the actual cluster."
+  - name: elastichoney-banner-build-hash
+    id: 147
+    port: 9200
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '"build_hash" ?: ?"89d3241d670db65f994242c8e838b169779e2d4",\n +"build_snapshot" ?: ?false,\n +"lucene_version" ?: ?"4\.10\.2"'
+        invert_match: false
+    confidence: High
+    comment: "Hard-coded banner build details: a 39-character build hash (genuine build hashes are 40-character git commit IDs) with no build_timestamp and Lucene 4.10.2, whatever version is configured. Genuine 1.x banners carry a 40-character hash and a build_timestamp."
+  - name: elastichoney-default-identity
+    id: 148
+    port: 9200
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '"status" ?: ?200,\n +"name" ?: ?"Green Goblin",\n +"cluster_name" ?: ?"elasticsearch",\n +"version" ?: ?\{\n +"number" ?: ?"1\.4\.1"'
+        invert_match: false
+    confidence: Medium
+    comment: "Default instance_name 'Green Goblin' and spoofed_version 1.4.1 from config.json, in Elastichoney's field order (status, name, cluster_name, then version with number first). ElasticPot uses the same default name with a different field order. Name and version are configuration settings."
+  - name: elastichoney-servemux-redirect
+    id: 149
+    port: 9200
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET //_nodes HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 301 Moved Permanently\r\nContent-Type: text/html; charset=utf-8\r\nLocation: /_nodes\r\n[\s\S]*<a href="/_nodes">Moved Permanently</a>'
+        invert_match: false
+    confidence: High
+    comment: "Go's http.ServeMux cleans the path and redirects //_nodes to /_nodes with an HTML 301 page. Genuine Elasticsearch answers the request itself (200 in 1.x, 405 in 7.x and 8.x)."
+  - name: mongodb-honeyproxy-client-metadata-accepted-twice
+    id: 150
+    port: 27017
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "c9000000dd05000000000000d40700000000000061646d696e2e24636d640000000000ffffffffa20000001069734d6173746572000100000003636c69656e740087000000036472697665720034000000026e616d6500100000006d6f6e676f2d676f2d647269766572000276657273696f6e000800000076312e31312e340000036f73002d000000027479706500060000006c696e757800026172636869746563747572650006000000616d643634000002706c6174666f726d0007000000676f312e3231000000"
+        output_match_type: regex
+        output: 'ismaster\x00\x01'
+        invert_match: false
+      - input_type: hex
+        input: "c9000000dd05000000000000d40700000000000061646d696e2e24636d640000000000ffffffffa20000001069734d6173746572000100000003636c69656e740087000000036472697665720034000000026e616d6500100000006d6f6e676f2d676f2d647269766572000276657273696f6e000800000076312e31312e340000036f73002d000000027479706500060000006c696e757800026172636869746563747572650006000000616d643634000002706c6174666f726d0007000000676f312e3231000000"
+        output_match_type: regex
+        output: 'ismaster\x00\x01[\s\S]*\x01ok\x00\x00{6}[^\x00]\x3f'
+        invert_match: false
+    confidence: High
+    comment: "isMaster with client metadata sent twice on one TCP connection. The proxy opens a new connection to the backing mongod for every message it receives, so the second handshake is accepted again (ismaster true, ok 1.0 as a BSON double). Genuine MongoDB (3.4, 3.6, 4.0, 4.2, 4.4, 7.0 and 8.3 tested) refuses it with error 186 ClientMetadataCannotBeMutated ('The client metadata document may only be sent in the first isMaster/hello', ok 0.0). Dionaea also accepts it but encodes ok as an int32. Independent of configuration, of the backing server's version and of where it runs."
+  - name: mongodb-honeyproxy-loopback-client-address
+    id: 151
+    port: 27017
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "39000000e705000000000000dd0700000000000000240000001077686174736d79757269000100000002246462000600000061646d696e0000"
+        output_match_type: regex
+        output: 'you\x00[\s\S]{4}127\.0\.0\.1:\d+\x00'
+        invert_match: false
+    confidence: Medium
+    comment: "OP_MSG whatsmyuri returns the client address as seen by the server. Behind MongoDB-HoneyProxy with its documented default backend (127.0.0.1:27016) every remote client is reported as 127.0.0.1. Genuine MongoDB 3.6 to 7.0 reports the client's own address. Depends on the backing mongod running on the same host (a remote backend reports the proxy's address instead), and any genuine server behind a local TCP relay would also show 127.0.0.1."
+  - name: mysql-honeypotd-out-of-order-on-bad-handshake
+    id: 160
+    port: 3306
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: string
+        output: "mysql_native_password"
+        invert_match: false
+      - input_type: hex
+        input: "0100000100"
+        output_match_type: string
+        output: "#08S01Got packets out of order"
+        invert_match: false
+    confidence: High
+    comment: "Reads the greeting, then answers it with a one-byte handshake response (sequence 1). mysql-honeypotd rejects any response shorter than 32 bytes as out of order: error 1156 #08S01 'Got packets out of order'. Genuine MySQL 5.6, 5.7, 8.0, 8.4 and 9.7 and MariaDB 10.11 and 11.8 return error 1043 #08S01 'Bad handshake'; OpenCanary returns 1045 Access denied and Dionaea closes the connection. Independent of configuration."
+  - name: mysql-honeypotd-fixed-greeting-capabilities
+    id: 161
+    port: 3306
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: hex
+        output: "00fff7210200ff811500000000000000000000"
+        invert_match: false
+    confidence: High
+    comment: "Hard-coded greeting fields after the first salt part: capabilities 0xf7ff, character set 0x21 (utf8_general_ci), status 0x0002, extended capabilities 0x81ff, auth data length 21, ten reserved zero bytes. No genuine server tested has this combination (MySQL 5.6: 0xf7ff/0x08/0x807f; 5.7: 0xffff/0x08/0xc1ff; 8.x and 9.x: 0xffff/0xff/0xdfff; MariaDB: 0xf7fe or 0xfffe/0x2d/0x81ff with MariaDB capability bytes in the reserved area; OpenCanary 0xf7ff/0x08/0x800f; Dionaea 0xa22c). Not affected by --setver."
+  - name: mysql-honeypotd-greeting-salt-high-bytes
+    id: 162
+    port: 3306
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '\x00{10}[\s\S]*[^\x00-\x7f][\s\S]*\x00mysql_native_password\x00$'
+        invert_match: false
+    confidence: High
+    comment: "The second part of the greeting salt (12 bytes) is filled from rand() over the full byte range, so it almost always contains a byte of 0x80 or above (the check misses about one connection in 4,096). Genuine MySQL and MariaDB scrambles only use 7-bit bytes (MariaDB printable ASCII, MySQL 1 to 127). Not affected by --setver."
+  - name: mysql-honeypotd-default-version-8.0.19-native-password
+    id: 163
+    port: 3306
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '\x0a8\.0\.19\x00[\s\S]*\x00mysql_native_password\x00$'
+        invert_match: false
+    confidence: Medium
+    comment: "Default --setver version 8.0.19 offered with mysql_native_password. Genuine MySQL 8.0 and later offer caching_sha2_password by default (8.0.46, 8.4.11 and 9.7.2 tested). Configurable with --setver, and a genuine 8.0.19 configured with default_authentication_plugin=mysql_native_password would also match."
+  - name: pghoney-fixed-md5-salt
+    id: 170
+    port: 5432
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "00000029000300007573657200706f73746772657300646174616261736500706f7374677265730000"
+        output_match_type: hex
+        output: "520000000c00000005336fbfd2"
+        invert_match: false
+    confidence: High
+    comment: "StartupMessage (protocol 3.0) for user postgres, database postgres. pghoney answers with AuthenticationMD5Password and the hard-coded salt 33 6f bf d2 on every connection. Genuine PostgreSQL 9.6 and 12 send a random four-byte salt per connection, and 14, 16, 17 and 18 offer SCRAM-SHA-256 (SASL) instead. Requires postgres in pgUsers (the shipped sample and MHN deploy script) and cleartext false (the default)."
+  - name: pghoney-no-such-user-error
+    id: 171
+    port: 5432
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "00000028000300007573657200686470726f626500646174616261736500706f7374677265730000"
+        output_match_type: hex
+        output: "534552524f5200433038503031004d4e6f207375636820757365723a20686470726f626500"
+        invert_match: false
+    confidence: High
+    comment: "StartupMessage for an unknown user (hdprobe). pghoney refuses immediately with ErrorResponse S=ERROR C=08P01 M='No such user: hdprobe' and no V, F, L or R fields. Genuine PostgreSQL never reveals whether a role exists before authentication: 9.6 and 12 ask for an MD5 password and 14 to 18 for SCRAM-SHA-256, as for any user, and authentication errors use severity FATAL with SQLSTATE 28P01. Independent of configuration unless hdprobe is added to pgUsers."
+  - name: pghoney-fixed-unsupported-protocol-error
+    id: 172
+    port: 5432
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "0000000841424344"
+        output_match_type: string
+        output: "unsupported frontend protocol 65363.19778: server supports 1.0 to 3.0"
+        invert_match: false
+    confidence: High
+    comment: "An 8-byte startup packet with protocol bytes 'ABCD'. pghoney replies to any packet whose length field does not match its own estimate with a canned ErrorResponse copied from a packet capture: S=ERROR C=0A000 'unsupported frontend protocol 65363.19778: server supports 1.0 to 3.0', postmaster.c line 2005, and keeps the connection open. Genuine PostgreSQL reports the version actually sent (16706.17220), with severity FATAL and V field, and closes the connection. The same canned error answers GSSENCRequest and CancelRequest (genuine 12 to 18 reply 'G' to GSSENCRequest; CancelRequest gets no reply). Hard-coded."
+  - name: pghoney-auth-failed-error
+    id: 173
+    port: 5432
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "00000029000300007573657200706f73746772657300646174616261736500706f7374677265730000"
+        output_match_type: regex
+        output: '^R\x00\x00\x00'
+        invert_match: false
+      - input_type: hex
+        input: "70000000286d6435303030303030303030303030303030303030303030303030303030303030303000"
+        output_match_type: hex
+        output: "534552524f5200433038503031004d41757468206661696c656400"
+        invert_match: false
+    confidence: High
+    comment: "StartupMessage for user postgres, then a PasswordMessage with a wrong MD5 hash. pghoney answers every password with ErrorResponse S=ERROR C=08P01 M='Auth failed'. Genuine PostgreSQL 9.6 and 12 send S=FATAL V=FATAL C=28P01 'password authentication failed for user \"postgres\"' (auth.c, auth_failed); 14 to 18, which expect SCRAM, send FATAL 08P01 'client selected an invalid SASL authentication mechanism'. Works with either cleartext setting; requires postgres in pgUsers (default)."
+  - name: sticky-elephant-accepts-any-password
+    id: 180
+    port: 5432
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "00000029000300007573657200706f73746772657300646174616261736500706f7374677265730000"
+        output_match_type: hex
+        output: "520000000800000003"
+        invert_match: false
+      - input_type: hex
+        input: "700000001b686470726f62652d77726f6e672d70617373776f726400"
+        output_match_type: hex
+        output: "520000000800000000"
+        invert_match: false
+    confidence: High
+    comment: "StartupMessage for user postgres, then a PasswordMessage with a made-up password. Sticky Elephant asks every client for a cleartext password and answers whatever is sent with AuthenticationOk, followed by a full session start. Genuine PostgreSQL configured for password authentication refuses with FATAL 28P01 'password authentication failed for user \"postgres\"'; MD5 and SCRAM servers never ask for a cleartext password, and trust servers send AuthenticationOk without asking. Hard-coded."
+  - name: sticky-elephant-fixed-backend-key-data
+    id: 181
+    port: 5432
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "00000029000300007573657200706f73746772657300646174616261736500706f7374677265730000"
+        output_match_type: hex
+        output: "520000000800000003"
+        invert_match: false
+      - input_type: hex
+        input: "700000001b686470726f62652d77726f6e672d70617373776f726400"
+        output_match_type: hex
+        output: "4b0000000c0000029aefbeadde4b0000000c0001567b2750b70c"
+        invert_match: false
+    confidence: High
+    comment: "After the login is accepted, Sticky Elephant sends two BackendKeyData messages: process id 666 with key 0xefbeadde ('DEADBEEF' byte-swapped), then a second, fixed one copied from a capture (process id 87675, key 0x2750b70c). Genuine PostgreSQL sends exactly one BackendKeyData per session with the real backend process id and a random secret key. Hard-coded."
+  - name: sticky-elephant-canned-query-result
+    id: 182
+    port: 5432
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "00000029000300007573657200706f73746772657300646174616261736500706f7374677265730000"
+        output_match_type: hex
+        output: "520000000800000003"
+        invert_match: false
+      - input_type: hex
+        input: "700000001b686470726f62652d77726f6e672d70617373776f726400"
+        output_match_type: hex
+        output: "520000000800000000"
+        invert_match: false
+      - input_type: hex
+        input: "510000000d53454c454354203100"
+        output_match_type: string
+        output: "Enjoys regex"
+        invert_match: false
+    confidence: High
+    comment: "After the accepted login, the simple query 'SELECT 1'. Sticky Elephant answers every query other than select version() and current_setting('config_file') with the same canned result: a six-column table (id, name, breed, notes, created_at, updated_at) of three camels, Perl (dromedary, 'Enjoys regex'), Joe and Alphons, and 'SELECT 3'. Genuine PostgreSQL returns one row with the value 1 (and never reaches this step without the right password). Hard-coded."
+  - name: sticky-elephant-gssenc-password-request
+    id: 183
+    port: 5432
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "0000000804d21630"
+        output_match_type: hex
+        output: "520000000800000003"
+        invert_match: false
+    confidence: High
+    comment: "GSSENCRequest (code 80877104). Sticky Elephant treats any packet whose length field is correct as a StartupMessage and asks for a cleartext password. Genuine PostgreSQL 12 and later reply with the single byte 'G' or 'N', and 9.6 with FATAL 0A000 'unsupported frontend protocol 1234.5680'. Independent of configuration."
+  - name: sticky-elephant-invalid-startup-password-request
+    id: 184
+    port: 5432
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "0000000841424344"
+        output_match_type: hex
+        output: "520000000800000003"
+        invert_match: false
+    confidence: High
+    comment: "An 8-byte startup packet whose protocol field is the text 'ABCD'. Sticky Elephant never checks the protocol version and asks for a cleartext password, as it also does for a protocol 2.0 startup. Genuine PostgreSQL rejects it with FATAL 0A000 'unsupported frontend protocol 16706.17220' and closes the connection. Independent of configuration."
+  - name: sticky-elephant-fixed-version-string
+    id: 185
+    port: 5432
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "00000029000300007573657200706f73746772657300646174616261736500706f7374677265730000"
+        output_match_type: hex
+        output: "520000000800000003"
+        invert_match: false
+      - input_type: hex
+        input: "700000001b686470726f62652d77726f6e672d70617373776f726400"
+        output_match_type: hex
+        output: "520000000800000000"
+        invert_match: false
+      - input_type: hex
+        input: "510000001573656c6563742076657273696f6e282900"
+        output_match_type: string
+        output: "PostgreSQL 9.5.5 on x86_64-pc-linux-gnu, compiled by gcc (Ubuntu 4.8.2-19ubuntu1) 4.8.2, 64-bit"
+        invert_match: false
+    confidence: Medium
+    comment: "After the accepted login, 'select version()'. Sticky Elephant always reports 'PostgreSQL 9.5.5 on x86_64-pc-linux-gnu, compiled by gcc (Ubuntu 4.8.2-19ubuntu1) 4.8.2, 64-bit' (and server_version 9.5.5, TimeZone US/Pacific in the session parameters). Genuine servers report their own version and build. Medium because it is the same fixed version string a real 9.5.5 build of that kind could report; the preceding steps already require the any-password login."
+  - name: nosqlpot-inline-first-character
+    id: 190
+    port: 6379
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "hdprobe\r"
+        output_match_type: string
+        output: "-ERR unknown command 'h'"
+        invert_match: false
+    confidence: High
+    comment: "An unknown inline (plain text) command. NoSQLpot only parses RESP arrays; any other input is kept as a string and its first character is used as the command name, so 'hdprobe' is answered with -ERR unknown command 'h'. Genuine Redis 2.8 to 7.4 accept inline commands and name the whole word ('hdprobe', with backticks and 'with args beginning with:' from 4.0); password-protected Redis answers NOAUTH. Hard-coded, independent of configuration."
+  - name: nosqlpot-quit-unknown
+    id: 191
+    port: 6379
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "*1\r\n$4\r\nQUIT\r"
+        output_match_type: string
+        output: "-ERR unknown command 'QUIT'"
+        invert_match: false
+    confidence: High
+    comment: "QUIT as a RESP command. NoSQLpot's QUIT check compares the method command.lower with a string, which is never true, so QUIT falls through to the unknown-command error. Every genuine Redis version, with or without a password, answers +OK and closes the connection. Hard-coded."
+  - name: nosqlpot-auth-unknown
+    id: 192
+    port: 6379
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "*2\r\n$4\r\nAUTH\r\n$9\r\nwrongpass\r"
+        output_match_type: string
+        output: "-ERR unknown command 'AUTH'"
+        invert_match: false
+    confidence: High
+    comment: "AUTH with a wrong password. NoSQLpot implements only PING, SET, GET, KEYS, INFO and CONFIG GET *, so AUTH is an unknown command. Genuine Redis answers 'Client sent AUTH, but no password is set' (2.8 to 5), 'AUTH <password> called without any password configured' (6 and later) or WRONGPASS / invalid password when a password is set; OpenCanary answers NOAUTH. Hard-coded."
+  - name: nosqlpot-info-as-array
+    id: 193
+    port: 6379
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "*1\r\n$4\r\nINFO\r"
+        output_match_type: regex
+        output: '^\*[0-9]+\r\n\$[0-9]+\r\nredis_version:'
+        invert_match: false
+    confidence: High
+    comment: "INFO. NoSQLpot encodes each key:value line of its info file as a separate element of a RESP array (*43, then $20 redis_version:2.4.16 ...). Genuine Redis returns INFO as one bulk string starting with $<length> and '# Server' (2.8 and later); password-protected Redis answers NOAUTH. The array format is in the code; the values come from the editable info file."
+  - name: nosqlpot-default-info-values
+    id: 194
+    port: 6379
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "*1\r\n$4\r\nINFO\r"
+        output_match_type: regex
+        output: '(?s)redis_version:2\.4\.16.*process_id:30064.*total_connections_received:1\r\n'
+        invert_match: false
+    confidence: Medium
+    comment: "INFO values from the shipped redispot/config/info file: redis_version 2.4.16, arch_bits 32, gcc 4.6.3, the fixed process_id 30064 and total_connections_received always 1 (the connection counter is reset for every connection). A genuine server reports its own version and process ID and a growing connection count. Configurable: an operator who edits the info file defeats this signature, but not 193."
