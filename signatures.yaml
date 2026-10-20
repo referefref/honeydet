@@ -273,8 +273,7 @@ signatures:
           index","resource.type":"index_or_alias","resource.id":"test","index":"test"},"status":404}'
         invert_match: false
     confidence: Low
-    comment: "Does not match current ElasticpotPY (73fff67), which returns HTTP 500 to requests without User-Agent and Accept headers. See ids 130-139."
-    comment: Hardcoded index name, and resource id.
+    comment: Hardcoded index name, and resource id. (Does not match current ElasticpotPY 73fff67; see ids 130-139.)
   - name: OWA-Honeypot
     id: 22
     port: web-ports
