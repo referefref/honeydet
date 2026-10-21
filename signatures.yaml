@@ -18,12 +18,10 @@ signatures:
     proto: TCP
     steps:
       - input_type: string
-        input: |+
-          GET /beekeeper.jpg HTTP/1.0
-          Host: localhost
-
+        input: "GET /beekeeper.jpg HTTP/1.0\r\nHost: localhost\r\n\r"
         output_match_type: string
         output: Canon PowerShot A710
+        invert_match: false
     confidence: High
     comment: Default image included in listing page
   - name: node-ftp-honeypot
@@ -1839,3 +1837,877 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: "INFO values from the shipped redispot/config/info file: redis_version 2.4.16, arch_bits 32, gcc 4.6.3, the fixed process_id 30064 and total_connections_received always 1 (the connection counter is reset for every connection). A genuine server reports its own version and process ID and a growing connection count. Configurable: an operator who edits the info file defeats this signature, but not 193."
+  # redishoneypot (ids 200-207)
+  - name: redishoneypot-unknown-command-no-space
+    id: 200
+    port: 6379
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "*2\r\n$8\r\nHDPROBEX\r\n$2\r\na1\r"
+        output_match_type: regex
+        output: '^-ERR unknown command `HDPROBEX`, with args beginning with:$'
+        invert_match: false
+    confidence: High
+    comment: "An unknown command with one argument. RedisHoneyPot answers every command it does not implement with the fixed text '-ERR unknown command `<name>`, with args beginning with:' and nothing after the colon, even when arguments were sent. Genuine Redis 4.0 to 7.4, with or without a password, always puts a space after the colon and lists the arguments (`a1`, or 'a1' from 7.0); Redis 2.8 and 3.2, NoSQLpot and OpenCanary use a different wording. Hard-coded."
+  - name: redishoneypot-quit-unknown
+    id: 201
+    port: 6379
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "*1\r\n$4\r\nQUIT\r"
+        output_match_type: string
+        output: "-ERR unknown command `QUIT`"
+        invert_match: false
+    confidence: High
+    comment: "QUIT. RedisHoneyPot does not implement QUIT, so it falls through to the unknown-command error (with backticks). Every genuine Redis version, with or without a password, answers +OK and closes the connection; NoSQLpot answers unknown command 'QUIT' (single quotes); OpenCanary answers NOAUTH. Hard-coded."
+  - name: redishoneypot-auth-unknown
+    id: 202
+    port: 6379
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "*2\r\n$4\r\nAUTH\r\n$9\r\nwrongpass\r"
+        output_match_type: string
+        output: "-ERR unknown command `AUTH`"
+        invert_match: false
+    confidence: High
+    comment: "AUTH with a wrong password. RedisHoneyPot has no AUTH command. Genuine Redis answers 'Client sent AUTH, but no password is set' (2.8 to 5), 'AUTH <password> called without any password configured' (6 and later) or WRONGPASS / invalid password when a password is set; OpenCanary answers NOAUTH; NoSQLpot unknown command 'AUTH' in single quotes. Hard-coded."
+  - name: redishoneypot-get-nil-status
+    id: 203
+    port: 6379
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "*2\r\n$3\r\nGET\r\n$7\r\nhdnokey\r"
+        output_match_type: string
+        output: "+(nil)"
+        invert_match: false
+    confidence: High
+    comment: "GET of a key that does not exist. RedisHoneyPot sends the status line +(nil), which is how redis-cli displays a missing value rather than what a server sends. Genuine Redis sends the null bulk string $-1 (NOAUTH with a password). Hard-coded."
+  - name: redishoneypot-integer-as-status
+    id: 204
+    port: 6379
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "*1\r\n$6\r\nDBSIZE\r"
+        output_match_type: regex
+        output: '^\+\(integer\) [0-9]+$'
+        invert_match: false
+    confidence: High
+    comment: "DBSIZE. RedisHoneyPot answers DBSIZE, EXISTS and DEL with a status line in redis-cli display format (+(integer) 0) instead of a RESP integer. Genuine Redis sends :0 (NOAUTH with a password); NoSQLpot answers unknown command 'DBSIZE'. Hard-coded."
+  - name: redishoneypot-info-without-sections
+    id: 205
+    port: 6379
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "*1\r\n$4\r\nINFO\r"
+        output_match_type: regex
+        output: '^\$[0-9]+\r\nredis_version:'
+        invert_match: false
+    confidence: High
+    comment: "INFO. RedisHoneyPot builds INFO from the [info] section of redis.conf as one bulk string of key:value lines with no section headers, so it begins with redis_version. Genuine Redis 2.8 and later starts with '# Server' (NOAUTH with a password); NoSQLpot returns an array (*43). The format is in the code; the values come from redis.conf."
+  - name: redishoneypot-config-get-uppercase
+    id: 206
+    port: 6379
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "*3\r\n$6\r\nCONFIG\r\n$3\r\nGET\r\n$9\r\nmaxmemory\r"
+        output_match_type: string
+        output: "Unknown subcommand or wrong number of arguments for 'get'. Try CONFIG HELP."
+        invert_match: false
+    confidence: High
+    comment: "CONFIG GET in upper case. RedisHoneyPot compares the CONFIG subcommand case-sensitively with 'get' and 'set', so CONFIG GET maxmemory is refused with a fixed error naming 'get'. Genuine Redis accepts subcommands in any case and returns maxmemory 0 (NOAUTH with a password); NoSQLpot answers unknown command 'CONFIG'. Hard-coded."
+  - name: redishoneypot-default-info-values
+    id: 207
+    port: 6379
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "*1\r\n$4\r\nINFO\r"
+        output_match_type: regex
+        output: '(?s)redis_version:6\.0\.10\r\n.*os:Darwin 20\.3\.0 x86_64\r\n.*process_id:89810\r\n'
+        invert_match: false
+    confidence: Medium
+    comment: "INFO values from the shipped redis.conf: Redis 6.0.10 on macOS (os Darwin 20.3.0, multiplexing_api kqueue) with the fixed process_id 89810, uptime_in_seconds 28 and total_connections_received 1 on every request. Genuine Redis reports its own host, process ID and counters. Configurable: an operator who edits redis.conf defeats this signature, but not 200 to 206."
+  # express-honeypot (ids 210-216)
+  - name: express-honeypot-bee-index
+    id: 210
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '<title>Beeeeee[\s\S]*<h1>Bzzzzzzzz!</h1>[\s\S]*Welcome to bee learning'
+        invert_match: false
+    confidence: High
+    comment: "Standalone mode home page. The bait index page served by the SEO router has the title 'Beeeeee', the heading 'Bzzzzzzzz!' and the line 'Welcome to bee learning, the best place to learn the bee language.', followed by links to every trap. Hard-coded in express/seo/controller.js; not served in middleware mode unless seo is enabled. The Docker image and the companion LXC script publish it on port 80 (the server's own default is 3001)."
+  - name: express-honeypot-trap-page
+    id: 211
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /parse/parser.php?WN_BASEDIR= HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 200 OK[\s\S]*<html lang="bee">[\s\S]*<h3>/parse/parser\.php\?WN_BASEDIR= WEB//NEWS</h3>'
+        invert_match: false
+    confidence: High
+    comment: "One of the 310 built-in traps (WEB//NEWS parser.php remote file inclusion). Every trap page uses the same template, which declares the document language as 'bee' and repeats the trap path and title in an h3 between paragraphs of generated 'bee language' text. Matches both the standalone server and an Express application using the honeypot as middleware with the default traps. Genuine nginx, Apache and Express answer 404."
+  - name: express-honeypot-catchall-200
+    id: 212
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /hd-x7q2-notfound HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 200 OK[\s\S]*<html lang="bee">[\s\S]*<title>/hd-x7q2-notfound : /hd-x7q2-notfound</title>'
+        invert_match: false
+    confidence: High
+    comment: "A path that does not exist. In standalone mode (catchAll) every GET request that is not a trap, the home page, robots.txt, sitemap.xml or the beekeeper receives 200 and the trap template with the requested URL echoed as title, description and headings. Genuine servers and Express applications answer 404 (Express: 'Cannot GET /hd-x7q2-notfound'). Hard-coded behaviour of the standalone app."
+  - name: express-honeypot-robots-hive
+    id: 213
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /robots.txt HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 200 OK[\s\S]*\r\n\r\nUser-agent: \*\r\nDisallow: /hive/$'
+        invert_match: false
+    confidence: High
+    comment: "robots.txt in standalone mode is exactly 'User-agent: *' and 'Disallow: /hive/' (the honeypot's own storage folder name). Hard-coded in express/seo/router.js. Genuine servers in the lab answer 404 or serve their own file."
+  - name: express-honeypot-beekeeper-realm
+    id: 214
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /beekeeper/ HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 401 Unauthorized\r\nWWW-Authenticate: Basic realm="beekeeper", charset="UTF-8"'
+        invert_match: false
+    confidence: High
+    comment: "The log viewer. The standalone server always mounts it at /beekeeper behind HTTP basic authentication with the realm 'beekeeper' (path and realm hard-coded; only the username and password are configurable). In middleware mode it is optional and its path is configurable."
+  - name: express-honeypot-sitemap-dorks
+    id: 215
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /sitemap.xml HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '<loc><!\[CDATA\[http://x/assets/snippets/reflect/snippet\.reflect\.php\?reflect_base=\]\]></loc>'
+        invert_match: false
+    confidence: High
+    comment: "sitemap.xml in standalone mode lists all 310 trap URLs, built from the Host header, starting with the MODx snippet.reflect.php remote file inclusion path inside CDATA. Hard-coded order from express/pages.js (Medium if the operator edits the trap list)."
+  - name: express-honeypot-beekeeper-image
+    id: 216
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /beekeeper.jpg HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 200 OK\r\nAccept-Ranges: bytes\r\n[\s\S]*Content-Type: image/jpeg[\s\S]*Canon PowerShot A710 IS'
+        invert_match: false
+    confidence: High
+    comment: "The picture of the beekeeper shown on the standalone home page, the only public static file. Its EXIF data names the camera, a Canon PowerShot A710 IS. Hard-coded file (express/views/beekeeper.jpg), served in standalone mode on any port; sent with CRLF line endings, which current Node.js requires."
+  # honeyup (ids 220-229)
+  - name: honeyup-uploads-index
+    id: 220
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /uploads/ HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 200 OK[\s\S]*<title>Index of /uploads</title>[\s\S]*<th>Description</a></th>[\s\S]*<a href="config\.env">config\.env</a>[\s\S]*<a href="upload\.php">upload\.php</a>'
+        invert_match: false
+    confidence: High
+    comment: "honeyup's bait page, a static imitation of an Apache directory listing (res/index.html) served for /uploads/. It has a stray closing anchor in the header row ('<th>Description</a></th>', left from removing Apache's sort links), no Last modified column and no address footer, and lists backup, config.env, files, phpinfo.php and upload.php. Genuine Apache autoindex has sort links ('<a href=\"?C=D;O=A\">Description</a>'), nginx autoindex uses a <pre> list."
+  - name: honeyup-upload-success-empty
+    id: 221
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST /uploads/upload.php HTTP/1.1\r\nHost: x\r\nConnection: close\r\nContent-Type: multipart/form-data; boundary=hdb\r\nContent-Length: 67\r\n\r\n--hdb\r\nContent-Disposition: form-data; name=\"probe\"\r\n\r\nx\r\n--hdb--\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 200 OK[\s\S]*\r\n\r\nsuccess:$'
+        invert_match: false
+    confidence: High
+    comment: "A multipart POST to the upload handler whose only field is not 'fileToUpload'. honeyup stores nothing and answers 200 with the bare body 'success: ' (the upload handler's reply prefix; a real upload adds a Windows path 'D:\\xampp\\www\\uploads\\files\\<uuid>-<name>'). Non-destructive: no file is written. Genuine PHP upload pages give their own message, static servers answer 404 or 405."
+  - name: honeyup-files-scripting-engine
+    id: 222
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /uploads/files/hd-probe.php HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 200 OK[\s\S]*\r\n\r\nScripting Engine not enabled\.$'
+        invert_match: false
+    confidence: High
+    comment: "Any path under /uploads/files/ containing 'php', 'ps1' or 'bat', whether or not such a file was uploaded, returns 200 with exactly 'Scripting Engine not enabled.' (hard-coded in src/main.rs). Genuine servers answer 404 for a missing file."
+  - name: honeyup-files-video-rickroll
+    id: 223
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /uploads/files/hd-probe.mp4 HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 301 Moved Permanently[\s\S]*\r\n[Ll]ocation: https://www\.youtube\.com/watch\?v=dQw4w9WgXcQ(\r\n|$)'
+        invert_match: false
+    confidence: High
+    comment: "Any path under /uploads/files/ containing mp4, avi, mov, mkv or webm is redirected to a well-known YouTube video (added upstream to stop the honeypot being used for free video hosting). Hard-coded. Genuine servers answer 404."
+  - name: honeyup-phpinfo-xampp-capture
+    id: 224
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /uploads/phpinfo.php HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '<title>PHP 8\.0\.8 - phpinfo\(\)</title>[\s\S]*Windows NT ECS-MUCHANG 6\.3 build 9600'
+        invert_match: false
+    confidence: High
+    comment: "The decoy phpinfo.php is a saved copy of a real phpinfo() page (res/phpinfo.php.html): PHP 8.0.8 on 'Windows NT ECS-MUCHANG' (Windows Server 2012 R2, XAMPP under D:\\xampp), served unchanged by every installation. Shipped file; not mentioned in the README as something to edit."
+  - name: honeyup-config-env-default
+    id: 225
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /uploads/config.env HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: 'id = YXZlcnlzZWN1cmVhcHBpZA== #random base64[\s\S]*# use canarytokens'
+        invert_match: false
+    confidence: Medium
+    comment: "Default decoy configuration file (res/config.env.txt) with placeholder values and the comments '#random base64' and '# use canarytokens'. The README asks operators to edit it (and the Docker entrypoint rewrites it), so this only finds unedited installations."
+  - name: honeyup-direct-index
+    id: 226
+    port: 4000
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 200 OK[\s\S]*<title>Index of /uploads</title>[\s\S]*<th>Description</a></th>[\s\S]*<a href="config\.env">config\.env</a>[\s\S]*<a href="upload\.php">upload\.php</a>'
+        invert_match: false
+    confidence: High
+    comment: "honeyup reached directly on its fixed port 4000 (it binds 0.0.0.0:4000 even when nginx is in front; the Docker image publishes the same port). The root path serves the same imitation Apache listing as signature 220."
+  - name: honeyup-direct-upload-success-empty
+    id: 227
+    port: 4000
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST /upload.php HTTP/1.1\r\nHost: x\r\nConnection: close\r\nContent-Type: multipart/form-data; boundary=hdb\r\nContent-Length: 67\r\n\r\n--hdb\r\nContent-Disposition: form-data; name=\"probe\"\r\n\r\nx\r\n--hdb--\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 200 OK[\s\S]*\r\n\r\nsuccess:$'
+        invert_match: false
+    confidence: High
+    comment: "As signature 221, sent directly to port 4000: a multipart POST without a 'fileToUpload' field returns 200 and the bare body 'success: '. Nothing is stored."
+  - name: honeyup-direct-files-scripting-engine
+    id: 228
+    port: 4000
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /files/hd-probe.php HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 200 OK[\s\S]*\r\n\r\nScripting Engine not enabled\.$'
+        invert_match: false
+    confidence: High
+    comment: "As signature 222, sent directly to port 4000: a non-existent PHP file under /files/ returns 200 'Scripting Engine not enabled.'"
+  - name: honeyup-backup-listing
+    id: 229
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /uploads/backup HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '<title>Index of /backup</title>[\s\S]*<th>Description</a></th>[\s\S]*employees\.sql</a></td>\s*<td align="right">3\.2M</td>[\s\S]*public_html\.zip</a></td>\s*<td align="right">43\.8M</td>'
+        invert_match: false
+    confidence: High
+    comment: "The decoy backup folder: a static listing (res/backup/index.html) offering employees.sql (3.2M, the MySQL Sakila sample database) and public_html.zip (43.8M, a zip bomb), with the same stray anchor as the main listing. A genuine Apache listing of /uploads/backup redirects to /uploads/backup/ first."
+  # webtrap (ids 230-234)
+  - name: webtrap-cloned-page-injection
+    id: 230
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.0 200 OK\r\nServer: SimpleHTTP/[0-9.]+ Python/[23]\.[\s\S]*<script src="/session\.js"></script>\s*<script>\s*var xhr = new XMLHttpRequest\(\);\s*xhr\.open\("POST", window\.location\.href \+ "additional_data", true\);'
+        invert_match: false
+    confidence: High
+    comment: "WebTrap's cloner (PostProcessor.py) inserts the same client-side forensics block before </head> of every cloned page: a script tag for /session.js followed by an XMLHttpRequest that POSTs the visitor profile as JSON to the page URL plus 'additional_data'. Served by TrapServer, which is Python's SimpleHTTPRequestHandler (HTTP/1.0, Server: SimpleHTTP/0.6 Python/2.7 or 3.x). The original page and genuine servers carry neither."
+  - name: webtrap-session-js
+    id: 231
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /session.js HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.0 200 OK\r\nServer: SimpleHTTP/[0-9.]+ Python/[23]\.[\s\S]*session\.js 0\.4\.1[\s\S]*CodeJoust[\s\S]*gapi_location: true'
+        invert_match: false
+    confidence: High
+    comment: "The client-side collection library loaded by every cloned page: session.js 0.4.1 (CodeJoust, 2012) in the web root, served by Python's SimpleHTTP server. Genuine servers answer 404 for /session.js."
+  - name: webtrap-post-served-as-get
+    id: 232
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST / HTTP/1.1\r\nHost: x\r\nConnection: close\r\nContent-Length: 0\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.0 200 OK\r\nServer: SimpleHTTP/[0-9.]+ Python/[23]\.'
+        invert_match: false
+    confidence: High
+    comment: "TrapServer logs the POST body and then answers the POST exactly as a GET (do_POST calls do_GET), so POST / returns 200 and the cloned page. Python's own http.server answers any POST with 501 Unsupported method ('POST'); nginx answers 405 for static files. Apache also answers 200 here, but never with a SimpleHTTP Server header."
+  - name: webtrap-post-missing-path-404
+    id: 233
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST /additional_data HTTP/1.1\r\nHost: x\r\nConnection: close\r\nContent-Type: application/json\r\nContent-Length: 20\r\n\r\n{\"api_version\":0.4}"
+        output_match_type: regex
+        output: '^HTTP/1\.0 404 File not found\r\nServer: SimpleHTTP/[0-9.]+ Python/[23]\.[\s\S]*<title>Error response</title>'
+        invert_match: false
+    confidence: High
+    comment: "The beacon that session.js sends (POST to <page>additional_data) is logged and then answered as a GET for a file that does not exist: Python's 404 'File not found' error page. The same happens to the cloned login form's POST target (for example index.php), so a submitted login always ends on a Python error page. Plain Python http.server answers 501 for POST, so the 404 identifies TrapServer."
+  - name: webtrap-hashed-resource-names
+    id: 234
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.0 200 OK\r\nServer: SimpleHTTP/[0-9.]+ Python/[23]\.[\s\S]*(src|href)="[^"?]*_[0-9a-f]{32}\.(es|js|css|html)"'
+        invert_match: false
+    confidence: Medium
+    comment: "Resources that the original page loaded with a query string (for example app.js?v=5.2.3) are saved as <name>_<MD5 of the query>.<extension guessed from the MIME type> and the links rewritten, giving names such as jquery.min.js_de6d0a2a602518a10874bccbbe4daf34.es. Present only when the cloned page uses versioned assets, hence Medium."
+  # basic-auth-pot (ids 240-247)
+  - name: basic-auth-pot-default-banner
+    id: 240
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.0 401 Unauthorized\r\nServer: Admin Console/1\.0 \r\nDate: [^\r]+\r\nWWW-Authenticate: Basic realm="ADMIN"\r\nContent-type: text/html$'
+        invert_match: false
+    confidence: High
+    comment: "bap's defaults set in bap.py: an HTTP/1.0 401 from Python's BaseHTTPServer with Server 'Admin Console/1.0 ' (server_version plus an empty sys_version leaves a trailing space), realm ADMIN, a lower-case 'Content-type: text/html' and no body or Content-Length. Every path and every Authorization header gets the same reply. Genuine nginx and Apache answer HTTP/1.1 401 with their own Server header, Content-Length and an HTML error page, even with the same realm."
+  - name: basic-auth-pot-bare-401-any-credentials
+    id: 241
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nAuthorization: Basic YWRtaW46YWRtaW4=\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.0 401 Unauthorized\r\nServer: [^\r]*\r\nDate: [^\r]+\r\nWWW-Authenticate: Basic realm="[^"]*"\r\nContent-type: text/html$'
+        invert_match: false
+    confidence: Medium
+    comment: "Structure of bap's 401 regardless of the server name and realm (both are edited in bap.py): Python BaseHTTPServer status line HTTP/1.0, headers in the order Server, Date, WWW-Authenticate, Content-type, then nothing (no Content-Length and no body). Genuine web servers always send a Content-Length or body with a 401. Medium because small hand-written Python Basic-auth scripts built on the same widely copied BaseHTTPServer pattern give the same shape."
+  - name: basic-auth-pot-post-501-empty
+    id: 242
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST / HTTP/1.1\r\nHost: x\r\nContent-Length: 0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.0 501 Unsupported method \(.POST.\)\r\nServer: Admin Console/1\.0 \r\n[^<]*$'
+        invert_match: false
+    confidence: High
+    comment: "bap implements only GET and HEAD, so POST gets BaseHTTPServer's 501 with the reason \"Unsupported method ('POST')\" in the status line, the Admin Console server header and an empty body (error_message_format is blanked). Genuine nginx and Apache with Basic authentication answer POST with the same 401 as GET."
+  - name: basic-auth-pot-options-501-structure
+    id: 243
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "OPTIONS / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.0 501 Unsupported method \(.OPTIONS.\)\r\nServer: [^\r]*\r\nDate: [^\r]+\r\nConnection: close\r\nContent-Type: text/html(;charset=utf-8)?(\r\nContent-Length: 0)?$'
+        invert_match: false
+    confidence: High
+    comment: "OPTIONS gets a 501 \"Unsupported method ('OPTIONS')\" with an empty body whatever the server name: Python 2.7 sends no Content-Length, Python 3 sends Content-Length: 0. Python's own http.server sends an HTML error page with its 501, and nginx and Apache with Basic authentication answer 401."
+  - name: basic-auth-pot-default-banner-port80
+    id: 244
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.0 401 Unauthorized\r\nServer: Admin Console/1\.0 \r\nDate: [^\r]+\r\nWWW-Authenticate: Basic realm="ADMIN"\r\nContent-type: text/html$'
+        invert_match: false
+    confidence: High
+    comment: "As signature 240 on port 80, where the README recommends redirecting HTTP to bap's port 8080."
+  - name: basic-auth-pot-bare-401-any-credentials-port80
+    id: 245
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nAuthorization: Basic YWRtaW46YWRtaW4=\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.0 401 Unauthorized\r\nServer: [^\r]*\r\nDate: [^\r]+\r\nWWW-Authenticate: Basic realm="[^"]*"\r\nContent-type: text/html$'
+        invert_match: false
+    confidence: Medium
+    comment: "As signature 241 on port 80, where the README recommends redirecting HTTP to bap's port 8080."
+  - name: basic-auth-pot-post-501-empty-port80
+    id: 246
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST / HTTP/1.1\r\nHost: x\r\nContent-Length: 0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.0 501 Unsupported method \(.POST.\)\r\nServer: Admin Console/1\.0 \r\n[^<]*$'
+        invert_match: false
+    confidence: High
+    comment: "As signature 242 on port 80, where the README recommends redirecting HTTP to bap's port 8080."
+  - name: basic-auth-pot-options-501-structure-port80
+    id: 247
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "OPTIONS / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.0 501 Unsupported method \(.OPTIONS.\)\r\nServer: [^\r]*\r\nDate: [^\r]+\r\nConnection: close\r\nContent-Type: text/html(;charset=utf-8)?(\r\nContent-Length: 0)?$'
+        invert_match: false
+    confidence: High
+    comment: "As signature 243 on port 80, where the README recommends redirecting HTTP to bap's port 8080."
+  # drupot (ids 250-256)
+  - name: drupot-core-directory-listing
+    id: 250
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /core/ HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 200 OK\r\n[^<]*\r\n\r\n<!doctype html>\n<meta name="viewport" content="width=device-width">\n<pre>\n<a href="misc/">misc/</a>\n<a href="themes/">themes/</a>\n</pre>$'
+        invert_match: false
+    confidence: High
+    comment: "Drupot serves /core/ with Go's http.ServeFile, which returns a directory listing of its small public/core tree (misc/ and themes/ only). Genuine Drupal 8 to 11 answer /core/ with 403 Forbidden from the web server, and Drupal 7 (which has no core directory) with its own 404 page."
+  - name: drupot-files-directory-listing
+    id: 251
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /sites/default/files/ HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 200 OK\r\n[^<]*\r\n\r\n<!doctype html>\n<meta name="viewport" content="width=device-width">\n<pre>\n<a href="css/">css/</a>\n<a href="js/">js/</a>\n</pre>$'
+        invert_match: false
+    confidence: High
+    comment: "Go directory listing of Drupot's public/sites/default/files (only the css/ and js/ aggregates the bait pages link to). Genuine Drupal 8 to 11 return 404 from Apache for the files directory index, and Drupal 7 returns its own 404 page."
+  - name: drupot-changelog-200-not-found-page
+    id: 252
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /CHANGELOG.txt HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 200 OK\r\n[^<]*\r\n\r\n<!DOCTYPE html><html><head><title>404 Not Found</title></head><body><h1>Not Found</h1><p>The requested URL "[^"]*/CHANGELOG\.txt" was not found on this server\.</p></body></html>$'
+        invert_match: false
+    confidence: High
+    comment: "Drupot copies Drupal 8's fast 404 page for /CHANGELOG.txt (the file Drupal 7 scanners look for) but sends it with status 200 OK. Genuine Drupal 8 to 11 send the same page with 404 Not Found; Drupal 7 serves the real changelog as text/plain."
+  - name: drupot-node-422-plain-error
+    id: 253
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /node/1 HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 422 Unprocessable Entity\r\nContent-Type: text/plain; charset=utf-8\r\nX-Content-Type-Options: nosniff\r\n[^<]*\r\n\r\nThe website encountered an unexpected error\. Please try again later\.$'
+        invert_match: false
+    confidence: High
+    comment: "Every path under /node/ (the REST target of CVE-2019-6340) gets 422 Unprocessable Entity with Drupal's error sentence as a bare text/plain body from Go's http.Error. Genuine Drupal answers /node/1 with 200 or with its themed HTML 404 page, never a plain-text 422 for a GET."
+  - name: drupot-unknown-path-front-page
+    id: 254
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /hd-drupot-probe-7f3a HTTP/1.0\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.[01] 200 OK\r\n[\s\S]*<meta name="Generator" content="Drupal 8 \(https://www\.drupal\.org\)" />[\s\S]*<title>Welcome to [^<|]* \| [^<]*</title>'
+        invert_match: false
+    confidence: High
+    comment: "Drupot's catch-all route returns the Drupal 8 front page ('Welcome to <site name>') with 200 OK for any unknown path. Genuine Drupal 7 to 11 return 404 Not Found with a 'Page not found' page. Survives a reverse proxy and changes to the site name."
+  - name: drupot-static-login-form-build-id
+    id: 255
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /user/login HTTP/1.0\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.[01] 200 OK\r\n[\s\S]*name="form_build_id" value="form-80fXZ5pjlkK1HGjoF-RMzqjByNdvQpxqUTQVLFuwR64"'
+        invert_match: false
+    confidence: High
+    comment: "The login page is a static template with a fixed form_build_id (form-80fXZ5pj...), identical on every Drupot instance and every request. Genuine Drupal generates a random form_build_id when it builds the form (Drupal 7 on every request; Drupal 8 to 11 per site, then reused from the page cache until it is cleared), so this exact value never appears on a real site."
+  - name: drupot-go-headers-drupal8-page
+    id: 256
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 200 OK\r\nDate: [^\r]+\r\nContent-Type: text/html; charset=utf-8\r\nConnection: close\r\nTransfer-Encoding: chunked\r\n\r\n[0-9a-f]+\r\n\s*<!DOCTYPE html>[\s\S]*<meta name="Generator" content="Drupal 8 \(https://www\.drupal\.org\)" />'
+        invert_match: false
+    confidence: Medium
+    comment: "A Drupal 8 front page served with Go net/http's minimal header set (Date, Content-Type, Connection, Transfer-Encoding) and no Server, X-Powered-By, X-Generator, X-Drupal-Cache or Cache-Control headers. Every genuine Drupal sends X-Generator and cache headers. Medium because a reverse proxy in front of Drupot adds or reorders headers."
+  # drupal-honeypot (ids 260-265)
+  - name: drupal-honeypot-register-time-field
+    id: 260
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /user/register HTTP/1.0\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '<input [^>]*type="hidden" name="honeypot_time" value="[A-Za-z0-9_|-]+"'
+        invert_match: false
+    confidence: High
+    comment: "The Honeypot module adds a hidden honeypot_time field (a random key for the time limit, or in the Drupal 7 branch a timestamp and signature) to each protected form. Its name is fixed in the code. Genuine Drupal 7 to 11 registration forms carry no such field."
+  - name: drupal-honeypot-register-hidden-textfield
+    id: 261
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /user/register HTTP/1.0\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)<div class="[A-Za-z0-9_-]+-textfield(?: js-form-wrapper form-wrapper" style="display: none !important;)?">.{0,500}Leave this field blank'
+        invert_match: false
+    confidence: High
+    comment: "The trap field: a text field (named url by default, configurable) inside a div with the class <name>-textfield, hidden with an inline display:none (Drupal 8 and later) or by the module's stylesheet (Drupal 7), and labelled 'Leave this field blank'. Not present in genuine Drupal."
+  - name: drupal-honeypot-password-time-field
+    id: 262
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /user/password HTTP/1.0\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '<input [^>]*type="hidden" name="honeypot_time" value="[A-Za-z0-9_|-]+"'
+        invert_match: false
+    confidence: High
+    comment: "honeypot_time on the password reset form, which stays reachable on sites that close public registration. Genuine Drupal has no such field."
+  - name: drupal-honeypot-contact-time-field
+    id: 263
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /contact/feedback HTTP/1.0\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '<input [^>]*type="hidden" name="honeypot_time" value="[A-Za-z0-9_-]+"'
+        invert_match: false
+    confidence: Medium
+    comment: "honeypot_time on the site-wide contact form of Drupal 8 and later (contact module, feedback form of the standard profile). Medium: the contact form exists and is protected only if the site uses it and the operator ticked it in the Honeypot settings."
+  - name: drupal-honeypot-time-limit-rejection
+    id: 264
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST /user/password HTTP/1.0\r\nHost: x\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: 33\r\nConnection: close\r\n\r\nname=&form_id=user_pass&op=Submit"
+        output_match_type: regex
+        output: 'There was a problem with your form submission\. Please wait [0-9]+ seconds and try again\.'
+        invert_match: false
+    confidence: High
+    comment: "An immediate password reset submission with an empty name and no honeypot_time. The module rejects it with its time-limit message (the number of seconds grows with each failure from the same address); genuine Drupal only reports the required field. The empty name means the probe never triggers a reset e-mail or any other change on a genuine site."
+  - name: drupal-honeypot-register-page-cache-disabled
+    id: 265
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /user/register HTTP/1.0\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 [^\r\n]*\r\n(?:[^\r\n]+\r\n)*X-Generator: Drupal (?:8|9|1[0-9]) [^\r\n]*\r\n(?:[^\r\n]+\r\n)*X-Drupal-Cache: UNCACHEABLE \(response policy\)\r\n.*name="form_id" value="user_register_form"'
+        invert_match: false
+    confidence: Medium
+    comment: "To keep each visitor's honeypot_time unique, the module switches off Drupal's anonymous page cache on protected forms, so Drupal 8 and later answer X-Drupal-Cache: UNCACHEABLE (response policy) where a genuine registration page shows MISS or HIT. Medium: other modules that stop page caching (for example CAPTCHA) have the same effect."
+  # django-admin-honeypot (ids 270-275)
+  - name: django-admin-honeypot-login-not-never-cache
+    id: 270
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /admin/login/ HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 [^\r\n]*\r\n(?:(?:[^CcEe\r\n][^\r\n]*|[Cc][^Aa\r\n][^\r\n]*|[Ee][^Xx\r\n][^\r\n]*)\r\n)*\r\n.*<form action="/admin/login/" method="post" id="login-form"><input type="hidden" name="csrfmiddlewaretoken"'
+        invert_match: false
+    confidence: High
+    comment: "A Django admin login form at /admin/login/ served without Cache-Control or Expires headers. Django's real admin login view is wrapped in never_cache (Cache-Control: max-age=0, no-cache, no-store, must-revalidate, private and Expires) in every version tested; the honeypot renders the same form from its own view, which is not."
+  - name: django-admin-honeypot-index-redirect-not-never-cache
+    id: 271
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /admin/ HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.[01] 302 [^\r\n]*(?:\r\n(?:[^CcEe\r\n][^\r\n]*|[Cc][^Aa\r\n][^\r\n]*|[Ee][^Xx\r\n][^\r\n]*))*\r\n[Ll]ocation: /admin/login/\?next=/admin/(?:\r\n(?:[^CcEe\r\n][^\r\n]*|[Cc][^Aa\r\n][^\r\n]*|[Ee][^Xx\r\n][^\r\n]*))*\z'
+        invert_match: false
+    confidence: High
+    comment: "The redirect from /admin/ to the login page (an empty 302) without Cache-Control or Expires. The real admin index redirect passes through Django's admin_view wrapper, which adds never_cache headers; the honeypot emulates the redirect with redirect_to_login only."
+  - name: django-admin-honeypot-login-noslash-drops-query
+    id: 272
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /admin/login?next=/admin/ HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 301 [^\r\n]*\r\n(?:[^\r\n]+\r\n)*[Ll]ocation: /admin/login/\r\n'
+        invert_match: false
+    confidence: High
+    comment: "The honeypot answers any path without a trailing slash with a permanent redirect to path + '/', discarding the query string. The real admin sends a 302 to /admin/login/?next=/admin/login%3Fnext%3D/admin/, and Django's APPEND_SLASH or a web server's directory redirect keeps the query string."
+  - name: django-admin-honeypot-catchall-appends-slash
+    id: 273
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /admin/index.php HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 301 [^\r\n]*\r\n(?:[^\r\n]+\r\n)*[Ll]ocation: /admin/index\.php/\r\n'
+        invert_match: false
+    confidence: High
+    comment: "Every path under /admin/ is caught by the honeypot's catch-all URL, so a file name such as /admin/index.php is redirected to /admin/index.php/. The real Django admin redirects unauthenticated requests for unknown admin paths to the login page (302 with next=), and Django sites without the admin or ordinary web servers answer 404."
+  - name: django-admin-honeypot-logout-asks-login
+    id: 274
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /admin/logout/ HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 302 [^\r\n]*\r\n(?:[^\r\n]+\r\n)*[Ll]ocation: /admin/login/\?next=/admin/logout/\r\n'
+        invert_match: false
+    confidence: High
+    comment: "The honeypot sends every admin path to its login page, including logout. The real admin never asks an anonymous visitor to log in to log out: Django 3.2 to 6.1 redirect an anonymous GET /admin/logout/ straight to /admin/."
+  - name: django-admin-honeypot-login-branding-without-theme-toggle
+    id: 275
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /admin/login/ HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)admin/js/theme\.js"[^>]*></script>.*<div id="branding">\s*<h1 id="site-name"><a href="/admin/">[^<]*</a></h1>\s*</div>\s*</(?:header|div)>.*id="login-form"'
+        invert_match: false
+    confidence: Medium
+    comment: "The honeypot's template replaces the admin branding block with its own heading, which drops the light/dark theme toggle that Django 4.2 and later place beside the site name, although the page still loads theme.js. Medium: a site that overrides the branding block in its own admin/base_site.html without the toggle looks the same."
+  # magenpot (ids 280-287)
+  - name: magenpot-pub-directory-listing
+    id: 280
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /pub/ HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 200 OK\r\n[^<]*\r\n\r\n<!doctype html>\n<meta name="viewport" content="width=device-width">\n<pre>\n<a href="static/">static/</a>\n</pre>$'
+        invert_match: false
+    confidence: High
+    comment: "Magenpot serves /pub/ with Go's http.ServeFile, which returns a directory listing of its public/pub tree (static/ only). Genuine Magento never lists /pub/: with the installation root as document root it routes the path into the store (a store page or 404), and with pub/ as document root the path does not exist."
+  - name: magenpot-pub-static-directory-listing
+    id: 281
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /pub/static/ HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 200 OK\r\n[^<]*\r\n\r\n<!doctype html>\n<meta name="viewport" content="width=device-width">\n<pre>\n<a href="adminhtml/">adminhtml/</a>\n<a href="deployed_version.txt">deployed_version.txt</a>\n<a href="frontend/">frontend/</a>\n</pre>$'
+        invert_match: false
+    confidence: High
+    comment: "Go directory listing of Magenpot's static file tree (adminhtml/, deployed_version.txt and frontend/). Genuine Magento answers the static directory index with 404 (its .htaccess disables indexes and routes misses to static.php)."
+  - name: magenpot-fixed-deployed-version
+    id: 282
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /pub/static/deployed_version.txt HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 200 OK\r\n[^\n]*\r\n(?:[A-Za-z-]+: [^\r]*\r\n)*\r\n1561400699$'
+        invert_match: false
+    confidence: High
+    comment: "Magenpot ships a copy of a 2019 static content deployment and always returns the same deployment timestamp, 1561400699 (24 June 2019), from /pub/static/deployed_version.txt. A genuine Magento writes the time of its own deployment there, so the value differs per store and changes with every deployment."
+  - name: magenpot-unknown-path-home-page
+    id: 283
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /hd-magenpot-probe-3c1e HTTP/1.0\r\nHost: x\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.0 200 OK\r\n.*<title>Home page</title>.*cms-home cms-index-index'
+        invert_match: false
+    confidence: High
+    comment: "Every path Magenpot does not route explicitly returns the Magento home page with status 200. Genuine Magento returns its 404 page (\"Whoops, our bad...\") with status 404 for an unknown path."
+  - name: magenpot-customer-login-fixed-form-key
+    id: 284
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /customer/account/login/ HTTP/1.0\r\nHost: x\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.0 200 OK\r\n.*<title>Customer Login</title>.*name="form_key" type="hidden" value="c6VoV4tXdw7AUHsz"'
+        invert_match: false
+    confidence: High
+    comment: "Magenpot's customer login template carries a fixed form_key, c6VoV4tXdw7AUHsz, on every request and every instance. Genuine Magento generates a random 16-character form_key for each visitor session."
+  - name: magenpot-admin-access-login-fixed-form-key
+    id: 285
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /admin_access/ HTTP/1.0\r\nHost: x\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.0 200 OK\r\n.*<title>Magento Admin</title>.*name="form_key" type="hidden" value="1YHfhJV4YmZjDu8M"'
+        invert_match: false
+    confidence: High
+    comment: "Magenpot serves the Magento admin login page at /admin_access/ with a fixed form_key, 1YHfhJV4YmZjDu8M. Genuine Magento has no /admin_access/ route unless the operator chose that admin path, and its admin form_key is random per session."
+  - name: magenpot-magento-version-go-headers
+    id: 286
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /magento_version HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 200 OK\r\nDate: [^\r]*\r\nContent-Length: [0-9]+\r\nContent-Type: text/plain; charset=utf-8\r\nConnection: close\r\n\r\nMagento/[^\r\n]*$'
+        invert_match: false
+    confidence: Medium
+    comment: "Magenpot answers /magento_version with the configured text (default \"Magento/2.3 (Enterprise)\") as text/plain with only Go's Date, Content-Length and Content-Type headers. Genuine Magento 2.3 answers through PHP and the web server (text/html; charset=UTF-8, Server, X-Powered-By, cache and X-Frame-Options headers, \"(Community)\" for Open Source), and 2.4 returns \"Magento/2.4 (Community)\" the same way. Medium: a reverse proxy in front of Magenpot adds or rewrites headers."
+  - name: magenpot-go-headers-magento-page
+    id: 287
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.0\r\nHost: x\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.0 200 OK\r\nDate: [^\r]*\r\nContent-Type: text/html; charset=utf-8\r\n\r\n<!doctype html>.*"baseUrl": "/pub/static/frontend/Magento/blank/en_US"'
+        invert_match: false
+    confidence: Medium
+    comment: "Magenpot's front page is a Magento 2 storefront (blank theme) sent with only Go's Date and Content-Type headers. A genuine Magento page always carries the web server's and PHP's headers (Server, X-Powered-By, Cache-Control, Pragma, X-Frame-Options and X-Content-Type-Options). Medium: a reverse proxy in front of Magenpot can add such headers."
+  # owa-honeypot (ids 290-296)
+  - name: owa-honeypot-flask-redirect-to-logon
+    id: 290
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 302 FOUND\r\n.*\r\nLocation: /owa/auth/logon\.aspx\?replaceCurrent=1&url=\r\n.*Server: Microsoft-IIS/.*<title>Redirecting\.\.\.</title>'
+        invert_match: false
+    confidence: High
+    comment: "GET / returns Werkzeug's '302 FOUND' (upper-case reason phrase) and Flask's 'Redirecting...' HTML page, with a relative Location of /owa/auth/logon.aspx?replaceCurrent=1&url= and a Server: Microsoft-IIS header. IIS sends '302 Found' and ASP.NET redirects carry an 'Object moved' body; Exchange redirects to logon.aspx with an absolute url= parameter."
+  - name: owa-honeypot-flask-basic-auth-stub
+    id: 291
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /EWS/ HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 401 UNAUTHORIZED\r\n(?:.*(?i:WWW-Authenticate): Basic realm="Login Required"\r\n.*Server: Microsoft-IIS/|.*Server: Microsoft-IIS/[^\r\n]*\r\n.*(?i:WWW-Authenticate): Basic realm="Login Required"\r\n).*\r\n\r\nCould not verify your access level for that URL\.\nYou have to login with proper credentials$'
+        invert_match: false
+    confidence: High
+    comment: "The Exchange virtual directories (/EWS/, /ecp/, /Autodiscover/, /OAB/, /Rpc/ and others) answer with the text of the classic Flask HTTP Basic authentication example: 401 UNAUTHORIZED, realm 'Login Required' and 'Could not verify your access level for that URL.' Genuine Exchange offers Negotiate/NTLM (and a host-name realm when Basic is enabled), with IIS's '401 Unauthorized' and an IIS error page."
+  - name: owa-honeypot-owa-vdir-404
+    id: 292
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /owa/ HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 404 NOT FOUND\r\n.*<title>404 - File or directory not found\.</title>'
+        invert_match: false
+    confidence: High
+    comment: "The OWA virtual directory itself (/owa/) is not routed: the honeypot returns its IIS-style '404 - File or directory not found.' page with Werkzeug's upper-case '404 NOT FOUND' status. On a genuine Exchange server /owa/ is the entry point and redirects an unauthenticated visitor to /owa/auth/logon.aspx."
+  - name: owa-honeypot-referenced-font-missing
+    id: 293
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /owa/auth/15.1.1466/themes/resources/segoeui-semibold.ttf HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 404 NOT FOUND\r\n.*<title>404 - File or directory not found\.</title>'
+        invert_match: false
+    confidence: Medium
+    comment: "The logon page references /owa/auth/15.1.1466/themes/resources/segoeui-semibold.ttf (and segoeui-semilight.ttf), but the honeypot does not serve them (no route, or a route without the file) and returns its 404 page with an upper-case status. A genuine Exchange server serves the resources its own logon page references; the file list is not documented by Microsoft, hence Medium."
+  - name: owa-honeypot-exchange2016-on-iis75
+    id: 294
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /owa/auth/logon.aspx HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*Server: Microsoft-IIS/7\.5\r\n.*<!-- OwaPage = ASP\.auth_logon_aspx -->.*/owa/auth/15\.1\.1466/themes/resources/'
+        invert_match: false
+    confidence: High
+    comment: "The logon page is that of Exchange 2016 CU9 (build 15.1.1466, March 2018) but the response claims Server: Microsoft-IIS/7.5, the IIS of Windows Server 2008 R2. Microsoft documents Exchange 2016 only on Windows Server 2012, 2012 R2 and 2016 (IIS 8.0, 8.5 and 10.0), so the combination cannot occur on a genuine server."
+  - name: owa-honeypot-werkzeug-and-iis-server-headers
+    id: 295
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /owa/auth/logon.aspx HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\nServer: Werkzeug/[^\r\n]*\r\n.*\r\nServer: Microsoft-IIS/[^\r\n]*\r\n.*<title>Outlook</title>'
+        invert_match: false
+    confidence: Medium
+    comment: "Run as upstream documents it (python owa_pot.py), the honeypot is served by Flask's development server, which with current Werkzeug sends its own 'Server: Werkzeug/x Python/y' header before the application's 'Server: Microsoft-IIS/7.5', so the Outlook logon page arrives with two Server headers. Medium: a different WSGI server or a reverse proxy changes the headers."
+  - name: owa-honeypot-activesync-slash-redirect
+    id: 296
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /Microsoft-Server-ActiveSync HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 308 PERMANENT REDIRECT\r\n.*Location: http://x/Microsoft-Server-ActiveSync/\r\n.*<title>Redirecting\.\.\.</title>'
+        invert_match: false
+    confidence: Medium
+    comment: "ActiveSync's endpoint without a trailing slash, the form mobile clients use, is answered by Werkzeug's routing with '308 PERMANENT REDIRECT' to the slash form and Flask's 'Redirecting...' page. Genuine Exchange handles /Microsoft-Server-ActiveSync directly (an authentication challenge for an anonymous request) and IIS never sends upper-case reason phrases. Medium because genuine ActiveSync responses are not documented in detail."
