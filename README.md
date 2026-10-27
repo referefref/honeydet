@@ -16,6 +16,12 @@ Signatures support multi-step, hex, string and regex detection on TCP and UDP.
 Features a SQL backend for persistent scans which can be managed through the web interface.
 Shodan API integration for non-private IPs, automatically adds shodan host information when the flag is set (currently CLI only)
 
+### What's new in 1.5.0
+- Licence changed to GPL-3.0.
+- Standard file locations: signatures, config and scan history are found in the user and system directories (see Files), with new -config and -db flags.
+- The web interface is built into the binary, so -w works from any directory.
+- 72 new signatures for web and Redis honeypots (ids 200-296), 204 in total.
+
 ### What's new in 1.4.2
 - New OpenCanary signatures (ids 58-66).
 - Improved Redis (id 12) and SNMP (id 17) signatures.
