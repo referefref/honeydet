@@ -1,10 +1,7 @@
-version: '3.8'
-
 services:
   honeydet:
-    image: referefrefref/honeydet:v1.2
+    build: .
     ports:
       - "8888:8888"
-    command: ["/root/honeydet", "-w"]
     volumes:
       - ./data:/root/data

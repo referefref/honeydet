@@ -1,12 +1,13 @@
 package main
 
 import (
-	_ "embed"
+	"embed"
 	"bytes"
 	"encoding/csv"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io/fs"
 	"github.com/TwiN/go-color"
 	"github.com/tomsteele/go-shodan"
 	"go.yaml.in/yaml/v3"
@@ -34,8 +35,8 @@ var (
 	usernameShort   = flag.String("u", "", "Short form of -username")
 	password        = flag.String("password", "", "Password for authentication")
 	passwordShort   = flag.String("pw", "", "Short form of -password")
-	signatureFile   = flag.String("signatures", "signatures.yaml", "File with signatures")
-	signatureShort  = flag.String("s", "signatures.yaml", "Short form of -signatures")
+	signatureFile   = flag.String("signatures", "", "File with signatures (default: first signatures.yaml found, see FILES below)")
+	signatureShort  = flag.String("s", "", "Short form of -signatures")
 	verbose         = flag.Bool("verbose", false, "Enable verbose output")
 	verboseShort    = flag.Bool("v", false, "Short form of -verbose")
 	debug           = flag.Bool("debug", false, "Enable extra verbose (debug) output")
@@ -55,6 +56,8 @@ var (
 	webserver       = flag.Bool("webserver", false, "Run as a web server on port 8888")
 	webserverShort  = flag.Bool("w", false, "Short form of -webserver")
 	useShodan       = flag.Bool("shodan", false, "Enable Shodan API enrichment")
+	configFile      = flag.String("config", "", "Configuration file with the Shodan API key (default: first config.yaml found, see FILES below)")
+	databaseFile    = flag.String("db", "", "SQLite database for scan history (default: ~/.local/share/honeydet/scans.db)")
 	shodanClient    *shodan.Client
 )
 
@@ -105,6 +108,10 @@ type Scan struct {
 
 //go:embed index.html
 var indexHTML []byte
+
+//go:embed assets
+var assetsFS embed.FS
+
 func enhancedHelpOutput() {
 	logo()
 	fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s:\n", os.Args[0])
@@ -115,6 +122,10 @@ func enhancedHelpOutput() {
 	fmt.Println(color.Ize(color.White, "  Run in webserver mode to expose an API endpoint: ./honeydet -webserveri -vv"))
 	fmt.Println(color.Ize(color.Blue, "                         curl 'http://localhost:8888/scan?host=1.2.378.1.1/24'"))
 	fmt.Println(color.Ize(color.Blue, "                         interface 'http://localhost:8888/'"))
+	fmt.Println("\nFILES (an explicit flag always wins; otherwise the first file found is used):")
+	fmt.Println("  Signatures: " + strings.Join(signatureSearchPaths(), ", "))
+	fmt.Println("  Config:     " + strings.Join(configSearchPaths(), ", "))
+	fmt.Println("  Database:   $XDG_DATA_HOME/honeydet/scans.db or ~/.local/share/honeydet/scans.db")
 }
 
 func logo() {
@@ -140,7 +151,7 @@ func logo() {
   I+ :I+=I+  7I =I+ I7   I7~ :I?   +I,    II,II  I7~ :I?=I=
       =, I7III: =I= I7    IIIII    +I,     II7I   IIIII ~I+
 
-      Go Honeypot Detector, Oct 2026, Version 1.4.2
+      Go Honeypot Detector, Oct 2026, Version 1.5.0
 `))
 }
 
@@ -172,7 +183,16 @@ func main() {
 	*proto = selectFlagValue(*proto, *protoShort, "tcp")
 	*username = selectFlagValue(*username, *usernameShort, "")
 	*password = selectFlagValue(*password, *passwordShort, "")
-	*signatureFile = selectFlagValue(*signatureFile, *signatureShort, "signatures.yaml")
+	*signatureFile = selectFlagValue(*signatureFile, *signatureShort, "")
+	if *signatureFile == "" {
+		*signatureFile = firstExisting(signatureSearchPaths(), "signatures.yaml")
+	}
+	if *configFile == "" {
+		*configFile = firstExisting(configSearchPaths(), "config.yaml")
+	}
+	if *databaseFile == "" {
+		*databaseFile = defaultDatabasePath()
+	}
 	*verbose = selectFlagValue(*verbose, *verboseShort, false)
 	*delay = selectFlagValue(*delay, *delayShort, 0)
 	*threads = selectFlagValue(*threads, *threadsShort, 1)
@@ -188,7 +208,7 @@ func main() {
 	}
 
 	if *useShodan {
-		config, err := readConfig("config.yaml")
+		config, err := readConfig(*configFile)
 		if err != nil {
 			log.Fatalf("Error reading config: %s", err)
 		}
@@ -199,7 +219,7 @@ func main() {
 	logo()
 
 	var err error
-	db, err := initializeDatabase()
+	db, err := initializeDatabase(*databaseFile)
 	if err != nil {
 		log.Fatalf("Error initializing database: %s", err)
 	}
@@ -211,8 +231,11 @@ func main() {
 	}
 
 	if *webserver {
-		fs := http.FileServer(http.Dir("./assets"))
-		http.Handle("/assets/", http.StripPrefix("/assets/", fs))
+		assets, err := fs.Sub(assetsFS, "assets")
+		if err != nil {
+			log.Fatalf("Error loading web assets: %s", err)
+		}
+		http.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(http.FS(assets))))
 		http.HandleFunc("/scan", scanHandler)
 		http.HandleFunc("/clearDatabase", clearDatabaseHandler)
 		http.HandleFunc("/deleteScan", deleteScanHandler)
