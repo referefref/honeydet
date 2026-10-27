@@ -11,8 +11,8 @@ import (
 	"time"
 )
 
-func initializeDatabase() (*sql.DB, error) {
-	db, err := sql.Open("sqlite", "./scans.db")
+func initializeDatabase(path string) (*sql.DB, error) {
+	db, err := sql.Open("sqlite", path)
 	if err != nil {
 		return nil, err
 	}
@@ -109,7 +109,7 @@ func clearDatabaseHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Println(color.Ize(color.Blue, "[Verbose] Clearing database"))
 	}
 
-	db, err := initializeDatabase()
+	db, err := initializeDatabase(*databaseFile)
 	if err != nil {
 		if *debug {
 			fmt.Println(color.Ize(color.Red, "[Debug] Error initializing database: "+err.Error()))
@@ -147,7 +147,7 @@ func deleteScanHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Println(color.Ize(color.Blue, "[Verbose] Deleting scan from database"))
 	}
 
-	db, err := initializeDatabase()
+	db, err := initializeDatabase(*databaseFile)
 	if err != nil {
 		if *debug {
 			fmt.Println(color.Ize(color.Red, "[Debug] Error initializing database: "+err.Error()))

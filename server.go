@@ -83,7 +83,7 @@ func getScans(db *sql.DB) ([]map[string]interface{}, error) {
 }
 
 func scanHandler(w http.ResponseWriter, r *http.Request) {
-	db, err := initializeDatabase()
+	db, err := initializeDatabase(*databaseFile)
 	if err != nil {
 		log.Print(color.Ize(color.Red, fmt.Sprintf("Error initializing database: %s", err)))
 		http.Error(w, "Internal server error", http.StatusInternalServerError)

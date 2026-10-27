@@ -1,18 +1,16 @@
-FROM golang:1.21 as builder
+FROM golang:1.26 AS builder
 
 WORKDIR /app
-RUN git clone https://github.com/referefref/honeydet.git .
+COPY . .
 RUN go mod download
-RUN CGO_ENABLED=1 GOOS=linux go build -o honeydet
-FROM debian:latest
+RUN CGO_ENABLED=0 GOOS=linux go build -o honeydet
+
+FROM debian:stable-slim
 RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /root/
-COPY --from=builder /app/honeydet .
-COPY --from=builder /app/assets ./assets
-COPY --from=builder /app/index.html .
-COPY --from=builder /app/signatures.yaml .
+COPY --from=builder /app/honeydet /usr/local/bin/honeydet
+COPY --from=builder /app/signatures.yaml /usr/share/honeydet/signatures.yaml
 
 EXPOSE 8888
 
-CMD ["./honeydet", "-w"]
+CMD ["honeydet", "-w", "-db", "/root/data/scans.db"]

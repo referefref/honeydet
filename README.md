@@ -89,11 +89,23 @@ go build
 
 #### Use docker compose
 ```bash
-# Note that scans.db will persist in the docker-compose file directory, if you need to map this somewhere else, edit the docker compose file
+# Scan history is kept in ./data/scans.db next to the compose file
 git clone https://github.com/referefref/honeydet.git
 cd honeydet
 docker compose up
 ```
+
+### Files
+
+An explicit flag always wins. Otherwise honeydet uses the first file it finds, so it works from a source checkout and when installed system-wide:
+
+| File | Flag | Search order |
+|---|---|---|
+| Signatures | `-signatures` | `./signatures.yaml`, `~/.config/honeydet/signatures.yaml`, next to the honeydet binary, `/usr/local/share/honeydet/signatures.yaml`, `/usr/share/honeydet/signatures.yaml` |
+| Shodan configuration | `-config` | `./config.yaml`, `~/.config/honeydet/config.yaml`, `/etc/honeydet/config.yaml` |
+| Scan history database | `-db` | `$XDG_DATA_HOME/honeydet/scans.db`, else `~/.local/share/honeydet/scans.db` (created on first run) |
+
+The web interface (page, styles, script and logo) is built into the binary.
 
 ### Command line options
 ```
@@ -139,12 +151,16 @@ docker compose up
     	Short form of -report (default "none")
   -report string
     	Type of report to generate (none, json, csv) (default "none")
+  -config string
+    	Configuration file with the Shodan API key (default: first config.yaml found, see Files)
+  -db string
+    	SQLite database for scan history (default: ~/.local/share/honeydet/scans.db)
   -s string
-    	Short form of -signatures (default "signatures.yaml")
+    	Short form of -signatures
   -shodan
     	Enable Shodan API enrichment
   -signatures string
-    	File with signatures (default "signatures.yaml")
+    	File with signatures (default: first signatures.yaml found, see Files)
   -t int
     	Short form of -threads (default 1)
   -threads int
@@ -241,3 +257,7 @@ Port 161 steps are sent as SNMP GET requests (the `input` is an OID) and port 50
 **Testing a signature**
 
 Before submitting, run it against the honeypot (it should match) and against a genuine instance of the same service (it should not), and include both outputs as proof with the PR.
+
+## Licence
+
+honeydet is free software, released under the GNU General Public License version 3 (see [LICENSE](LICENSE)). Releases up to and including 1.4.2 were published under CC BY-NC-SA 4.0.
