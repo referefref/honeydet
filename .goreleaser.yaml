@@ -17,7 +17,7 @@ archives:
   - formats: [tar.gz]
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     files:
-      - LICENSE.txt
+      - LICENSE
       - README.md
       - signatures.yaml
       - config.yaml
