@@ -120,6 +120,128 @@ signatures:
         invert_match: false
     confidence: High
     comment: "Twisted Conch rejects the malformed version with 'bad version'. Matches OpenCanary 0.9.10 and Cowrie before 3.x; Cowrie 3.1.3 replies 'Invalid SSH identification string.' like OpenSSH (see ids 43-49)."
+  # WOWHoneypot blocks a scanner after four bad connections, so its signatures run before other web-port signatures
+  # wowhoneypot (ids 460-469)
+  - name: wowhoneypot-default-page-direct
+    id: 460
+    port: web-ports
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /hd-probe-7d1e/nothing-here HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\nDate: [^\r\n]+ GMT\r\nServer: [^\r\n]+\r\nContent-Type: text/html\r\nContent-Length: (?:84|91|266)\r\n\r\n<html>\n<head>\n  <title>(?:hello|sample|login)</title>'
+        invert_match: false
+    confidence: High
+    comment: "WOWHoneypot answers any unknown path with 200 OK and one of its three default pages (hello, sample page or a login form), chosen at random, with exactly four headers in Python http.server order (Date, Server, Content-Type: text/html, Content-Length) and no Connection, ETag or Last-Modified. Genuine nginx and Apache return 404 for a path that does not exist. Requires the honeypot to answer directly (a reverse proxy rewrites the headers)."
+  - name: wowhoneypot-default-page-any-front
+    id: 461
+    port: web-ports
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /hd-probe-7d1e/nothing-at-all HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*\r\n\r\n<html>\n<head>\n  <title>(?:hello</title>\n</head>\n<body>\n  <h1>hello</h1>|sample</title>\n</head>\n<body>\n  <h1>sample page</h1>|login</title>\n</head>\n<body>\n<form action="/login" method="post">)'
+        invert_match: false
+    confidence: High
+    comment: "Same catch-all, matched on the body only so that it also detects WOWHoneypot behind a reverse proxy (as the catch-all of Bwpot): a made-up path returns 200 OK with one of WOWHoneypot's three default pages. A genuine server returns 404."
+  - name: wowhoneypot-propfind-ok
+    id: 462
+    port: web-ports
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "PROPFIND / HTTP/1.1\r\nHost: x\r\nDepth: 0\r\nContent-Length: 0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*\r\n\r\nok$'
+        invert_match: false
+    confidence: High
+    comment: "WOWHoneypot's default PROPFIND rule answers 200 OK with the two-byte body 'ok' (and, when it answers directly, Server: Microsoft-IIS/7.0 on a server that otherwise says Apache). A WebDAV server answers PROPFIND with 207 Multi-Status and an XML body; nginx and Apache without WebDAV return 405. Survives a reverse proxy."
+  - name: wowhoneypot-head-length-one
+    id: 463
+    port: web-ports
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "HEAD / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\nDate: [^\r\n]+\r\nServer: [^\r\n]+\r\nContent-Type: text/html\r\nContent-Length: 1$'
+        invert_match: false
+    confidence: High
+    comment: "WOWHoneypot's HEAD rule answers HEAD / with Content-Length: 1 (and then sends a one-space body, which HTTP forbids for HEAD; honeydet trims it), while GET / returns a default page of 84, 91 or 266 bytes. A genuine server sends the headers of the GET response, including its real length, and no body. Requires the honeypot to answer directly (the exact four-header layout)."
+  - name: wowhoneypot-options-allow-any-front
+    id: 464
+    port: web-ports
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "OPTIONS / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n(?:.*\r\n)?Allow: GET,HEAD,POST,PUT,OPTIONS,CONNECT,PROPFIND(?:\r\n|$)'
+        invert_match: false
+    confidence: High
+    comment: "WOWHoneypot's OPTIONS rule advertises Allow: GET,HEAD,POST,PUT,OPTIONS,CONNECT,PROPFIND (no spaces, CONNECT and PROPFIND on a plain web server), whatever the front end. nginx returns 405 and Apache lists its real methods (GET,POST,OPTIONS,HEAD). Survives a reverse proxy."
+  - name: wowhoneypot-http11-without-host
+    id: 465
+    port: web-ports
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /hd-probe-7d1e/nohost HTTP/1.1\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\nDate: [^\r\n]+\r\nServer: [^\r\n]+\r\nContent-Type: text/html\r\nContent-Length: (?:84|91|266)\r\n\r\n<html>'
+        invert_match: false
+    confidence: High
+    comment: "An HTTP/1.1 request without a Host header is answered 200 OK with a default page. HTTP/1.1 requires Host, and nginx, Apache, IIS and Tomcat return 400 Bad Request. Requires the honeypot to answer directly (a proxy in front rejects the request)."
+  - name: wowhoneypot-phpmyadmin-fixed-cookie
+    id: 466
+    port: web-ports
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /phpMyAdmin/ HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\nDate: [^\r\n]+\r\nSet-Cookie: phpMyAdmin=1vbs1ar15h9a880ekmr49f4p4pvbuh89; path=/phpmyadmin/; HttpOnly\r\n.*\r\n\r\nphpmyadmin$'
+        invert_match: false
+    confidence: Medium
+    comment: "WOWHoneypot's phpMyAdmin rule answers /phpMyAdmin/ with the same session cookie value for every visitor (phpMyAdmin=1vbs1ar15h9a880ekmr49f4p4pvbuh89, for a lower-case path) and the ten-byte body 'phpmyadmin' instead of a login page. A genuine phpMyAdmin issues a fresh random session cookie and its login form. Medium: editable rule. Not seen in Bwpot, which sends this path to a real phpMyAdmin."
+  - name: wowhoneypot-jsp-coyote-ok
+    id: 467
+    port: web-ports
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /hd-probe-7d1e.jsp HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\nDate: [^\r\n]+\r\nServer: Apache-Coyote/1\.1\r\nContent-Type: text/html\r\nContent-Length: 2\r\n\r\nok$'
+        invert_match: false
+    confidence: Medium
+    comment: "Any path containing .jsp is answered by WOWHoneypot's Tomcat rule: 200 OK, Server: Apache-Coyote/1.1 (on a server that says Apache elsewhere) and the body 'ok', for a JSP that cannot exist. Tomcat returns its 404 page. Medium: the rule is part of the editable art/mrrules.xml. Not seen in Bwpot, which sends .jsp to a real Tomcat."
+  - name: wowhoneypot-whoami-rule
+    id: 468
+    port: web-ports
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /?hd=whoami HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*\r\n\r\nroot$'
+        invert_match: false
+    confidence: Medium
+    comment: "WOWHoneypot's command-injection rules answer any URL containing =whoami (and any header or body containing whoami) with the four-byte body 'root'. A genuine site serves its normal page for an unknown query parameter. Medium: the rule is part of the editable art/mrrules.xml. Survives a reverse proxy."
+  - name: wowhoneypot-put-file-created-any-front
+    id: 469
+    port: web-ports
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "PUT /hd-probe-7d1e.txt HTTP/1.1\r\nHost: x\r\nContent-Length: 4\r\nConnection: close\r\n\r\nhd\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 201 Created\r\n.*\r\n\r\nfile created\.$'
+        invert_match: false
+    confidence: Medium
+    comment: "A PUT to any path returns 201 Created with the body 'file created.', but nothing is stored (a GET for the same path returns a default page). nginx and Apache without WebDAV refuse PUT (404 or 405); a WebDAV server stores the file. Medium: editable rule. Survives a reverse proxy."
   - name: cisco-asa
     id: 9
     port: web-ports
@@ -3558,3 +3680,137 @@ signatures:
         invert_match: false
     confidence: High
     comment: "As 424, on port 24, where ftp/strong_password lands when the SSH modules are processed first (fresh CT 9242)."
+  # servletpot (ids 440-445)
+  - name: servletpot-robots-txt-as-html
+    id: 440
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /robots.txt HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 [^\r\n]*\r\n.*Content-Type: text/html;charset=ISO-8859-1\r\n.*\r\n\r\n(?:[0-9a-fA-F]+\r\n)?User-agent: \*<br>\r?\n(?:(?:Dis)?[Aa]llow: ?/[^\r\n]*<br>\r?\n)*'
+        invert_match: false
+    confidence: High
+    comment: "Any path containing robots.txt is answered by Servletpot's Robots class: 200 with Content-Type text/html;charset=ISO-8859-1 and a robots file whose lines end in '<br>' ('User-agent: *<br>' followed by a random selection of Disallow/Allow lines from a built-in list, different on every request). Genuine servers send robots.txt as text/plain without HTML line breaks, or 404 when there is none (Tomcat)."
+  - name: servletpot-image-empty-html-200
+    id: 441
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /hd-probe-5e1c.png HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 [^\r\n]*\r\n(?:[^\r\n]+\r\n)*?Content-Type: text/html;charset=ISO-8859-1\r\n(?:[^\r\n]+\r\n)*?Content-Length: 0(?:\r\n[^\r\n]+)*$'
+        invert_match: false
+    confidence: High
+    comment: "Requests for any .png, .gif, .jpg or favicon.ico path, existing or not, return 200 with an empty text/html body (checkForDefaultFiles returns before any output). A genuine server returns the image with an image content type, or 404 for a file that does not exist."
+  - name: servletpot-options-without-allow
+    id: 442
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "OPTIONS /hd-probe-5e1c HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.[01] 200 \r\nContent-Length: 0\r\nDate: [^\r\n]+(?:\r\nConnection: close)?$'
+        invert_match: false
+    confidence: Medium
+    comment: "Servletpot overrides doOptions and only logs the request, so Tomcat sends a bare 200 (no reason phrase, as Tomcat 8.5 and later do) with Content-Length: 0 and no Allow header. Genuine Tomcat answers OPTIONS with 'Allow: OPTIONS, GET, HEAD, POST' (DefaultServlet) or 404 when nothing is deployed. Medium: depends on Tomcat's header layout and changes behind a reverse proxy."
+  - name: servletpot-delete-accepted-silently
+    id: 443
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "DELETE /hd-probe-5e1c HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.[01] 200 \r\nContent-Length: 0\r\nDate: [^\r\n]+(?:\r\nConnection: close)?$'
+        invert_match: false
+    confidence: Medium
+    comment: "DELETE (and PUT) on any path return an empty 200 from Tomcat with no other headers, because Servletpot's doDelete and doPut only log the request. Genuine Tomcat refuses both with 405 and an Allow header (read-only DefaultServlet) or 404. Medium: Tomcat-specific header layout; a reverse proxy changes it."
+  - name: servletpot-post-empty-html-200
+    id: 444
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST /hd-probe-5e1c HTTP/1.1\r\nHost: x\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: 3\r\nConnection: close\r\n\r\na=b"
+        output_match_type: regex
+        output: '^HTTP/1\.[01] 200 \r\nContent-Type: text/html;charset=ISO-8859-1\r\nContent-Length: 0\r\nDate: [^\r\n]+(?:\r\nConnection: close)?$'
+        invert_match: false
+    confidence: Medium
+    comment: "A form POST to any path that matches none of Servletpot's POST rules is logged parameter by parameter and answered with 200, Content-Type text/html;charset=ISO-8859-1 and an empty body. Genuine Tomcat returns 404 for a path that does not exist (405 for POST to a static file elsewhere). Medium: Tomcat-specific header layout."
+  - name: servletpot-default-demo-page
+    id: 445
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /hd-probe-5e1c.php HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 [^\r\n]*\r\n.*Content-Type: text/html;charset=ISO-8859-1\r\n.*<title>Servletpot demo side</title>.*<span style="color: white;">'
+        invert_match: false
+    confidence: Medium
+    comment: "Every path that is not an image, robots.txt or a Tomcat-protected path returns 200 with the shipped default page (title 'Servletpot demo side', text 'hi guyss' and a white-on-white span that lists the request paths Servletpot has learned from attacks). The page lives in index.html under SERVLETPOT_HOME and operators are told to replace it, hence Medium; the 200 for arbitrary paths remains."
+  # weblabyrinth (ids 450-454)
+  - name: weblabyrinth-search-engine-serenade
+    id: 450
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /labyrinth/ HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.0 404 Not Found\r\n.*\r\n\r\n\s*o/~ Whatever you''re looking for\.\.\. / Hey! Don''t come around here no more\.\.\. o/~'
+        invert_match: false
+    confidence: High
+    comment: "A search engine user agent (Google, Yandex, Openfind, msnbot, bingbot, Slurp, Yahoo, Architext) inside the labyrinth path gets 'HTTP/1.0 404 Not Found' (an HTTP/1.0 status line to an HTTP/1.1 request) and a body of Tom Petty lyrics, 'o/~ Whatever you're looking for... / Hey! Don't come around here no more... o/~'. Hard-coded, deterministic and not logged by the tool. Default web path /labyrinth."
+  - name: weblabyrinth-maze-page
+    id: 451
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /labyrinth/hd451/qz7 HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\n.*\r\n\r\n\s*(?:[A-Za-z0-9_-]+ \s*)?<link rel="stylesheet" type="text/css" href="/labyrinth/labyrinth\.css">\n<title>qz7</title>\n<body>\n'
+        invert_match: false
+    confidence: High
+    comment: "Any path below /labyrinth returns 200 with WebLabyrinth's page skeleton: leading blank lines, an optional IDS alert keyword, then a stylesheet link to /labyrinth/labyrinth.css and a <title> holding the last path segment, with no doctype, <html> or <head>. Random 404/403/402 replies (about 3 in 101 requests, by design) make single runs miss occasionally. Default web path /labyrinth."
+  - name: weblabyrinth-base64-number-links
+    id: 452
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /labyrinth/hd452/maze HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\n.*<a href="/labyrinth/hd452/maze/[MNO][DTjz][AEIMQUYcgk][w-z0-5][A-Za-z0-9]*">[^<]+</a> .*<a href="/labyrinth/hd452/maze/[MNO][DTjz][AEIMQUYcgk][w-z0-5][A-Za-z0-9]*">'
+        invert_match: false
+    confidence: High
+    comment: "Pages link one level deeper below the requested path with names that are base64-encoded random decimal numbers without padding (for example /labyrinth/a/b/ODkwMTM1NTg = 89013558), which always begin with M, N or O followed by D, T, j or z; the links wrap single words of Markov-chain text. Random 404/403/402 replies make single runs miss occasionally. Default web path /labyrinth."
+  - name: weblabyrinth-empty-domain-mailto
+    id: 453
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /labyrinth/hd453/maze/deep HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\n.*<a href="mailto:[MNO][DTjz][AEIMQUYcgk][w-z0-5][A-Za-z0-9]*@">'
+        invert_match: false
+    confidence: Medium
+    comment: "With the shipped configuration (bogus_email 'enabled' => 'false' is a non-empty string, which PHP treats as true, and the domain is empty) about one link in ten is a mailto: address of a base64 number with an empty domain, such as mailto:NDgyNjIxODY@. Medium: depends on the default configuration, and a page occasionally has no mailto link, besides the random error replies."
+  - name: weblabyrinth-stylesheet
+    id: 454
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /labyrinth/labyrinth.css HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\n.*Content-Type: text/css.*\r\n\r\nbody \{\n    color: #2F2F2F;\n    font-size: small;\n    font-family: arial, verdana, tahoma, sans-serif;\n\}\nh1 \{\n    size: 130%;\n'
+        invert_match: false
+    confidence: Medium
+    comment: "The labyrinth pages load /labyrinth/labyrinth.css, WebLabyrinth's own style sheet, which sets headings with a non-existent CSS property ('size: 130%' for h1). Static and deterministic; Medium because an operator can restyle it."
