@@ -2711,3 +2711,694 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: "ActiveSync's endpoint without a trailing slash, the form mobile clients use, is answered by Werkzeug's routing with '308 PERMANENT REDIRECT' to the slash form and Flask's 'Redirecting...' page. Genuine Exchange handles /Microsoft-Server-ActiveSync directly (an authentication challenge for an anonymous request) and IIS never sends upper-case reason phrases. Medium because genuine ActiveSync responses are not documented in detail."
+  # phpmyadmin-honeypot (ids 300-307)
+  - name: phpmyadmin-honeypot-login-form-to-login-php
+    id: 300
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /phpmyadmin/ HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*<form method="post" action="login\.php" name="login form">.*<input name="doc" value="phpmyadmin-form" type="hidden">'
+        invert_match: false
+    confidence: High
+    comment: "The phpMyAdmin login page posts to login.php and carries a hidden field doc=phpmyadmin-form (the honeypot's SIEM marker). Genuine phpMyAdmin (3.3 to 5.2) posts the login form to index.php with pma_username/pma_password and a session token; login.php does not exist."
+  - name: phpmyadmin-honeypot-reflects-x-forwarded-for
+    id: 301
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /phpmyadmin/ HTTP/1.1\r\nHost: x\r\nX-Forwarded-For: hd-pma-7f3a\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*<input name="ip" value="hd-pma-7f3a" type="hidden">'
+        invert_match: false
+    confidence: High
+    comment: "The login page copies the client address, taken from Client-IP or X-Forwarded-For when present, unescaped into a hidden 'ip' form field (with the server time in a hidden 'date' field). Genuine phpMyAdmin never echoes request headers into its login form."
+  - name: phpmyadmin-honeypot-unauthenticated-admin-page
+    id: 302
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /phpmyadmin/master-config/index.php HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*<title>[^<]*\| phpMyAdmin 4\.1\.8</title>.*token:"8594484b0e843036171474b16cde4a15"'
+        invert_match: false
+    confidence: High
+    comment: "The 'logged-in' page (a saved copy of a phpMyAdmin 4.1.8 demo home page) is served to anyone who requests it, without a session, with the fixed session token 8594484b0e843036171474b16cde4a15. Genuine phpMyAdmin has no master-config directory and never shows its main page, let alone a fixed token, without authentication."
+  - name: phpmyadmin-honeypot-login-php-redirect
+    id: 303
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /phpmyadmin/login.php HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 302 Found\r\n.*Location: index2\.php\r\n'
+        invert_match: false
+    confidence: High
+    comment: "login.php answers even a GET without credentials with a redirect to index2.php (the failed-login page); it also appends a line to the honeypot's log. Neither login.php nor index2.php exists in genuine phpMyAdmin 3.3 to 5.2 (404)."
+  - name: phpmyadmin-honeypot-index2-invalid-login
+    id: 304
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /phpmyadmin/index2.php HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*<p>ERROR: Invalid Login Attempt</p>.*permission denied : 0x42-0839475'
+        invert_match: false
+    confidence: High
+    comment: "index2.php is a static copy of the login page with 'ERROR: Invalid Login Attempt' and a 'Reset Password' link that pops up 'error -- permission denied : 0x42-0839475'. It answers a plain GET; genuine phpMyAdmin has no index2.php, no password reset link and reports a failed login on its own login page with the database server's error ('#1045 Cannot log in to the MySQL server' in 3.3.8.1; 'Cannot log in to the MySQL server' and 'Access denied for user ...' in 5.2)."
+  - name: phpmyadmin-honeypot-login-without-session-cookie
+    id: 305
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /phpmyadmin/ HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n(?:(?:[^S\r][^\r\n]*|Se[^t][^\r\n]*|Set[^-][^\r\n]*)\r\n)*\r\n.*<title>phpMyAdmin </title>.*Welcome to <bdo dir="ltr" xml:lang="en">phpMyAdmin </bdo>'
+        invert_match: false
+    confidence: Medium
+    comment: "The phpMyAdmin welcome page arrives without any Set-Cookie header. Every genuine version tested (3.3.8.1, 4.1.8, 4.9, 5.2) starts a phpMyAdmin session and sets pma_lang (and other pma_ cookies) on the login page. Medium: a reverse proxy that adds cookies would hide it."
+  - name: phpmyadmin-honeypot-master-config-phpinfo
+    id: 306
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /phpmyadmin/master-config/phpinfo.php HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*<title>PHP [0-9][^<]*phpinfo\(\)'
+        invert_match: false
+    confidence: Medium
+    comment: "The honeypot's bait phpinfo page at /phpmyadmin/master-config/phpinfo.php answers without authentication (and shows the honeypot host's real PHP configuration). The path does not exist in genuine phpMyAdmin, whose phpinfo.php needs a login and is disabled by default. Medium: the file can be renamed or removed."
+  - name: phpmyadmin-honeypot-saved-page-assets
+    id: 307
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /phpmyadmin/phpmyadmin_files/phpmyadmin.css HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*Content-Type: text/css'
+        invert_match: false
+    confidence: Medium
+    comment: "The login page's stylesheet, logo and help icon come from phpmyadmin_files/, the folder a browser creates with 'Save page as'. Genuine phpMyAdmin serves themes from themes/<name>/ (and phpmyadmin.css.php in 3.x and 4.x); phpmyadmin_files/ returns 404. Medium: the folder can be renamed together with the page."
+  # eohoneypotbundle (ids 310-313)
+  - name: eohoneypotbundle-hidden-field-contact
+    id: 310
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /contact HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 .*<input type="text" id="[^"]*" name="[^"]*"[^>]*? autocomplete="nope" tabindex="-1" aria-hidden="true" style="position: fixed; left: -100%; top: -100%;"'
+        invert_match: false
+    confidence: High
+    comment: "The form on /contact contains EoHoneypotBundle's honeypot input: a text field rendered without a label or row wrapper, with the bundle's fixed attribute set autocomplete=\"nope\" tabindex=\"-1\" aria-hidden=\"true\" style=\"position: fixed; left: -100%; top: -100%;\". The field name is chosen by the developer, the attributes are the bundle's defaults. Symfony forms without the bundle, and hand-made honeypots such as the one in the Strangebuzz tutorial (display:none, autocomplete=\"off\"), do not produce this markup. The path is the lab application's contact form."
+  - name: eohoneypotbundle-hidden-field-home
+    id: 311
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 .*<input type="text" id="[^"]*" name="[^"]*"[^>]*? autocomplete="nope" tabindex="-1" aria-hidden="true" style="position: fixed; left: -100%; top: -100%;"'
+        invert_match: false
+    confidence: High
+    comment: "The same EoHoneypotBundle honeypot input in a form on the home page (the lab application's newsletter sign-up form). Detects the bundle on any site that protects a form on its landing page."
+  - name: eohoneypotbundle-form-is-invalid
+    id: 312
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST /contact HTTP/1.1\r\nHost: x\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: 131\r\nConnection: close\r\n\r\ncontact%5Bname%5D=Ann&contact%5Bemail%5D=ann%40example.com&contact%5Bmessage%5D=Hello&contact%5Bwebsite%5D=http%3A%2F%2Fexample.com"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 422 .*<li[^>]*>Form is invalid\.</li>'
+        invert_match: false
+    confidence: Medium
+    comment: "Submitting the form with the honeypot field (here contact[website]) filled in returns the form with the bundle's own error message 'Form is invalid.' (causesError option, on by default) and status 422. The same application without the bundle reports Symfony's 'This form should not contain extra fields.' for the unknown field. Applies to the bundle's default configuration (redirect disabled); with redirect enabled see 313. Form and field names are those of the lab application."
+  - name: eohoneypotbundle-redirect-on-honeypot
+    id: 313
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST /contact HTTP/1.1\r\nHost: x\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: 107\r\nConnection: keep-alive\r\n\r\ncontact%5Bname%5D=Ann&contact%5Bemail%5D=ann%40example.com&contact%5Bmessage%5D=Hello&contact%5Bwebsite%5D="
+        output_match_type: regex
+        output: '^HTTP/1\.[01] 422 '
+        invert_match: false
+      - input_type: string
+        input: "POST /contact HTTP/1.1\r\nHost: x\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: 131\r\nConnection: close\r\n\r\ncontact%5Bname%5D=Ann&contact%5Bemail%5D=ann%40example.com&contact%5Bmessage%5D=Hello&contact%5Bwebsite%5D=http%3A%2F%2Fexample.com"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 302 .*\r\nLocation: /\r\n.*<title>Redirecting to /</title>'
+        invert_match: false
+    confidence: Medium
+    comment: "With the redirect option enabled (as in the bundle's README example, url \"/\"), the same submission without a CSRF token is rejected with 422 while the honeypot field is empty, but answered with a 302 redirect to / as soon as the field is filled in: the bundle replaces the response for caught submissions. A Symfony form without the bundle rejects both with 422. Form and field names and the redirect target are those of the lab application."
+  # fab-pot (ids 320-321)
+  - name: fab-pot-hidden-field
+    id: 320
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 .*<input type="text" id="[^"]*" name="[^"]*"[^>]*? style="display:none !important" tabindex="-1" autocomplete="off"'
+        invert_match: false
+    confidence: High
+    comment: "The form on / contains the honeypot field described in the Strangebuzz tutorial: a text input hidden with the inline attributes style=\"display:none !important\" tabindex=\"-1\" autocomplete=\"off\", in that order, as the post's form_widget call sets them. No visible form field carries this combination; Symfony forms without the trap and EoHoneypotBundle's field (autocomplete=\"nope\", off-screen position) do not match. The path is the lab application's newsletter page."
+  - name: fab-pot-swapped-email-field
+    id: 321
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 .*<input type="email" id="[^"]*" name="[^"]*\[information\]".*<input type="text" id="[^"]*" name="[^"]*\[email\]"'
+        invert_match: false
+    confidence: Medium
+    comment: "The tutorial's field swap: the real address is collected by an input of type email named [information], and a plain text input named [email], the name a form-filling bot looks for, follows it as the trap. The names are constants in the post's form class and are kept by sites that follow it; a site that renames them is not detected by this signature (320 still applies)."
+  # bwpot-breakable-web-applications-honeypo (ids 330-337)
+  - name: bwpot-php-catchall-empty-200
+    id: 330
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /hd-probe-4c7e1a/check-9b2f.php HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\nServer: nginx\r\n.*Content-Length: 0\r\n.*X-Powered-By: PHP/7\.'
+        invert_match: false
+    confidence: High
+    comment: "Every URL containing .php that is not under /wp- is rewritten by Bwpot's nginx to the single index.php of its PHP 7 web shell container, so a request for a .php file that cannot exist returns 200 OK with an empty body and X-Powered-By: PHP/7.x behind Server: nginx. Genuine nginx or Apache with PHP returns 404 (File not found. / Not Found) for a missing script."
+  - name: bwpot-php-webshell-eval
+    id: 331
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST /hd-probe-4c7e1a.php HTTP/1.1\r\nHost: x\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: 37\r\nConnection: close\r\n\r\nhd=echo%20'hd-'.'eval-'.(6*7)%3B%0A\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\n.*X-Powered-By: PHP/.*\r\n\r\nhd-eval-42'
+        invert_match: false
+    confidence: High
+    comment: "Bwpot's PHP web shell evaluates every request parameter as PHP (plain and base64-decoded) on any .php path. Posting echo 'hd-'.'eval-'.(6*7) returns hd-eval-42, which only appears if the server executed the expression. A genuine server returns 404 for an unknown script, or a page that never evaluates request parameters. The probe executes only a harmless echo."
+  - name: bwpot-phpmyadmin-any-path
+    id: 332
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /hd-probe-mysql-4c7e1a/ HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\nServer: nginx\r\n.*Set-Cookie: phpMyAdmin='
+        invert_match: false
+    confidence: High
+    comment: "Bwpot's nginx sends any path containing phpMyAdmin, pma or mysql (case-insensitive) to phpMyAdmin, so a made-up directory such as /hd-probe-mysql-4c7e1a/ returns the phpMyAdmin login page with a phpMyAdmin session cookie. A genuine phpMyAdmin answers only under the one path it is installed at."
+  - name: bwpot-wowhoneypot-catchall-page
+    id: 333
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /hd-probe-4c7e1a/nothing-here HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\nServer: nginx\r\n.*Content-Type: text/html\r\nContent-Length: (?:84|91|266)\r\n.*\r\n\r\n<html>\n<head>\n  <title>(?:hello|sample|login)</title>'
+        invert_match: false
+    confidence: High
+    comment: "Paths that match no other rule go to WOWHoneypot, which answers 200 OK with one of its three default pages (hello, sample page or a simple login form) chosen at random, behind Server: nginx. A genuine web server returns 404 for a path that does not exist, and a WordPress site its own 404 page."
+  - name: bwpot-wowhoneypot-options-allow
+    id: 334
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "OPTIONS / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\nServer: nginx\r\n.*Allow: GET,HEAD,POST,PUT,OPTIONS,CONNECT,PROPFIND(?:\r\n|$)'
+        invert_match: false
+    confidence: High
+    comment: "OPTIONS on the root is answered by WOWHoneypot's built-in rule with Allow: GET,HEAD,POST,PUT,OPTIONS,CONNECT,PROPFIND (no spaces, CONNECT and PROPFIND advertised) behind Server: nginx. nginx serving content returns 405 Not Allowed, Apache lists its real methods with spaces, and WordPress answers with its home page."
+  - name: bwpot-wowhoneypot-put-file-created
+    id: 335
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "PUT /hd-probe-4c7e1a.txt HTTP/1.1\r\nHost: x\r\nContent-Length: 4\r\nConnection: close\r\n\r\nhd\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 201 Created\r\nServer: nginx\r\n.*\r\n\r\nfile created\.$'
+        invert_match: false
+    confidence: Medium
+    comment: "A PUT to any path is accepted by WOWHoneypot's rule with 201 Created and the body 'file created.', but nothing is stored. Genuine nginx and Apache refuse PUT without WebDAV (405), and a WebDAV server stores the file and returns its own body. Medium: WOWHoneypot's response rules are editable."
+  - name: bwpot-wowhoneypot-robots
+    id: 336
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /robots.txt HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\nServer: nginx\r\n.*Content-Type: text/html\r\n.*\r\n\r\nUser-agent: \*\nAllow: /wordpress/\nAllow: /joomla/\nAllow: /drupal/\nAllow: /blog/\nDisallow: /phpmyadmin/'
+        invert_match: false
+    confidence: Medium
+    comment: "robots.txt is WOWHoneypot's bait file, served as text/html, which advertises /wordpress/, /joomla/, /drupal/ and /blog/ and disallows /phpmyadmin/, while none of those directories exist on Bwpot (WordPress is served from the root /wp- paths). Medium: the file is part of WOWHoneypot's editable art directory."
+  - name: bwpot-wordpress-default-example-com
+    id: 337
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /wp-admin/ HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 302 Found\r\nServer: nginx\r\n.*X-Redirect-By: WordPress\r\nLocation: http://example\.com/wp-login\.php\?redirect_to='
+        invert_match: false
+    confidence: Medium
+    comment: "Bwpot installs WordPress with wp-cli using the defaults in its credentials template (site URL http://example.com/, title 'example', admin/password), so /wp-admin/ redirects to http://example.com/wp-login.php whatever host name was used. A genuine site redirects to its own address. Medium: the defaults can be changed before the first start."
+  # ensnare (ids 340-345)
+  - name: ensnare-random-trap-cookie
+    id: 340
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?si)^HTTP/1\.[01] [0-9]{3} .*\r\nset-cookie: vnenSdjfxLgjFDSra=[A-Za-z0-9_-]{40,}'
+        invert_match: false
+    confidence: High
+    comment: "Ensnare's predefined :random trap cookie always has the same hard-coded name, vnenSdjfxLgjFDSra, with a 54-character URL-safe Base64 value. The application never uses it; a client that changes or drops it records a cookie violation. Present whenever the :random cookie trap is enabled (it is in the upstream example configuration)."
+  - name: ensnare-engine-root-redirect-loop
+    id: 341
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /ensnare/ HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?si)^HTTP/1\.[01] 302 Found\r\n.*\r\nlocation: https?://[^/\r\n]+/ensnare/\?id=[0-9]{1,7}\r\n'
+        invert_match: false
+    confidence: Medium
+    comment: "The root of the Ensnare engine (mounted at /ensnare as in the README) is the redirect-loop endpoint: it answers every request, without authentication, with a redirect to itself carrying a random id parameter (/ensnare/?id=NNNNNN). A Rails application without Ensnare returns its 404 page. Medium: the mount path is chosen by the operator."
+  - name: ensnare-server-set-google-cookies
+    id: 342
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?si)^HTTP/1\.[01] [0-9]{3} .*\r\nset-cookie: __utmv=[0-9]{8}\.lang%253A%2520en;'
+        invert_match: false
+    confidence: High
+    comment: "The :google cookie trap sets imitation Google Analytics cookies (__utma, __utmb, __utmc, __utmv, __utmz) from the server. Genuine Google Analytics cookies are written by JavaScript in the browser, never in a Set-Cookie header, and Ensnare's __utmv value arrives double-encoded (lang%253A%2520en) because Rails encodes an already encoded string."
+  - name: ensnare-hidden-trap-parameters
+    id: 343
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)<form [^>]*>(?:<input type="hidden" name="authenticity_token" value="[^"]*"[^>]*>)?<input type="hidden" name="[a-z_]+\[debug\]" value="false" id="[a-z_]+_debug" /><input type="hidden" name="[a-z_]+\[random\]" value="[0-9a-f]{32}" id="[a-z_]+_random" />'
+        invert_match: false
+    confidence: Medium
+    comment: "With the parameter trap enabled, every form gets hidden trap fields straight after the opening tag (and the CSRF token): <object>[debug] with the value false and <object>[random] with 32 hex digits, named after the controller or model. Changing them records a parameter violation. Medium: matches only if the probed page contains a form and the :debug and :random parameters are enabled."
+  - name: ensnare-boolean-trap-cookie
+    id: 344
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?si)^HTTP/1\.[01] [0-9]{3} .*\r\nset-cookie: (?:admin|debug)=false; path=/;.*\r\nset-cookie: _[a-z0-9_]+_session='
+        invert_match: false
+    confidence: Medium
+    comment: "The :admin and :debug cookie traps set cookies named admin or debug with the value false on every page, ahead of the Rails session cookie. The application never reads them; changing one to true records a cookie violation. Medium: the cookie names are generic and depend on the configuration."
+  - name: ensnare-uid-trap-cookie
+    id: 345
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?si)^HTTP/1\.[01] [0-9]{3} .*\r\nset-cookie: (?:uid|gid)=[A-Za-z0-9_-]{34}; path=/;.*\r\nset-cookie: _[a-z0-9_]+_session='
+        invert_match: false
+    confidence: Low
+    comment: "The :uid and :gid cookie traps (the :uid trap is the one enabled in the configuration file Ensnare's installer generates) set a uid or gid cookie holding 34 URL-safe Base64 characters before the Rails session cookie. Low: an application could use a cookie of that name and shape itself."
+  # glastopf (ids 370-378)
+  - name: glastopf-robots-txt-in-response-headers
+    id: 370
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /robots.txt HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\nUser-agent: [^\r\n]*\r\n.*\r\n\r\nUser-agent: '
+        invert_match: false
+    confidence: High
+    comment: "Glastopf's robots.txt emulator writes the file as a raw response without a header block, and its WSGI wrapper turns every line of it that contains a colon into a response header: the reply starts '200 OK', then 'User-agent: *' and 'Disallow:' as headers, no Server header, and the same text again as the body. A web server sends robots.txt only as the body, after its own headers."
+  - name: glastopf-sqli-error-in-response-headers
+    id: 371
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /index.php?id=1%20union%20select%201,2-- HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\nInvalid query: You have an error in your SQL syntax; [^\r\n]*\r\n.*\r\n\r\nInvalid query: You have an error in your SQL syntax'
+        invert_match: false
+    confidence: High
+    comment: "A query string that libinjection classifies as SQL injection goes to the SQL injection emulator, whose MySQL error message is also a raw response: 'Invalid query: You have an error in your SQL syntax; ...' appears as the first response header line (no Server header) and again as the body. An application that leaks a MySQL error does so in the body only."
+  - name: glastopf-lfi-warning-in-response-headers
+    id: 372
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /index.php?file=../../../../etc/nothing HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\nWarning: include\(vars1\.php\): failed to open stream: No such file or directory in /var/www/html/anonymous/test\.php on line 6'
+        invert_match: false
+    confidence: High
+    comment: "A path traversal to a file outside Glastopf's virtual file system returns a fixed PHP warning (include(vars1.php) in /var/www/html/anonymous/test.php on line 6) as a raw response, so it arrives as a 'Warning:' response header directly after the status line, whatever file was requested. PHP prints its warnings in the body and names the file actually requested."
+  - name: glastopf-php-cgi-source-in-response-headers
+    id: 373
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /?-s HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n<code><span style="color: #000000">\r\n'
+        invert_match: false
+    confidence: High
+    comment: "The PHP-CGI emulator (CVE-2012-1823, '?-s' source disclosure) returns highlighted PHP source as a raw response; its first line, '<code><span style=\"color: #000000\">', becomes the first response line after the status, with no headers before it. A vulnerable PHP-CGI returns the highlighted source as the body after normal headers."
+  - name: glastopf-default-dork-page-template
+    id: 374
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)<div id="login_msg">.*<form action="comments" method="POST" class="niceform">.*Please post your comments for the blog.*<div id="footer"> Footer Powered By </div>'
+        invert_match: false
+    confidence: Medium
+    comment: "Pages for unclassified requests are dork pages rendered from Glastopf's default Jinja template: a login form with a login_msg div, 150 links built from dorks, a 'Please post your comments for the blog' form posting to 'comments' and the footer ' Footer Powered By '. The title and links change with every page rotation, the template does not. Medium: the template (data/templates) can be edited."
+  - name: glastopf-phpmyadmin-2101-setup-page
+    id: 375
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /phpmyadmin/ HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*rj1\.locomotion\.tw/phpmyadmin/favicon\.ico.*<title>phpMyAdmin 2\.10\.1 setup</title>'
+        invert_match: false
+    confidence: Medium
+    comment: "/phpmyadmin, /pma and /phpmyadmin-* return a saved copy of the phpMyAdmin 2.10.1 (2007) setup script, which still loads its favicon from the site it was copied from (rj1.locomotion.tw). Medium: the page is a data file (data/phpmyadmin/script_setup.php) that can be replaced."
+  - name: glastopf-response-header-layout
+    id: 376
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\nServer: [^\r\n]+\r\nDate: [^\r\n]+ GMT\r\nContent-Type: text/html; charset=utf8\r\nContent-Length: [0-9]+\r\n(?:Connection: close\r\n)?\r\n<html>'
+        invert_match: false
+    confidence: Medium
+    comment: "Glastopf builds its headers with Python's BaseHTTPRequestHandler (Server, then Date) and passes them through WebOb, which adds 'Content-Type: text/html; charset=utf8' (utf8 without the hyphen) and Content-Length; gevent answers HTTP/1.1 even though the Server header claims Apache/2.0.48. Apache sends Date before Server and labels pages charset=UTF-8 (or not at all). Medium: the banner is configurable and a proxy in front changes the headers."
+  - name: glastopf-unsupported-method-internal-error
+    id: 377
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "DELETE / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 500 Internal Server Error\r\nContent-Type: text/plain\r\nConnection: close\r\nContent-Length: 21\r\nDate: [^\r\n]+\r\n\r\nInternal Server Error$'
+        invert_match: false
+    confidence: Medium
+    comment: "Methods other than GET, POST, HEAD, PUT and OPTIONS (DELETE, PATCH, and TRACE, whose emulator fails) raise an exception inside Glastopf, and gevent answers with its bare '500 Internal Server Error' text/plain reply without a Server header. Apache and nginx answer DELETE on a static resource with 405 Method Not Allowed, and an application server such as PHP or Tomcat answers it like any other request. Medium: any gevent application that fails on a request gives the same reply."
+  - name: glastopf-virtual-etc-passwd
+    id: 378
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /index.php?file=../../../../etc/passwd HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*\r\n\r\nroot:x:0:0:root:/root:/bin/bash\n.*\nlibuuid:x:100:101::/var/lib/libuuid:/bin/sh\nDebian-exim:x:101:104::/var/spool/exim4:/bin/false\n.*sshd:x:103:65534::/var/run/sshd:/usr/sbin/nologin\n[a-z]{3}:x:1[0-9]{3}:1[0-9]{3}::/home/[a-z]{3}/:/bin/sh'
+        invert_match: false
+    confidence: High
+    comment: "The LFI emulator answers any ../ traversal to /etc/passwd with Glastopf's virtual passwd file: the fixed accounts of a Debian 7 system (libuuid, Debian-exim, statd, sshd) followed by one to ten random three-letter users with equal uid and gid between 1000 and 1500 and a home directory ending in a slash (/home/abc/:/bin/sh). A genuinely vulnerable server returns its real file."
+  # hihat (ids 380-384)
+  - name: hihat-pma-tokenless-login-attempted
+    id: 380
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST /index.php?route=/ HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: 50\r\nConnection: close\r\n\r\npma_username=hdprobe&pma_password=hdprobe&server=1"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 .*<title>phpMyAdmin</title>.*Cannot log in to the MySQL server'
+        invert_match: false
+    confidence: High
+    comment: "A phpMyAdmin login POST without the CSRF token: phpMyAdmin behind HIHAT tries the login and shows 'Cannot log in to the MySQL server', because HIHAT's logging code puts the form fields that phpMyAdmin removed back into $_POST. A genuine phpMyAdmin (4.9, 5.1, 5.2) discards the fields and shows the empty login form."
+  - name: hihat-pma-tokenless-lang-applied
+    id: 381
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST /index.php?route=/ HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: 7\r\nConnection: close\r\n\r\nlang=de"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 .*<html lang="de" dir="ltr">.*phpMyAdmin'
+        invert_match: false
+    confidence: High
+    comment: "A token-less POST of lang=de: phpMyAdmin behind HIHAT switches the login page to German (html lang=\"de\"); a genuine phpMyAdmin drops the field and answers in English. Same cause as 380 (HIHAT restores removed POST fields), seen through a different parameter."
+  - name: hihat-pma-tokenless-username-echoed
+    id: 382
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST /index.php HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: 38\r\nConnection: close\r\n\r\npma_username=hdprobe&pma_password=x1y2"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 .*name="pma_username" id="input_username" value="hdprobe"'
+        invert_match: false
+    confidence: High
+    comment: "A token-less login POST to /index.php: behind HIHAT the login form comes back pre-filled with the submitted user name (the login was attempted); a genuine phpMyAdmin returns the form with an empty user name."
+  - name: hihat-analysis-console-exposed
+    id: 383
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /hihat/overview.php HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 .*<title>HIHAT - High Interaction Honeypot Analysis Tool</title>'
+        invert_match: false
+    confidence: High
+    comment: "The HIHAT analysis console (overview page) reachable without authentication in /hihat/. The INSTALL file asks for the console to be password protected and kept off the honeypot; when it is, this signature does not match."
+  - name: hihat-analysis-config-file-exposed
+    id: 384
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /hihat/HIHAT.conf HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 .*\r\n\r\nListingMode=[0-3]\r?\nShortView=[01]?\r?\nshowBots=[01]?\s*$'
+        invert_match: false
+    confidence: High
+    comment: "The HIHAT analysis console's settings file (HIHAT.conf: ListingMode, ShortView, showBots) served as a static file from /hihat/. It is written by the console's configuration page into its own web directory."
+  # honeyhttpd (ids 390-398)
+  - name: honeyhttpd-head-501-duplicate-content-length
+    id: 390
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "HEAD / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.0 501 [^\r\n]*\r\nServer: [^\r\n]*\r\nDate: [^\r\n]*\r\nContent-Length: \d+\r\n(?:[^\r\n]+\r\n)*?Content-Length: \d+\r\n'
+        invert_match: false
+    confidence: High
+    comment: "HEAD is not implemented by the framework (only do_GET and do_POST exist), so HEAD / returns '501 Not Implemented' with an HTTP/1.0 status line, the Server header before Date and two Content-Length headers (one from the error handler, one from the header builder). Apache, nginx and Tomcat answer HEAD with the GET headers over HTTP/1.1 and never send Content-Length twice. Independent of the server module."
+  - name: honeyhttpd-http2-request-error-without-status-line
+    id: 391
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/2.0\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^(?:<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 2\.0//EN">\s*<html><head>\s*<title>505 HTTP Version Not Supported</title>|<html><head><title>[^<]* - Error report</title>.*<h1>HTTP Status 505 - </h1>)'
+        invert_match: false
+    confidence: High
+    comment: "A request line with HTTP/2.0 is rejected by Python's request parser before the version is known, so the module's 505 error page (Apache or Tomcat style) is sent as bare HTML with no status line or headers. Apache serves such a request normally over HTTP/1.1; nginx and Tomcat send a proper 'HTTP/1.1 505' response."
+  - name: honeyhttpd-apache-module-http10-server-before-date
+    id: 392
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.0 \d{3} [^\r\n]*\r\nServer: Apache/[^\r\n]*\r\nDate: '
+        invert_match: false
+    confidence: High
+    comment: "Responses claiming to be Apache (Server: Apache/2.4.9 (Ubuntu) in the shipped modules) come back with an HTTP/1.0 status line to an HTTP/1.1 request and with Server before Date, the order of Python's http.server. Apache httpd answers HTTP/1.1 requests with HTTP/1.1 and always sends Date first."
+  - name: honeyhttpd-tomcat7-module-coyote-trailing-space
+    id: 393
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.0 \d{3} [^\r\n]*\r\nServer: Apache-Coyote/1\.1 \r\nDate: '
+        invert_match: false
+    confidence: High
+    comment: "The Tomcat7Server module sends 'Server: Apache-Coyote/1.1 ' with a trailing space (Python appends a space and the empty system string) after an HTTP/1.0 status line. Tomcat 7's Coyote connector answers HTTP/1.1 with HTTP/1.1 and sends 'Server: Apache-Coyote/1.1' without the space; Tomcat 8.5 and later send no Server header by default."
+  - name: honeyhttpd-tomcat7-module-reflects-request-headers
+    id: 394
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /hd-7f3a-missing HTTP/1.1\r\nHost: x\r\nX-Hd-Reflect: 7f3a\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.0 404 [^\r\n]*\r\n(?:[^\r\n]+\r\n)*X-Hd-Reflect: 7f3a\r\n(?:[^\r\n]+\r\n)*\r\n<html><head><title>Apache Tomcat/'
+        invert_match: false
+    confidence: High
+    comment: "The Tomcat7Server module's error hook returns the request headers it is given, so a 404 echoes every request header (Host, a custom X- header, Connection) back as response headers, followed by a Tomcat 7 error report. No genuine web server copies request headers into its response."
+  - name: honeyhttpd-tomcat7-module-gzip-without-accept-encoding
+    id: 395
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 [^\r\n]*\r\n(?:[^\r\n]+\r\n)*Server: Apache-Coyote/1\.1 ?\r\n(?:[^\r\n]+\r\n)*Content-Encoding: gzip\r\n'
+        invert_match: false
+    confidence: Medium
+    comment: "The Tomcat7Server module's home page is always gzip-compressed, even when the client sent no Accept-Encoding header. Tomcat compresses only when the client advertises gzip (and compression is off by default). Medium: this is the module's example page, which an operator would normally replace."
+  - name: honeyhttpd-apache-module-example-catch-all-page
+    id: 396
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /hd-7f3a-missing.txt HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 [^\r\n]*\r\n(?:[^\r\n]+\r\n)*Server: Apache/[^\r\n]*\r\n.*<html><head><title>My Website</title></head><body>Hi</body></html>'
+        invert_match: false
+    confidence: Medium
+    comment: "With the shipped ApacheServer module every path other than / returns 200 and the example page '<title>My Website</title>...Hi', so a random file name 'exists'. Apache returns 404 for a missing file. Medium: the page is the module's example content."
+  - name: honeyhttpd-apache-module-root-426
+    id: 397
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.0 426 Upgrade Required\r\n.*<address>Apache/[^<]* Server at [^<]* Port \d+</address>'
+        invert_match: false
+    confidence: Medium
+    comment: "The shipped ApacheServer module answers GET / (and POST /) on plain HTTP with '426 Upgrade Required' and an Apache error page. Apache sends 426 only with mod_ssl's SSLEngine optional (TLS upgrade) configuration, and then over HTTP/1.1 with the Upgrade header that RFC 9110 requires; the module's 426 has an HTTP/1.0 status line and no Upgrade header. Medium: module default."
+  - name: honeyhttpd-password-module-401-duplicate-content-length
+    id: 398
+    port: 8081
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.0 401 Unauthorized\r\nServer: Apache/[^\r\n]*\r\nDate: [^\r\n]*\r\nContent-Length: \d+\r\nWWW-Authenticate: Basic realm="Secure Area"\r\nContent-Length: \d+\r\n'
+        invert_match: false
+    confidence: High
+    comment: "The ApachePasswordServer module (credential capture with HTTP Basic authentication) answers / with an HTTP/1.0 401, realm 'Secure Area', and the WWW-Authenticate header between two Content-Length headers. Apache's 401 is HTTP/1.1 with Date first and a single Content-Length."
+  # nodepot (ids 410-414)
+  - name: nodepot-default-demo-page
+    id: 410
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\n.*<title>Plain demo side</title>.*Plain nodepot demo side'
+        invert_match: false
+    confidence: High
+    comment: "Nodepot's default page (html/demo.html), returned for every path: title 'Plain demo side' and the visible text 'Plain nodepot demo side'. The template directory is configurable, so an operator who replaces demo.html removes this tell."
+  - name: nodepot-hidden-dork-list
+    id: 411
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\n.*<font color="white">\s*(?:<br />\s*){20,}.*/wp-content/plugins/is-human/engine\.php\?action=log-reset&type=ih_options\(\);'
+        invert_match: false
+    confidence: High
+    comment: "The default page hides a list of about 500 vulnerable-looking paths (WordPress timthumb, Joomla, RFI parameters) in white text below a run of empty lines, starting with /wp-content/plugins/is-human/engine.php?action=log-reset&type=ih_options(); for search engines to index. Part of the default demo.html."
+  - name: nodepot-attack-url-added-to-dork-list
+    id: 412
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /?page=../../hdtrav412 HTTP/1.1\r\nHost: x\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 200 OK\r\n'
+        invert_match: false
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\n.*</html>.*/\?page=\.\./\.\./hdtrav412<br>'
+        invert_match: false
+    confidence: High
+    comment: "Two requests on one keep-alive connection. A query containing '..' is classed as directory traversal, stored in Redis (lower-cased) and written into html/dork.html, which every page appends after </html> as 'URL<br>' entries; the second request finds the probe's own URL there. Independent of the page template. Note: the probe URL stays in the honeypot's dork list."
+  - name: nodepot-catch-all-bare-node-headers
+    id: 413
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "DELETE /hd413-missing.bak HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\nContent-Type: text/html\r\nDate: [^\r\n]+\r\nConnection: close\r\nTransfer-Encoding: chunked\r\n\r\n[0-9a-f]+\r\n<!DOCTYPE '
+        invert_match: false
+    confidence: Medium
+    comment: "DELETE for a non-existent .bak file returns 200 OK with an HTML page and exactly the bare header set of Node's core http module (Content-Type: text/html without a charset, Date, Connection, chunked; no Server, X-Powered-By or caching headers): Nodepot answers every method and path the same way. Express and typical Node applications answer 404 (Express adds X-Powered-By and a charset); web servers send a Server header. A custom catch-all Node.js application could look the same, hence Medium."
+  - name: nodepot-content-after-html-end
+    id: 414
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\nContent-Type: text/html\r\n.*Transfer-Encoding: chunked\r\n.*</html>\s*\r\n[0-9a-f]+\r\n/[^\r\n]*<br>'
+        invert_match: false
+    confidence: Medium
+    comment: "The page is written in two chunks: the template, ending in </html>, then the learned dork list (html/dork.html) as bare 'URL<br>' entries after the end of the document. Survives a replaced demo.html as long as the dork list is not empty; Medium because the layout depends on the template files."
