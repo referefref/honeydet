@@ -3402,3 +3402,159 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: "The page is written in two chunks: the template, ending in </html>, then the learned dork list (html/dork.html) as bare 'URL<br>' entries after the end of the document. Survives a replaced demo.html as long as the dork list is not empty; Medium because the layout depends on the template files."
+  # owasp-honeypot (ids 420-429)
+  - name: owasp-honeypot-smtp-python-smtpd-banner
+    id: 420
+    port: 25
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^220 \S+ Python SMTP proxy version 0\.3$'
+        invert_match: false
+    confidence: High
+    comment: "The smtp/strong_password module is built on Python's old smtpd library and greets with '220 <container id> Python SMTP proxy version 0.3'. Mail servers (Postfix, Exim, Sendmail, Exchange) announce ESMTP and their own name; the host name is the Docker container ID."
+  - name: owasp-honeypot-smtp-ehlo-auth-only
+    id: 421
+    port: 25
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^220 '
+        invert_match: false
+      - input_type: string
+        input: "EHLO probe.example\r"
+        output_match_type: regex
+        output: '(?s)^250-\S+ Hello probe\.example\r\n250-AUTH LOGIN PLAIN\r\n250 EHLO$'
+        invert_match: false
+    confidence: High
+    comment: "EHLO is answered with three lines only: a greeting, '250-AUTH LOGIN PLAIN' and a literal '250 EHLO' as the last line. Genuine MTAs list their extensions (PIPELINING, SIZE, 8BITMIME, STARTTLS and others) and end with an extension keyword, never with 'EHLO'."
+  - name: owasp-honeypot-ssh-paramiko-2-10-1-port-22
+    id: 422
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^SSH-2\.0-paramiko_2\.10\.1$'
+        invert_match: false
+    confidence: Medium
+    comment: "The ssh/strong_password module is a Paramiko server pinned to paramiko 2.10.1 that records every password and refuses all logins; it announces 'SSH-2.0-paramiko_2.10.1'. Genuine SSH servers on port 22 are OpenSSH, Dropbear or a vendor stack; a Paramiko banner is rare outside test tools and honeypots. Medium: other Paramiko-based services use the same banner. Port 22 when the module runs on its own."
+  - name: owasp-honeypot-ssh-paramiko-2-10-1-port-24
+    id: 423
+    port: 24
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^SSH-2\.0-paramiko_2\.10\.1$'
+        invert_match: false
+    confidence: Medium
+    comment: "As 422, on port 24: with all modules selected the engine moves one SSH module off port 22, and ssh/strong_password lands on 23 or 24 depending on module order (24 on CT 9136). Port 24 is normally unassigned."
+  - name: owasp-honeypot-ftp-python-login-port-21
+    id: 424
+    port: 21
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^220 \(vsFTPd 3\.0\.3\)$'
+        invert_match: false
+      - input_type: string
+        input: "USER anonymous\r"
+        output_match_type: regex
+        output: '^331 Please specify the password\.$'
+        invert_match: false
+      - input_type: string
+        input: "PASS probe@example.org\r"
+        output_match_type: regex
+        output: '^530 Incorrect Login\.$'
+        invert_match: false
+    confidence: High
+    comment: "The ftp/strong_password module is a small Python socket server that claims to be vsFTPd 3.0.3 but answers a failed login at once with '530 Incorrect Login.' (vsftpd sends '530 Login incorrect.' after a delay) and ends lines with a bare LF. Port 21 when the module runs on its own."
+  - name: owasp-honeypot-ftp-python-login-port-23
+    id: 425
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^220 \(vsFTPd 3\.0\.3\)$'
+        invert_match: false
+      - input_type: string
+        input: "USER anonymous\r"
+        output_match_type: regex
+        output: '^331 Please specify the password\.$'
+        invert_match: false
+      - input_type: string
+        input: "PASS probe@example.org\r"
+        output_match_type: regex
+        output: '^530 Incorrect Login\.$'
+        invert_match: false
+    confidence: High
+    comment: "As 424, on port 23 (the Telnet port): with all modules selected the engine moves one FTP module off port 21 to 23 or 24 depending on module order (23 on CT 9136). An FTP server on the Telnet port is itself unusual."
+  - name: owasp-honeypot-dashboard
+    id: 426
+    port: 5000
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*Server: Werkzeug/.*<title>OWASP Honeypot</title>'
+        invert_match: false
+    confidence: High
+    comment: "The OWASP Honeypot API server serves its web dashboard on port 5000 on all interfaces by default, with API access without a key enabled. An exposed dashboard identifies the sensor directly."
+  - name: owasp-honeypot-api-module-list
+    id: 427
+    port: 5000
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /api/core/list/modules HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*Content-Type: application/json.*\r\n\r\n\[.*"(?:ssh/(?:weak|strong)_password|ftp/(?:weak|strong)_password|smtp/strong_password|ics/veeder_root_guardian_ast|http/basic_auth_(?:weak|strong)_password)"'
+        invert_match: false
+    confidence: High
+    comment: "Without an API key (the default), /api/core/list/modules returns the honeypot's module names as JSON, for example ssh/strong_password and ics/veeder_root_guardian_ast, revealing the sensor and its decoy services."
+  - name: owasp-honeypot-ssh-paramiko-2-10-1-port-23
+    id: 428
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^SSH-2\.0-paramiko_2\.10\.1$'
+        invert_match: false
+    confidence: Medium
+    comment: "As 422, on port 23 (the Telnet port), where ssh/strong_password lands when the SSH modules are processed before the FTP modules (fresh CT 9242). An SSH server on the Telnet port is itself unusual."
+  - name: owasp-honeypot-ftp-python-login-port-24
+    id: 429
+    port: 24
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^220 \(vsFTPd 3\.0\.3\)$'
+        invert_match: false
+      - input_type: string
+        input: "USER anonymous\r"
+        output_match_type: regex
+        output: '^331 Please specify the password\.$'
+        invert_match: false
+      - input_type: string
+        input: "PASS probe@example.org\r"
+        output_match_type: regex
+        output: '^530 Incorrect Login\.$'
+        invert_match: false
+    confidence: High
+    comment: "As 424, on port 24, where ftp/strong_password lands when the SSH modules are processed first (fresh CT 9242)."
