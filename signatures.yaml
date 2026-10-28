@@ -3814,3 +3814,56 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: "The labyrinth pages load /labyrinth/labyrinth.css, WebLabyrinth's own style sheet, which sets headings with a non-existent CSS property ('size: 130%' for h1). Static and deterministic; Medium because an operator can restyle it."
+  - name: laravel-honeypot-fields-contact
+    id: 470
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /contact HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 .*<div id="[^"]+_wrap"\s+(?:style="display: none"\s+)?aria-hidden="true">\s*<input id="[^"]+"\s+name="[^"]+"\s+type="text"\s+value=""\s+autocomplete="nope"\s+tabindex="-1">\s*<input name="[^"]+"\s+type="text"\s+value="eyJpdiI6[A-Za-z0-9+/=]+"\s+autocomplete="off"\s+tabindex="-1">\s*</div>'
+        invert_match: false
+    confidence: High
+    comment: "The form on /contact contains spatie/laravel-honeypot's field block (Blade @honeypot directive or <x-honeypot /> component): a <div id=\"<name>_wrap\" style=\"display: none\" aria-hidden=\"true\"> holding an empty text input with autocomplete=\"nope\" tabindex=\"-1\" and a second text input whose value is a Laravel-encrypted timestamp (base64 JSON starting eyJpdiI6, i.e. {\"iv\":) with autocomplete=\"off\" tabindex=\"-1\". Field names are configurable (default my_name_<16 random characters> and valid_from); the structure is the package's view and survives renaming. The style attribute is optional in the pattern so the with_csp option also matches. Laravel forms without the package, EoHoneypotBundle (single off-screen input) and the Strangebuzz/Fab Pot field (display:none !important, autocomplete=off) do not produce this markup. The path is the lab application's contact form."
+  - name: laravel-honeypot-fields-home
+    id: 471
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 .*<div id="[^"]+_wrap"\s+(?:style="display: none"\s+)?aria-hidden="true">\s*<input id="[^"]+"\s+name="[^"]+"\s+type="text"\s+value=""\s+autocomplete="nope"\s+tabindex="-1">\s*<input name="[^"]+"\s+type="text"\s+value="eyJpdiI6[A-Za-z0-9+/=]+"\s+autocomplete="off"\s+tabindex="-1">\s*</div>'
+        invert_match: false
+    confidence: High
+    comment: "The same spatie/laravel-honeypot field block in a form on the home page (the lab application's newsletter sign-up). Detects the package on any site that protects a form on its landing page."
+  - name: laravel-honeypot-default-field-names
+    id: 472
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /contact HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 .*name="my_name_[A-Za-z0-9]{16}"[^>]*>\s*<input name="valid_from"\s+type="text"\s+value="eyJpdiI6[A-Za-z0-9+/=]+"'
+        invert_match: false
+    confidence: Medium
+    comment: "spatie/laravel-honeypot's default field names: a trap field named my_name_ followed by 16 random letters and digits (name_field_name my_name with randomize_name_field_name on), followed by the encrypted timestamp field valid_from. Independent of the attribute layout, so it also matches sites that publish and restyle the package's view, but not sites that rename the fields (HONEYPOT_NAME, HONEYPOT_VALID_FROM). The path is the lab application's contact form."
+  - name: laravel-honeypot-global-blank-page
+    id: 473
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST / HTTP/1.1\r\nHost: x\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: 46\r\nConnection: keep-alive\r\n\r\nname=Ann&email=ann%40example.com&message=Hello"
+        output_match_type: regex
+        output: '^HTTP/1\.[01] (?:404|405|419) '
+        invert_match: false
+      - input_type: string
+        input: "POST / HTTP/1.1\r\nHost: x\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: 56\r\nConnection: close\r\n\r\nname=Ann&email=ann%40example.com&message=Hello&my_name=1"
+        output_match_type: regex
+        output: '^HTTP/1\.[01] 200 OK(?:\r\n[^\r\n]+)*\r\nCache-Control: no-cache, private(?:\r\n[^\r\n]+)*(?:\r\n\r\n0)?$'
+        invert_match: false
+    confidence: Medium
+    comment: "With ProtectAgainstSpam registered as global middleware (an option in the README), a POST without a CSRF token is rejected by Laravel (419, or 404/405 where no POST route exists) while it carries no honeypot field, but once it carries a filled-in field named my_name the package answers before routing and CSRF checks with its default BlankPageResponder: 200 OK with an empty body and no session cookie. A Laravel site without the package rejects both requests alike. Applies to the global middleware registration with the default field name; the README's per-route usage puts the CSRF check first, so the blank page is only visible to clients with a valid session and token."
