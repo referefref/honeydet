@@ -570,6 +570,30 @@ signatures:
     comment: "Hardcoded error message in template dummyerror.xml.
       Ref:  https://github.com/schmalle/medpot/blob/master/template/dummyerror.\
       xml"
+  - name: honeyprint-raw-ipp-reply-to-http
+    id: 570
+    port: 9100
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "504f5354202f6970702f7072696e7420485454502f312e310d0a486f73743a207072696e7465720d0a436f6e74656e742d547970653a206170706c69636174696f6e2f6970700d0a436f6e74656e742d4c656e6774683a203135380d0a0d0a0200000b0000002a01470012617474726962757465732d6368617273657400057574662d3848001b617474726962757465732d6e61747572616c2d6c616e67756167650002656e45000b7072696e7465722d75726900176970703a2f2f7072696e7465722f6970702f7072696e744400147265717565737465642d6174747269627574657300167072696e7465722d6d616b652d616e642d6d6f64656c03"
+        output_match_type: hex
+        output: "0101400100000001"
+        invert_match: false
+    confidence: High
+    comment: "IPP Get-Printer-Attributes (request id 42) sent as an HTTP POST. Honeyprint answers with bare IPP bytes and no HTTP status line: version 1.1, the CUPS-Get-Default operation code 0x4001 where a status code belongs, and request id 1 whatever the request carried. Genuine IPP servers (CUPS) answer HTTP/1.1 with the request id echoed; raw print ports stay silent."
+  - name: honeyprint-ipp-attributes-without-value-length
+    id: 571
+    port: 9100
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "0200000b0000002a01470012617474726962757465732d6368617273657400057574662d3848001b617474726962757465732d6e61747572616c2d6c616e67756167650002656e45000b7072696e7465722d75726900176970703a2f2f7072696e7465722f6970702f7072696e744400147265717565737465642d6174747269627574657300167072696e7465722d6d616b652d616e642d6d6f64656c03"
+        output_match_type: string
+        output: "attributes-charsetutf-8"
+        invert_match: false
+    confidence: High
+    comment: "Unframed IPP request on the raw print port. Honeyprint returns the same canned 76-byte reply, in which attribute values follow their names without the two-byte value length IPP requires (attributes-charsetutf-8, attributes-natural-languageen-us), ended by six end-of-attributes tags. CUPS resets the connection and p910nd stays silent."
   - name: qeeqbox-pjl
     id: 33
     port: 9100
@@ -3867,3 +3891,1349 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: "With ProtectAgainstSpam registered as global middleware (an option in the README), a POST without a CSRF token is rejected by Laravel (419, or 404/405 where no POST route exists) while it carries no honeypot field, but once it carries a filled-in field named my_name the package answers before routing and CSRF checks with its default BlankPageResponder: 200 OK with an empty body and no session cookie. A Laravel site without the package rejects both requests alike. Applies to the global middleware registration with the default field name; the README's per-route usage puts the CSRF check first, so the blank page is only visible to clients with a valid session and token."
+  - name: strutshoneypot-web-inf-served-by-php
+    id: 480
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /WEB-INF/web.xml HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*X-Powered-By: PHP/.*Powered by <img src="struts\.svg"'
+        invert_match: false
+    confidence: High
+    comment: "The mod_rewrite catch-all sends every path, including /WEB-INF/web.xml, to index.php, which answers 200 with X-Powered-By: PHP and the 'Powered by Struts' upload page. A Java servlet container never serves WEB-INF (the Servlet specification forbids it; Tomcat answers 404) and a Struts application does not run on PHP."
+  - name: strutshoneypot-action-url-answered-by-php
+    id: 481
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /index.action HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*X-Powered-By: PHP/.*Content-Type: text/html; charset=UTF-8\r\n.*Powered by <img src="struts\.svg"'
+        invert_match: false
+    confidence: High
+    comment: "A Struts action URL (*.action), the target of S2-045 scanners, is answered by PHP (X-Powered-By: PHP/x) with the Struts-branded upload page. Genuine Struts 2 actions run in a Java servlet container (Tomcat, Jetty and others) and never carry a PHP header; behind Apache httpd mod_proxy the PHP header is still absent."
+  - name: strutshoneypot-default-uploader-page
+    id: 482
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*<h3 class="masthead-brand">Uploader</h3>.*<h1 class="cover-heading">Upload video to storage</h1>.*<form action="upload\.php" method="post" enctype="multipart/form-data">.*Powered by <img src="struts\.svg"'
+        invert_match: false
+    confidence: Medium
+    comment: "The default bait page: Bootstrap 'cover' template with the brand 'Uploader', the heading 'Upload video to storage', a form posting to upload.php and 'Powered by' Apache and Struts logos. A Struts application posts to .action URLs, not .php. Medium: the README invites operators to change the HTML."
+  - name: strutshoneypot-struts-logo-file
+    id: 483
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /struts.svg HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\nDate: [^\r\n]*\r\nServer: Apache[^\r\n]*\r\n.*Content-Length: 2446\r\n.*Content-Type: image/svg\+xml\r\n\r\n<\?xml version="1\.0" encoding="utf-8"\?>\r?\n<!-- Generator: Adobe Illustrator 17\.1\.0, SVG Export Plug-In \. SVG Version: 6\.00 Build 0\)  -->.*viewBox="0 0 210 60"'
+        invert_match: false
+    confidence: Medium
+    comment: "struts.svg, the Struts logo the page shows, is one of three files the .htaccess rules exempt from the catch-all and is served as a static file by Apache httpd from the web root (2446 bytes, Adobe Illustrator 17.1.0 export, viewBox 0 0 210 60). It survives edits to the page HTML. Genuine Struts applications do not serve this file at the root. Medium: a genuine site could host the same logo file."
+  - name: strutshoneypot-upstream-image-versions
+    id: 484
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\nDate: [^\r\n]*\r\nServer: Apache/2\.4\.25 \(Debian\)\r\nX-Powered-By: PHP/7\.0\.33\r\n.*Powered by <img src="struts\.svg"'
+        invert_match: false
+    confidence: Medium
+    comment: "Built as documented (FROM php:7.0-apache), the Struts-branded page comes from Apache/2.4.25 (Debian) with PHP/7.0.33, the final php:7.0-apache image of December 2018 (Debian 9). Medium: rebuilding on another PHP image changes the versions."
+  - name: pasitheahoneypot-200-with-404-page
+    id: 490
+    port: 8082
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /api/v1/users HTTP/1.1\r\nHost: x\r\nAccept: application/json\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 200 OK \r\nContent-Type: text/html\r\nDate: [^\r\n]+ GMT\r\nConnection: [^\r\n]+\r\nContent-Length: 22\r\n\r\n<h1>404 Not Found</h1>$'
+        invert_match: false
+    confidence: High
+    comment: "A GET for an API path is answered with status '200 OK' (NanoHTTPD's status line, with a trailing space) and the 22-byte text/html body '<h1>404 Not Found</h1>'. A genuine API on NanoHTTPD, or any other server, sends a 404 status with a 'not found' page, or the resource; a success status with a not-found page is Pasithea's fixed reply to every request."
+  - name: pasitheahoneypot-options-same-page
+    id: 491
+    port: 8082
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "OPTIONS * HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 200 OK \r\nContent-Type: text/html\r\nDate: [^\r\n]+ GMT\r\nConnection: [^\r\n]+\r\nContent-Length: 22\r\n\r\n<h1>404 Not Found</h1>$'
+        invert_match: false
+    confidence: High
+    comment: "OPTIONS * (a server-wide capabilities request) receives the same '200 OK' and '<h1>404 Not Found</h1>' page as every other request, with no Allow header. Genuine servers answer OPTIONS * with an empty 200 or 204 and an Allow header, or with an error status, never with an HTML not-found page under a success status."
+  - name: pasitheahoneypot-delete-same-page
+    id: 492
+    port: 8082
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "DELETE /api/v1/users/1 HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 200 OK \r\nContent-Type: text/html\r\nDate: [^\r\n]+ GMT\r\nConnection: [^\r\n]+\r\nContent-Length: 22\r\n\r\n<h1>404 Not Found</h1>$'
+        invert_match: false
+    confidence: High
+    comment: "A DELETE on an API resource is accepted with '200 OK' and the same HTML not-found page. Genuine REST APIs answer an unauthenticated DELETE with 401, 403, 404 or 405 and a JSON or plain error body."
+  - name: pasitheahoneypot-post-json-same-page
+    id: 493
+    port: 8082
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST /api/login HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nContent-Length: 36\r\nConnection: close\r\n\r\n{\"username\":\"admin\",\"password\":\"x1\"}"
+        output_match_type: regex
+        output: '^HTTP/1\.1 200 OK \r\nContent-Type: text/html\r\nDate: [^\r\n]+ GMT\r\nConnection: [^\r\n]+\r\nContent-Length: 22\r\n\r\n<h1>404 Not Found</h1>$'
+        invert_match: false
+    confidence: High
+    comment: "A JSON login POST receives the same '200 OK' and HTML not-found page as a GET: the body is accepted and ignored, and the reply is HTML although the client sent and accepts JSON. Genuine APIs return a JSON error (400, 401 or 404)."
+  - name: pasitheahoneypot-post-without-length-drops
+    id: 494
+    port: 8082
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /api/v1/users HTTP/1.1\r\nHost: x\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 200 OK \r\nContent-Type: text/html\r\nDate: [^\r\n]+ GMT\r\nConnection: [^\r\n]+\r\nContent-Length: 22\r\n\r\n<h1>404 Not Found</h1>$'
+        invert_match: false
+      - input_type: string
+        input: "POST / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^$'
+        invert_match: false
+    confidence: High
+    comment: "On a kept-alive connection, after Pasithea's fixed 200 page, a POST without a Content-Length header gets no reply at all: the connection is closed without a response, because the request handler expects the header. Genuine NanoHTTPD applications, and other servers, answer such a POST (with a response, 411 Length Required or 400)."
+  - name: pasitheahoneypot-put-json-same-page
+    id: 495
+    port: 8082
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "PUT /api/v1/users/1 HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nContent-Length: 16\r\nConnection: close\r\n\r\n{\"role\":\"admin\"}"
+        output_match_type: regex
+        output: '^HTTP/1\.1 200 OK \r\nContent-Type: text/html\r\nDate: [^\r\n]+ GMT\r\nConnection: [^\r\n]+\r\nContent-Length: 22\r\n\r\n<h1>404 Not Found</h1>$'
+        invert_match: false
+    confidence: High
+    comment: "A JSON PUT that tries to modify an API resource is accepted with '200 OK' and the HTML '<h1>404 Not Found</h1>' page. Genuine REST APIs refuse an unauthenticated PUT with a 401, 403, 404 or 405 status and a JSON or plain error body."
+  - name: pasitheahoneypot-head-with-body
+    id: 496
+    port: 8082
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "HEAD / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 200 OK \r\nContent-Type: text/html\r\nDate: [^\r\n]+ GMT\r\nConnection: [^\r\n]+\r\nContent-Length: 22\r\n\r\n<h1>404 Not Found</h1>$'
+        invert_match: false
+    confidence: High
+    comment: "A HEAD request receives '200 OK' together with the '<h1>404 Not Found</h1>' body (NanoHTTPD 2.2 sends bodies on HEAD). HTTP forbids a body in a HEAD response; combined with the fixed not-found page under a success status this identifies Pasithea."
+  - name: dhp-docker-version-16.03.8
+    id: 500
+    port: 2375
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /v1.24/version HTTP/1.1\r\nHost: x\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\n.*Server: Docker/16\.03\.8 \(linux\)\r\n.*\r\n\r\n\{"Platform": \{"Name": ""\}, "Components": \[\{"Name": "Engine", "Version": "16\.03\.8"'
+        invert_match: false
+    confidence: High
+    comment: "GET /v1.24/version returns a fixed version document for 'Docker 16.03.8' (Go go1.0.0, kernel 2.4.0-42-generic, build date 2015) serialised by Python's json module, with a space after every colon and comma. No Docker release 16.03 exists (versions went from 1.13 to 17.03 in 2017), and the Docker daemon (Go) writes compact JSON: {\"Platform\":{\"Name\":\"Docker Engine - Community\"},..."
+  - name: dhp-docker-api-version-echo
+    id: 501
+    port: 2375
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /v1.99/version HTTP/1.1\r\nHost: x\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\nApi-Version: 1\.99\r\n.*"ApiVersion": "1\.12"'
+        invert_match: false
+    confidence: High
+    comment: "A request for the non-existent API version 1.99 is answered with 200 OK and the requested version echoed in the Api-Version header, while the body still reports ApiVersion 1.12. Docker answers 400 'client version 1.99 is too new. Maximum supported API version is ...' and always sends its own Api-Version; Podman answers 200 with its own Api-Version (1.44)."
+  - name: dhp-docker-error-after-idle-ping
+    id: 502
+    port: 2375
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "HEAD /_ping HTTP/1.1\r\nHost: x\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 200 OK\r\n'
+        invert_match: false
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 500 Internal Server Error\r\n.*Server: Docker/[^\r\n]*\r\n.*\r\n\r\n\{"message": "[^"]*"\}$'
+        invert_match: false
+    confidence: High
+    comment: "After answering a ping, DHP waits about three seconds for the client's next request on the same connection; if none comes, it sends an unsolicited 500 Internal Server Error with a Python-serialised body ({\"message\": \"server error\"}; the text is configurable) and closes the connection. An HTTP server never sends a response without a request: Docker and Podman keep the idle connection open and send nothing."
+  - name: dhp-docker-create-server-error
+    id: 503
+    port: 2375
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "HEAD /_ping HTTP/1.1\r\nHost: x\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 200 OK\r\n'
+        invert_match: false
+      - input_type: string
+        input: "POST /v1.24/containers/create HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nContent-Length: 59\r\n\r\n{\"Image\":\"honeydet-probe-nonexistent:none\",\"Cmd\":[\"true\"]}"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 500 Internal Server Error\r\n.*Server: Docker/[^\r\n]*\r\n.*\r\n\r\n\{"message": "[^"]*"\}$'
+        invert_match: false
+    confidence: High
+    comment: "After a ping on the same connection, a container create request for an image that does not exist is answered with 500 Internal Server Error and a Python-serialised error body ({\"message\": \"server error\"}, with a space after the colon; the text is configurable), then the connection is closed. Docker and Podman answer 404 'No such image: ...' in compact JSON and keep the connection open. The probe names an image that does not exist, so a genuine daemon creates nothing."
+  - name: dhp-docker-ping-head
+    id: 504
+    port: 2375
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "HEAD /_ping HTTP/1.1\r\nHost: x\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\nApi-Version: 1\.16\r\n.*Server: Docker/16\.03\.8 \(linux\)\r\nDate: '
+        invert_match: false
+    confidence: High
+    comment: "HEAD /_ping (the first call of every Docker client) is answered, after about three seconds, with Api-Version 1.16 and 'Server: Docker/16.03.8 (linux)', a Docker version that never existed; API 1.16 belongs to Docker 1.4 (2014). Genuine Docker answers at once with its own version (for example Docker/27.5.1, API 1.47; Docker/20.10.24, API 1.41); Podman sends Server: Libpod/..."
+  - name: tomcat-manager-honeypot-spring-json-401
+    id: 510
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /manager/html HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 401.*(?i:www-authenticate): Basic .*\{"timestamp":[0-9]+,"status":401,"error":"Unauthorized","message":"Full authentication is required to access this resource","path":"/manager/html"\}'
+        invert_match: false
+    confidence: High
+    comment: "An unauthenticated request for the manager answers with the Basic challenge and a Spring Boot JSON error body (timestamp, status, error, 'Full authentication is required to access this resource', path). Every genuine Tomcat release (7.0, 8.5, 9.0, 11.0 tested) returns its HTML '401 Unauthorized' page that explains the manager roles in tomcat-users.xml."
+  - name: tomcat-manager-honeypot-expires-cet
+    id: 511
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /manager/html HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 401 [^\r\n]*\r\n.*\r\nExpires: Thu, 01 Jan 1970 01:00:00 CET\r\n'
+        invert_match: false
+    confidence: High
+    comment: "The manager's 401 carries 'Expires: Thu, 01 Jan 1970 01:00:00 CET', a fixed header written by the application (the epoch in Central European Time, not a valid HTTP date). Tomcat 7 sends 'Expires: Thu, 01 Jan 1970 00:00:00 GMT' on manager responses and Tomcat 8.5 and later send no Expires header there."
+  - name: tomcat-manager-honeypot-coyote-on-85-status-line
+    id: 512
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /manager/html HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 401 \r\n(?:.*\r\n)?Set-Cookie: JSESSIONID=[0-9A-F]+; Path=/manager; HttpOnly\r\n.*\r\nServer: Apache-Coyote/1\.1\r\n'
+        invert_match: false
+    confidence: Medium
+    comment: "The 401 has an empty reason phrase (Tomcat 8.5 and later) but 'Server: Apache-Coyote/1.1' (the default only up to Tomcat 8.0, which also sends the reason phrase), and it opens a session (JSESSIONID, Path=/manager) for a request that was refused. Genuine Tomcat 8.5+ sends no Server header and no session cookie on the manager's 401; Medium because a Tomcat 8.5+ administrator can set server=\"Apache-Coyote/1.1\" on the connector."
+  - name: tomcat-manager-honeypot-unauthenticated-image
+    id: 513
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /manager/image/tomcat.gif HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200[^\r\n]*\r\n.*(?i:content-type): image/gif\r\n.*\r\n\r\nGIF89a'
+        invert_match: false
+    confidence: Medium
+    comment: "The honeypot serves its page images from /manager/image/ without authentication (tomcat.gif, asf-logo.svg). The genuine manager keeps its images under /manager/images/ (tomcat.svg, asf-logo-wide.svg in current releases) and returns 404 for /manager/image/tomcat.gif."
+  - name: tomcat-manager-honeypot-default-creds-serverinfo
+    id: 514
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /manager/text/serverinfo HTTP/1.1\r\nHost: x\r\nAuthorization: Basic dG9tY2F0OnRvbWNhdA==\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200.*\r\n\r\nOK - Server info\nTomcat Version: Apache Tomcat/9\.0\.0\.M26\nOS Name: Linux\nOS Version: 4\.8\.0-56-generic\n'
+        invert_match: false
+    confidence: Medium
+    comment: "With the default credentials tomcat:tomcat (a login attempt, as scanners make) the text interface's serverinfo returns a fixed file: Apache Tomcat 9.0.0.M26 (a 2017 milestone) on Linux 4.8.0-56-generic with JVM 9+181, without the square brackets genuine Tomcat puts around each value ('Tomcat Version: [Apache Tomcat/9.0.123]'). Medium: the credentials and the file are configurable."
+  - name: tomcat-manager-honeypot-default-creds-resources-fail
+    id: 515
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /manager/text/resources HTTP/1.1\r\nHost: x\r\nAuthorization: Basic dG9tY2F0OnRvbWNhdA==\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200.*\r\n\r\nFAIL - Encountered exception$'
+        invert_match: false
+    confidence: Medium
+    comment: "With the default credentials, /manager/text/resources without a type parameter returns 'FAIL - Encountered exception' with status 200. Genuine Tomcat lists all global JNDI resources ('OK - Listed global resources of all types'). Medium because it needs the default credentials."
+  - name: tomcat-manager-honeypot-default-creds-static-list
+    id: 516
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /manager/text/list HTTP/1.1\r\nHost: x\r\nAuthorization: Basic dG9tY2F0OnRvbWNhdA==\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200.*\r\n\r\nOK - Listed applications for virtual host localhost\n/examples:running:0:examples\n/manager:running:0:manager\n/:running:0:ROOT$'
+        invert_match: false
+    confidence: Medium
+    comment: "With the default credentials, /manager/text/list returns a fixed list of three applications (/examples, /manager, ROOT) with no sessions and without the square brackets around the host name that Tomcat 7.0.109, 8.5, 9.0 and 11.0 print ('virtual host [localhost]'). Medium: needs the default credentials and the list is a configurable file."
+  - name: honeypress-server-set-ga-cookie
+    id: 520
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /wp-login.php HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 (?:.*\r\nSet-Cookie: _ga=[0-9A-Za-z]{35}\r\n.*\r\nSet-Cookie: wordpress_test_cookie=|.*\r\nSet-Cookie: wordpress_test_cookie=.*\r\nSet-Cookie: _ga=[0-9A-Za-z]{35}\r\n)'
+        invert_match: false
+    confidence: High
+    comment: "The WordPress login page sets a '_ga' cookie from the server: 35 random letters and digits with no path, domain or expiry attributes (HoneyPress's visitor token; with upstream's code and watchFiles on, one per file of the WordPress tree, thousands of headers). Google Analytics sets _ga in the browser (or server-side as GA1.x.<id>.<time> with Domain and Expires); genuine WordPress sets no _ga cookie."
+  - name: honeypress-failed-login-logs-in
+    id: 521
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST /wp-login.php HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nCookie: wordpress_test_cookie=WP%20Cookie%20check\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: 61\r\nConnection: close\r\n\r\nlog=hdprobe7a1c&pwd=hd-Probe-9x&wp-submit=Log+In&testcookie=1"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 302 .*\r\nLocation: [^\r\n]*/wp-admin/user/\r\n'
+        invert_match: false
+    confidence: High
+    comment: "A login with an unregistered user name (hdprobe7a1c) and a random password succeeds: HoneyPress creates the account (or reuses it), sets the WordPress authentication cookies for it and redirects to /wp-admin/user/ (user_admin_url, the multisite user dashboard). Genuine WordPress answers 200 with 'The username ... is not registered on this site', and after a real login redirects to /wp-admin/. Note: on a HoneyPress site this probe creates a short-lived account."
+  - name: honeypress-xmlrpc-auth-redirect
+    id: 522
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST /xmlrpc.php HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nContent-Type: text/xml\r\nContent-Length: 186\r\nConnection: close\r\n\r\n<?xml version=\"1.0\"?><methodCall><methodName>wp.getUsersBlogs</methodName><params><param><value>hdprobe7a1c</value></param><param><value>hd-Probe-9x</value></param></params></methodCall>"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 302 .*\r\nLocation: [^\r\n]*/wp-admin/user/\r\n'
+        invert_match: false
+    confidence: High
+    comment: "XML-RPC wp.getUsersBlogs with an unregistered user name returns an HTTP 302 redirect to /wp-admin/user/ with authentication cookies and an empty body. Genuine WordPress returns 200 with an XML-RPC fault (faultCode 403, 'Incorrect username or password.'), or 403/405 when XML-RPC is blocked."
+  - name: honeypress-plugin-file-reachable
+    id: 523
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /wp-content/plugins/honeypress/util.php HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*Content-Length: 0\r\n.*Content-Type: text/html; charset=UTF-8$'
+        invert_match: false
+    confidence: High
+    comment: "The HoneyPress plugin's helper file answers 200 with an empty body. hidePlugin only renames the entry in the dashboard's plugin list; the folder must be called honeypress because the plugin loads util.php from that path. A WordPress site without the plugin returns its 404 page."
+  - name: honeypress-generator-version-mismatch
+    id: 524
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nCookie: _ga=GA1.1.1.1\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 .*(?:<meta name="generator" content="WordPress [1-5]\.[^"]*" />.*wp-emoji-release\.min\.js\?ver=(?:[6-9]|[1-9][0-9])\.|wp-emoji-release\.min\.js\?ver=(?:[6-9]|[1-9][0-9])\..*<meta name="generator" content="WordPress [1-5]\.)'
+        invert_match: false
+    confidence: Medium
+    comment: "The home page's generator tag claims WordPress 5.x or older (HoneyPress's mask and generatorTag settings; default 'WordPress 5.7') while the core emoji script is loaded with ver=6.x or later, the real core version. Genuine WordPress prints its own version in both places. Medium: the generator tag is a setting."
+  - name: wp-smart-honeypot-enc-type-field
+    id: 530
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /seed-swap/ HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 .*<input type="hidden" name="enc-type" value="[A-Za-z0-9+/]{10}=="/>'
+        invert_match: false
+    confidence: High
+    comment: "The comment form carries the plugin's hidden enc-type field: base64 of seven characters, the six-character key used to hash the field names (the first six hex digits of sha1(time . salt)) followed by the index 0-3 of the trap field (name, email, website, comment). Added by the comment_form action on every page view, whatever the WordPress version or theme; WordPress itself has no field of that name. The path is the lab site's post; any post or page with an open comment form shows it."
+  - name: wp-smart-honeypot-removal-script
+    id: 531
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /seed-swap/ HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 .*<script type="text/JavaScript">nscrmhp = document\.getElementById\("(?:name|email|website|comment)"\); nscrmhpp = nscrmhp\.parentNode; nscrmhppp = nscrmhpp\.parentNode; nscrmhppp\.parentNode\.removeChild\(nscrmhppp\);</script>'
+        invert_match: false
+    confidence: High
+    comment: "The inline script the plugin prints at the end of every comment form to remove the trap field for visitors with JavaScript: fixed variable names nscrmhp, nscrmhpp and nscrmhppp and getElementById with one of the four trap names (name, email, website, comment). The script names the trap field in clear. The path is the lab site's post."
+  - name: wp-smart-honeypot-hashed-field-names
+    id: 532
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /seed-swap/ HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 .*<p class="comment-form-author"><label for="author">[^\n]{0,200}?<input id="[0-9a-f]{32}" name="[0-9a-f]{32}" type="text"'
+        invert_match: false
+    confidence: High
+    comment: "The comment form's Name field has an id and name of 32 hex digits (md5 of 'author' and the per-view key) instead of WordPress's author, while its label still points at for=\"author\". The plugin renames all four standard fields this way on every page view for visitors who are not logged in. A WordPress comment form without the plugin uses id=\"author\" name=\"author\". The path is the lab site's post."
+  - name: wp-smart-honeypot-standard-fields-ignored
+    id: 533
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST /wp-comments-post.php HTTP/1.1\r\nHost: x\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: 61\r\nConnection: close\r\n\r\nauthor=Ann&email=ann%40example.com&comment=&comment_post_ID=1"
+        output_match_type: regex
+        output: '(?si)^HTTP/1\.[01] 200 .*<p><strong>Error:?</strong>:? please fill the required fields'
+        invert_match: false
+    confidence: Medium
+    comment: "A comment submission with WordPress's standard field names (author, email) and an empty comment. WordPress without the plugin accepts the name and e-mail address and refuses only the empty comment ('Please type your comment text' / 'please type a comment'), so no comment is ever created. With the plugin the standard fields are replaced by the (missing) hashed fields before WordPress validates them, so the answer is 'Please fill the required fields'. Applies to the plugin on WordPress 4.3 and earlier and with the WordPress 4.4+ compatibility patch used by the companion LXC script and Docker version; the unchanged plugin on WordPress 4.4 and later rewrites the fields too late and answers like WordPress. Needs post 1 to exist with comments open (WordPress's first post)."
+  - name: wordpot-xmlrpc-post-refused
+    id: 540
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST /xmlrpc.php HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nContent-Type: text/xml\r\nContent-Length: 106\r\nConnection: close\r\n\r\n<?xml version=\"1.0\"?><methodCall><methodName>system.listMethods</methodName><params></params></methodCall>"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 .*\r\n\r\nXML-RPC server accepts POST requests only\.\s*$'
+        invert_match: false
+    confidence: High
+    comment: "A valid XML-RPC POST (system.listMethods) is answered with 200 and the text WordPress shows only for a GET, 'XML-RPC server accepts POST requests only.' Wordpot serves that page for every method. Genuine WordPress answers the POST with an XML methodResponse listing its methods (or 403/405 when XML-RPC is blocked)."
+  - name: wordpot-timthumb-any-plugin
+    id: 541
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /wp-content/plugins/hd-wp-7f3a/timthumb.php HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 .*\r\n\r\nno image specified\s*$'
+        invert_match: false
+    confidence: High
+    comment: "timthumb.php under a plugin folder that cannot exist (hd-wp-7f3a) returns 200 with the bare text 'no image specified' (Wordpot's timthumb plugin answers any path containing thumb or uploadify under any plugin or theme). Genuine WordPress returns its 404 page; a real TimThumb script exists only in the plugin or theme that ships it and prints an HTML error page."
+  - name: wordpot-unknown-plugin-folder
+    id: 542
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /wp-content/plugins/hd-wp-7f3a/ HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 .*<meta name="generator" content="WordPress '
+        invert_match: false
+    confidence: Medium
+    comment: "A plugin folder that cannot exist returns 200 with the blog's home page (Wordpot reports every plugin as installed unless PLUGINS is set). Genuine WordPress returns 404 for a missing plugin folder (and an empty page or 403 for an installed one, never the home page). Medium: a PLUGINS list in wordpot.conf turns unknown plugins into 404."
+  - name: wordpot-flask-static-admin-css
+    id: 543
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /static/wp-admin/css/wp-admin.css HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 .*Content-Type: text/css.*\r\n\r\n#wpwrap\{'
+        invert_match: false
+    confidence: High
+    comment: "The WordPress admin stylesheet is served from /static/wp-admin/css/, Flask's static folder, which the login page links to. WordPress keeps it at /wp-admin/css/ and has no /static/ folder: genuine sites return 404 for this path."
+  - name: wordpot-home-assets-under-static
+    id: 544
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 .*<link rel="stylesheet"[^>]*href="https?://[^"/]+/static/wp-content/themes/[^"]*/style\.css".*<meta name="generator" content="WordPress '
+        invert_match: false
+    confidence: High
+    comment: "The home page claims to be WordPress (generator tag) but loads its theme stylesheet from /static/wp-content/themes/<theme>/style.css, Flask's static URL, built from the Host header the client sent. WordPress themes live under /wp-content/themes/ and links use the configured site address."
+  - name: wordpot-wp-admin-redirect
+    id: 545
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /wp-admin/ HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 302 FOUND\r\n.*\r\nLocation: (?:https?://[^/\r\n]+/)?wp-login\.php\r\n'
+        invert_match: false
+    confidence: High
+    comment: "/wp-admin/ redirects with Werkzeug's upper-case '302 FOUND' straight to wp-login.php with no query string. Genuine WordPress (PHP behind Apache or nginx) sends '302 Found' and Location wp-login.php?redirect_to=<admin URL>&reauth=1."
+  - name: wordpot-empty-login-invalid-username
+    id: 546
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST /wp-login.php HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: 26\r\nConnection: close\r\n\r\nlog=&pwd=&wp-submit=Log+In"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 .*<div id="login_error">\s*<strong>ERROR</strong>: Invalid username\.'
+        invert_match: false
+    confidence: High
+    comment: "A login with an empty user name and password is answered with 'ERROR: Invalid username.', Wordpot's fixed reply to every login. Genuine WordPress checks the fields first ('The username field is empty.' / 'The password field is empty.', or a cookies warning when the test cookie is missing)."
+  - name: wordpot-login-page-template
+    id: 547
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /wp-login.php HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 .*title="Powered by WordPress">Test</a></h1>.*name="redirect_to" value=/wp-admin/"'
+        invert_match: false
+    confidence: High
+    comment: "Wordpot's login page always shows 'Test' as the heading (whatever the blog title) and carries a hidden redirect_to field with a malformed value (value=/wp-admin/\" with no opening quote). Genuine WordPress prints the site name (older releases) or 'Powered by WordPress' and a quoted redirect_to."
+  - name: wordpot-werkzeug-plus-custom-server
+    id: 548
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 [^\r\n]*\r\n(?:[^\r\n]+\r\n)*?Server: Werkzeug/[^\r\n]*\r\n(?:[^\r\n]+\r\n)*?Server: [^\r\n]+\r\n.*<meta name="generator" content="WordPress '
+        invert_match: false
+    confidence: Medium
+    comment: "A WordPress page with two Server headers: Werkzeug's development server's own, then the configured one (default 'Apache/2.2.22 (Ubuntu)'). WordPress runs on PHP under Apache, nginx or similar and sends one Server header. Medium: depends on Flask's built-in server (current Werkzeug); the original under Werkzeug 0.9 or a proxy in front sends one."
+  - name: wordpot-author-archive-relative-link
+    id: 549
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /?author=1 HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 .*<h1 class="page-title author">Author Archives: <span class="vcard"><a class="url fn n" href="\?author=1" '
+        invert_match: false
+    confidence: High
+    comment: "The author enumeration trap answers ?author=1 with an Author Archives heading whose link is the relative '?author=1'. Genuine WordPress redirects to /author/<name>/ with pretty permalinks, and with plain permalinks links the author with an absolute URL (http://<site>/?author=1)."
+  - name: adbhoney-open-before-connect
+    id: 550
+    port: 5555
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "4f50454e010000000000000013000000f5060000b0afbab17368656c6c3a6563686f20686470726f626500"
+        output_match_type: hex
+        output: "4f4b415902000000010000000000000000000000b0b4bea65752544502000000010000000000000000000000a8adabba"
+        invert_match: false
+    confidence: High
+    comment: "An OPEN (shell:echo) sent before any CNXN handshake is accepted: ADBHoney answers OKAY(2,1) followed at once by an empty WRTE(2,1) (and CLSE). adbd ignores OPEN until the transport is online (connected) and stays silent."
+  - name: adbhoney-empty-shell-output
+    id: 551
+    port: 5555
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "434e584e0100000100001000240000003c0d0000bcb1a7b1686f73743a3a66656174757265733d7368656c6c5f76322c636d642c737461745f763200"
+        output_match_type: regex
+        output: '(?s)^CNXN.{8,24}?device::'
+        invert_match: false
+      - input_type: hex
+        input: "4f50454e010000000000000013000000f5060000b0afbab17368656c6c3a6563686f20686470726f626500"
+        output_match_type: hex
+        output: "5752544502000000010000000000000000000000a8adabba"
+        invert_match: false
+    confidence: High
+    comment: "After the handshake, shell:echo hdprobe returns OKAY, a WRTE with an empty payload and CLSE, from local socket id 2. ADBHoney gives every shell command except 'ls' an empty answer and reuses id 2 for every stream; a genuine adbd runs the command (the WRTE carries 'hdprobe') and never sends an empty WRTE."
+  - name: adbhoney-bad-magic-accepted
+    id: 552
+    port: 5555
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "434e584e0100000100001000240000003c0d000000000000686f73743a3a66656174757265733d7368656c6c5f76322c636d642c737461745f763200"
+        output_match_type: regex
+        output: '(?s)^CNXN.{8,24}?device::'
+        invert_match: false
+    confidence: High
+    comment: "A CNXN whose magic field is zero (it must be the command XOR 0xffffffff) is answered with the device banner. adbd validates the header (check_header) and drops the connection."
+  - name: adbhoney-unknown-service-okay
+    id: 553
+    port: 5555
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "434e584e0100000100001000240000003c0d0000bcb1a7b1686f73743a3a66656174757265733d7368656c6c5f76322c636d642c737461745f763200"
+        output_match_type: regex
+        output: '(?s)^CNXN.{8,24}?device::'
+        invert_match: false
+      - input_type: hex
+        input: "4f50454e010000000000000017000000cc080000b0afbab1686470726f62652d6e6f73756368736572766963653a00"
+        output_match_type: hex
+        output: "4f4b4159020000000100000000000000"
+        invert_match: false
+    confidence: High
+    comment: "OPEN for a service that does not exist (hdprobe-nosuchservice:) is accepted with OKAY. adbd refuses unknown services with CLSE(0, local-id)."
+  - name: adbhoney-default-device-banner
+    id: 554
+    port: 5555
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "434e584e0100000100001000240000003c0d0000bcb1a7b1686f73743a3a66656174757265733d7368656c6c5f76322c636d642c737461745f763200"
+        output_match_type: string
+        output: "device::http://ro.product.name =starltexx;"
+        invert_match: false
+    confidence: Medium
+    comment: "Default device_id from adbhoney.cfg: the banner reads 'device::http://ro.product.name =starltexx;...' (a Galaxy S9, SM-G960F), with 'http://' and a space inside the property list. adbd builds the banner as device::ro.product.name=...; Medium because device_id is configurable."
+  - name: adbhoney-shell-v2-with-4k-payload
+    id: 555
+    port: 5555
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "434e584e0100000100001000240000003c0d0000bcb1a7b1686f73743a3a66656174757265733d7368656c6c5f76322c636d642c737461745f763200"
+        output_match_type: regex
+        output: '(?s)^CNXN\x00\x00\x00\x01\x00\x10\x00\x00.{8,16}?device::[^\x00]*features=[^\x00;]*shell_v2'
+        invert_match: false
+    confidence: High
+    comment: "To a client offering version 0x01000001 and a 1 MiB payload, ADBHoney always answers version 0x01000000 with a 4096-byte maximum payload, yet its banner advertises shell_v2. shell_v2 arrived in Android 7.0, whose adbd answers with min(client, 256 KiB) (Android 9 and later: version 0x01000001 and up to 1 MiB); only pre-7.0 adbd answers 4096, and it does not advertise shell_v2."
+  - name: adbhoneypot-open-before-connect
+    id: 560
+    port: 5555
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "4f50454e010000000000000013000000f5060000b0afbab17368656c6c3a6563686f20686470726f626500"
+        output_match_type: hex
+        output: "4f4b415902000000010000000000000000000000b0b4bea657525445020000000100000007000000e4020000a8adabba686470726f6265"
+        invert_match: false
+    confidence: High
+    comment: "An OPEN (shell:echo hdprobe) sent before any CNXN handshake is accepted: Adbhoneypot answers OKAY(2,1) and a WRTE carrying 'hdprobe'. adbd ignores OPEN until the transport is online and stays silent."
+  - name: adbhoneypot-echo-without-newline
+    id: 561
+    port: 5555
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "434e584e00000001001000000700000032020000bcb1a7b1686f73743a3a00"
+        output_match_type: regex
+        output: '(?s)^CNXN.{8,24}?device::'
+        invert_match: false
+      - input_type: hex
+        input: "4f50454e070000000000000013000000f5060000b0afbab17368656c6c3a6563686f20686470726f626500"
+        output_match_type: hex
+        output: "4f4b415902000000070000000000000000000000b0b4bea657525445020000000700000007000000e4020000a8adabba686470726f6265"
+        invert_match: false
+    confidence: High
+    comment: "After the handshake, shell:echo hdprobe is answered by the honeypot's echo emulation: OKAY and a WRTE of exactly 'hdprobe' (7 bytes, no line ending) from local stream id 2, whatever id the client used. A genuine shell prints 'hdprobe' followed by a newline (CRLF through adbd's pty)."
+  - name: adbhoneypot-bare-prompt
+    id: 562
+    port: 5555
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "434e584e00000001001000000700000032020000bcb1a7b1686f73743a3a00"
+        output_match_type: regex
+        output: '(?s)^CNXN.{8,24}?device::'
+        invert_match: false
+      - input_type: hex
+        input: "4f50454e0100000000000000090000001f030000b0afbab17368656c6c3a696400"
+        output_match_type: hex
+        output: "4f4b415902000000010000000000000000000000b0b4bea65752544502000000010000000100000023000000a8adabba23"
+        invert_match: false
+    confidence: High
+    comment: "shell:id (any command other than echo) returns only a one-byte '#' prompt and no output. adbd runs the command and returns its output (uid=2000(shell) ... on a device)."
+  - name: adbhoneypot-unknown-service-okay-close
+    id: 563
+    port: 5555
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "434e584e00000001001000000700000032020000bcb1a7b1686f73743a3a00"
+        output_match_type: regex
+        output: '(?s)^CNXN.{8,24}?device::'
+        invert_match: false
+      - input_type: hex
+        input: "4f50454e010000000000000017000000cc080000b0afbab1686470726f62652d6e6f73756368736572766963653a00"
+        output_match_type: hex
+        output: "4f4b415902000000010000000000000000000000b0b4bea6434c534502000000010000000000000000000000bcb3acba"
+        invert_match: false
+    confidence: High
+    comment: "OPEN for a service that does not exist is first accepted (OKAY 2,1) and then closed (CLSE 2,1). adbd refuses it with a single CLSE whose local id is 0, without an OKAY."
+  - name: adbhoneypot-header-not-validated
+    id: 564
+    port: 5555
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "434e584e0000000100100000070000000000000000000000686f73743a3a00"
+        output_match_type: regex
+        output: '(?s)^CNXN.{8,24}?device::'
+        invert_match: false
+      - input_type: hex
+        input: "4f50454e0100000000000000090000001f030000b0afbab17368656c6c3a696400"
+        output_match_type: hex
+        output: "5752544502000000010000000100000023000000a8adabba23"
+        invert_match: false
+    confidence: High
+    comment: "A CNXN whose magic and checksum fields are both zero is answered with the device banner, and the session that follows gives the honeypot's '#' prompt. adbd checks the magic (command XOR 0xffffffff) and drops the connection."
+  - name: adbhoneypot-default-device-banner
+    id: 565
+    port: 5555
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "434e584e00000001001000000700000032020000bcb1a7b1686f73743a3a00"
+        output_match_type: string
+        output: "device::ro.product.name=hlteuc;ro.product.model=SAMSUNG-SM-N900A;ro.product.device=hlteatt;."
+        invert_match: false
+    confidence: Medium
+    comment: "Default id_string from etc/adbhoney.cfg.base: an AT&T Galaxy Note 3 (SAMSUNG-SM-N900A), with a stray '.' after the final ';'. adbd ends the property list with ';' (and, from Android 7, a features= list). Medium because id_string is configurable."
+  - name: ipp-honey-get-twisted-500
+    id: 580
+    port: 631
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: printer\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 500 Internal Server Error\r\n.*Server: Lexmark_Web_Server\r\n.*<title>500 - Request did not return bytes</title>.*core\.protocol\.Index'
+        invert_match: false
+    confidence: High
+    comment: "Any GET or HEAD (and a POST without a body) on Python 3 ends in Twisted's '500 - Request did not return bytes' page, which names the honeypot's resource class (core.protocol.Index), under the printer headers (Server: Lexmark_Web_Server). Genuine IPP printers and CUPS answer GET / with their HTML web interface (200) or an HTTP error page of their own."
+  - name: ipp-honey-unsupported-operation-ok
+    id: 581
+    port: 631
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "504f5354202f6970702f7072696e7420485454502f312e310d0a486f73743a207072696e7465720d0a436f6e74656e742d547970653a206170706c69636174696f6e2f6970700d0a436f6e74656e742d4c656e6774683a203131310d0a436f6e6e656374696f6e3a20636c6f73650d0a0d0a020077770000580101470012617474726962757465732d6368617273657400057574662d3848001b617474726962757465732d6e61747572616c2d6c616e67756167650002656e45000b7072696e7465722d75726900176970703a2f2f7072696e7465722f6970702f7072696e7403"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\n.*Content-Length: 8\r\n.*Content-Type: application/ipp\r\n\r\n\x02\x00\x00\x00\x00\x00\x58\x01$'
+        invert_match: false
+    confidence: High
+    comment: "IPP request with an undefined operation code (0x7777, request id 0x5801). IPP Honey answers successful-ok in an 8-byte message with no attribute groups and no end-of-attributes tag. CUPS and ippeveprinter answer server-error-operation-not-supported (0x0501) with the required operation attributes and a status message, as RFC 8011 requires."
+  - name: ipp-honey-truncated-request-ok
+    id: 582
+    port: 631
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "504f5354202f6970702f7072696e7420485454502f312e310d0a486f73743a207072696e7465720d0a436f6e74656e742d547970653a206170706c69636174696f6e2f6970700d0a436f6e74656e742d4c656e6774683a20340d0a436f6e6e656374696f6e3a20636c6f73650d0a0d0a0200000b"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\n.*Content-Length: 4\r\n.*Content-Type: application/ipp\r\n\r\n\x01\x01\x00\x00$'
+        invert_match: false
+    confidence: High
+    comment: "IPP POST whose body is only 4 bytes (shorter than the 8-byte IPP header). IPP Honey answers 200 with a 4-byte body (version 1.1, successful-ok, no request id). ippeveprinter answers HTTP 400 Bad Request and CUPS sends nothing back."
+  - name: ipp-honey-any-version-successful
+    id: 583
+    port: 631
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "504f5354202f6970702f7072696e7420485454502f312e310d0a486f73743a207072696e7465720d0a436f6e74656e742d547970653a206170706c69636174696f6e2f6970700d0a436f6e74656e742d4c656e6774683a203135380d0a436f6e6e656374696f6e3a20636c6f73650d0a0d0a0909000b0000580301470012617474726962757465732d6368617273657400057574662d3848001b617474726962757465732d6e61747572616c2d6c616e67756167650002656e45000b7072696e7465722d75726900176970703a2f2f7072696e7465722f6970702f7072696e744400147265717565737465642d6174747269627574657300167072696e7465722d6d616b652d616e642d6d6f64656c03"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\n.*Content-Type: application/ipp\r\n\r\n\x09\x09\x00\x00\x00\x00\x58\x03\x01.*\x04.*printer-make-and-model'
+        invert_match: false
+    confidence: High
+    comment: "Get-Printer-Attributes with the non-existent IPP version 9.9. IPP Honey echoes the version, answers successful-ok and returns its full printer attribute group. CUPS and ippeveprinter answer server-error-version-not-supported (0x0503) with only the operation attributes ('Bad request version number 9.9.')."
+  - name: ipp-honey-default-printer-attributes
+    id: 584
+    port: 631
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "504f5354202f6970702f7072696e7420485454502f312e310d0a486f73743a207072696e7465720d0a436f6e74656e742d547970653a206170706c69636174696f6e2f6970700d0a436f6e74656e742d4c656e6774683a203131310d0a436f6e6e656374696f6e3a20636c6f73650d0a0d0a0200000b0000580401470012617474726962757465732d6368617273657400057574662d3848001b617474726962757465732d6e61747572616c2d6c616e67756167650002656e45000b7072696e7465722d75726900176970703a2f2f7072696e7465722f6970702f7072696e7403"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\n.*Server: Lexmark_Web_Server\r\n.*\r\n\r\n\x02\x00\x00\x00\x00\x00\x58\x04.*printer-name\x00\x0cPrintService.*printer-state-reasons\x00\x06paused.*printer-make-and-model\x00\x0cTest Printer'
+        invert_match: false
+    confidence: Medium
+    comment: "Get-Printer-Attributes (IPP 2.0). With the shipped responses/getattr.ipp IPP Honey describes itself as printer-name 'PrintService', make and model 'Test Printer', idle but with printer-state-reasons 'paused', behind a 'Lexmark_Web_Server' Server header. Genuine printers report a real make and model and a consistent state. Medium: the response file can be edited (the Server header cannot)."
+  - name: miniprint-pjl-echo-esc-terminator
+    id: 590
+    port: 9100
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "1b252d31323334355840504a4c204543484f2044454c494d495445523539300d0a1b252d313233343558"
+        output_match_type: regex
+        output: '^@PJL ECHO DELIMITER590\r?\n?\x1b$'
+        invert_match: false
+    confidence: High
+    comment: "@PJL ECHO DELIMITER590 is answered with the echo line followed by an ESC character (0x1b). HP's PJL reference: every status readback response begins with @PJL and ends with a form feed (<FF>, 0x0c); ECHO returns '@PJL ECHO words<CR><LF><FF>'. ECHO is the delimiter that PJL clients such as PRET rely on."
+  - name: miniprint-info-status-python-bool
+    id: 591
+    port: 9100
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "1b252d31323334355840504a4c20494e464f205354415455530d0a1b252d313233343558"
+        output_match_type: regex
+        output: '^@PJL INFO STATUS\r\nCODE=\d+\r\nDISPLAY="[^"\r\n]*"\r\nONLINE=True$'
+        invert_match: false
+    confidence: High
+    comment: "INFO STATUS ends with 'ONLINE=True' (a Python boolean printed as text, mixed case) and nothing after it. PJL printers send ONLINE=TRUE or ONLINE=FALSE in upper case, followed by <CR><LF> and the <FF> terminator."
+  - name: miniprint-info-id-unquoted-esc
+    id: 592
+    port: 9100
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "1b252d31323334355840504a4c20494e464f2049440d0a1b252d313233343558"
+        output_match_type: regex
+        output: '^@PJL INFO ID\r\n[^"\r\n][^\r\n]*\r\n\x1b$'
+        invert_match: false
+    confidence: High
+    comment: "INFO ID returns the model name without quotes ('hp LaserJet 4200' by default) and ends with ESC (0x1b). The PJL reference shows the model in double quotes, e.g. '\"HP LASERJET 4ML\"<CR><LF><FF>', and every readback response ends with <FF>."
+  - name: miniprint-info-config-unanswered
+    id: 593
+    port: 9100
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "1b252d31323334355840504a4c20494e464f20434f4e4649470d0a40504a4c204543484f2044454c494d495445523539330d0a1b252d313233343558"
+        output_match_type: regex
+        output: '^@PJL ECHO DELIMITER593[\r\n]*\x1b?$'
+        invert_match: false
+    confidence: Medium
+    comment: "A job with INFO CONFIG followed by ECHO gets only the ECHO line: the INFO CONFIG query is silently dropped (Miniprint implements ten PJL commands and ignores the rest, including INFO CONFIG, INFO VARIABLES and INQUIRE). HP's reference recommends INFO CONFIG for identifying printer features and LaserJets answer it with trays, papers, languages and memory. Medium: not every PJL implementation answers INFO CONFIG."
+  - name: miniprint-fsupload-ignores-size
+    id: 594
+    port: 9100
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "1b252d31323334355840504a4c20465355504c4f4144204e414d453d22303a2f7765625365727665722f64656661756c742f6373636f6e66696722204f46465345543d302053495a453d31360d0a1b252d313233343558"
+        output_match_type: regex
+        output: '^@PJL FSUPLOAD FORMAT:BINARY NAME="0:/webServer/default/csconfig" OFFSET=0 SIZE=4520\r\n%\n% ChaiServer configuration file\n'
+        invert_match: false
+    confidence: High
+    comment: "FSUPLOAD of 0:/webServer/default/csconfig with SIZE=16 returns the whole 4520-byte bait file (the HP ChaiServer configuration shipped with Miniprint) and reports SIZE=4520. The PJL reference: the printer uploads at most SIZE bytes from OFFSET and the SIZE in the response is the amount actually returned."
+  - name: miniprint-fsdirlist-root-no-terminator
+    id: 595
+    port: 9100
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "1b252d31323334355840504a4c2046534449524c495354204e414d453d22303a2f2220454e5452593d3120434f554e543d36353533350d0a1b252d313233343558"
+        output_match_type: regex
+        output: '^@PJL FSDIRLIST NAME="0:/" ENTRY=1\r\n\. TYPE=DIR\r\n\.\. TYPE=DIR\r\nPJL TYPE=DIR\r\nPostScript TYPE=DIR\r\nsaveDevice TYPE=DIR\r\nwebServer TYPE=DIR$'
+        invert_match: false
+    confidence: High
+    comment: "FSDIRLIST of 0:/ lists exactly the four directories of Miniprint's built-in virtual file system (PJL, PostScript, saveDevice, webServer, taken from an HP LaserJet 4200n) and ends without <CR><LF> or the <FF> terminator that every PJL readback response carries."
+  - name: cameraobscura-index-werkzeug-and-lighttpd
+    id: 600
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\nServer: Werkzeug/[^\r\n]*\r\n.*\r\nServer: [^\r\n]+\r\n.*src="cgi-bin/image\.pl".*setInterval\(refresh,10000\)'
+        invert_match: false
+    confidence: High
+    comment: "The camera live-view page (snapshot img from cgi-bin/image.pl, page reload every 10 s) arrives with two Server headers: Werkzeug's own ('Server: Werkzeug/x Python/y') followed by the one configured in routes.json ('Server: lighttpd' by default). A genuine lighttpd or embedded camera web server sends one Server header and never Werkzeug's."
+  - name: cameraobscura-unescaped-route-regex
+    id: 601
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /loginXphp HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*<title>IPCAM</title>.*<form action="admin\.php"'
+        invert_match: false
+    confidence: High
+    comment: "Route names in routes.json are used as unanchored regular expressions (re.match), so the dot in 'login.php' matches any character and any suffix is accepted: /loginXphp (and /login.php.bak) return the camera login page. A genuine web server answers 404 for a file that does not exist."
+  - name: cameraobscura-apache-404-from-werkzeug
+    id: 602
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /hd-cam-probe-6a1c HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 404 NOT FOUND\r\n.*<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 2\.0//EN">\n<html><head>\n<title>404 Not Found</title>\n</head><body>\n<h1>Not Found</h1>\n<p>The requested URL was not found on this server\.</p>\n</body></html>'
+        invert_match: false
+    confidence: High
+    comment: "Unknown paths return a copy of Apache's 404 page (without Apache's address line) with Werkzeug's upper-case status line '404 NOT FOUND'. Apache sends '404 Not Found', lighttpd its own XHTML 404 page, and a default Flask application a different 404 text."
+  - name: cameraobscura-snapshot-rtsp-stream-header
+    id: 603
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /cgi-bin/image.pl HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] (?:200 OK|500 INTERNAL SERVER ERROR)\r\nServer: Werkzeug/[^\r\n]*\r\n.*\r\nServer: RTSP-Stream\r\n'
+        invert_match: false
+    confidence: High
+    comment: "The snapshot route (a Perl CGI path on a camera) answers through Werkzeug with an extra 'Server: RTSP-Stream' header from routes.json: a JPEG frame when images are installed, or Werkzeug's '500 INTERNAL SERVER ERROR' when they are missing, as in the upstream repository. No genuine HTTP server names itself RTSP-Stream on a CGI path."
+  - name: cameraobscura-login-page
+    id: 604
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /login.php HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\nServer: Werkzeug/[^\r\n]*\r\n.*X-Powered-By: PHP/[^\r\n]*\r\n.*<title>IPCAM</title>.*<form action="admin\.php" method="GET">.*<button>Log me in</button>.*Firmware version '
+        invert_match: false
+    confidence: Medium
+    comment: "The default 'ugly' template's login page (title IPCAM, GET form to admin.php, 'Log me in' button, firmware footer) served by Werkzeug while claiming PHP through X-Powered-By. PHP pages are not served by Werkzeug. Medium: the template and headers are configurable."
+  - name: cameraobscura-admin-panel-without-login
+    id: 605
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /admin.php HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\nServer: Werkzeug/[^\r\n]*\r\n.*<h2>Admin panel</h2>.*Serial Number.*<form action="update\.php[^"]*" method="POST" enctype="multipart/form-data">'
+        invert_match: false
+    confidence: Medium
+    comment: "The admin panel (hostname, model, serial number, firmware and a firmware upload form) is served to anyone, with no credentials, through Werkzeug. A genuine camera asks for authentication first. Medium: the template is configurable."
+  - name: cameraobscura-flask-send-file-js
+    id: 606
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /jquery.min.js HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\nServer: Werkzeug/[^\r\n]*\r\n.*Content-Disposition: inline; filename=jquery\.min\.js\r\n.*\r\nServer: lighttpd\r\n'
+        invert_match: false
+    confidence: High
+    comment: "jQuery is served by Flask's send_file (Content-Disposition: inline; filename=jquery.min.js, Werkzeug ETag) with Werkzeug's Server header followed by 'Server: lighttpd'. lighttpd serves static files with a single Server header and no Content-Disposition."
+  - name: honeypot-camera-mjpg-streamer-headers-on-tornado
+    id: 610
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /camera.jpg HTTP/1.1\r\nHost: cam\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\nServer: TornadoServer/[^\r\n]*\r\nContent-Type: image/jpeg\r\n.*\r\nExpires: Mon, 3 Jan 2000 12:34:56 GMT\r\n.*\r\nX-Timestamp: [0-9]+\r\n'
+        invert_match: false
+    confidence: High
+    comment: "The snapshot URL /camera.jpg returns a JPEG from a Tornado server carrying mjpg-streamer's fixed anti-cache headers (Expires: Mon, 3 Jan 2000 12:34:56 GMT, pre-check=0, post-check=0) and an X-Timestamp in whole seconds. Genuine mjpg-streamer sends those headers with Server: MJPG-Streamer and an X-Timestamp with microseconds (seconds.usec), serves snapshots at /?action=snapshot and answers /camera.jpg with 404; Tornado camera products such as motionEye do not use these headers."
+  - name: honeypot-camera-observation-page
+    id: 611
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: cam\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*<META HTTP-EQUIV="refresh" CONTENT="[0-9]+" />.*<div id="camera">\s*<h2>[^<]* -- Security Observation Camera</h2>\s*<img src="/camera\.jpg" alt="CAM3" />'
+        invert_match: false
+    confidence: High
+    comment: "The landing page is the honeypot's fixed template: a meta refresh, a div with id camera, a heading ending in ' -- Security Observation Camera' and a single image /camera.jpg with alt text CAM3. The template is not configurable (only the title and refresh interval are), so the match survives a changed title."
+  - name: honeypot-camera-default-title
+    id: 612
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: cam\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\nServer: TornadoServer/.*<title>COMPANY Facility Management</title>'
+        invert_match: false
+    confidence: Medium
+    comment: "Default placeholder title 'COMPANY Facility Management' from a Tornado server. The title is hard-coded upstream but can be changed (for example with HPCAM_TITLE in the companion scripts), hence Medium."
+  - name: honeypot-camera-stylesheet
+    id: 613
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /static/style.css HTTP/1.1\r\nHost: cam\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\nServer: TornadoServer/[^\r\n]*\r\nContent-Type: text/css\r\n.*\r\n\r\nbody \{\s*background-color: #CCC;\s*\}\s*#camera \{\s*height: 480px;\s*width: 640px;\s*margin: auto;\s*\}$'
+        invert_match: false
+    confidence: High
+    comment: "/static/style.css is the project's 92-byte stylesheet (grey background, a centred 640x480 #camera box) served by Tornado's static file handler. mjpg-streamer answers 400 'No file extension found' or serves its own www files; motionEye and plain Tornado return 404."
+  - name: honeypot-camera-snapshot-refuses-head
+    id: 614
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "HEAD /camera.jpg HTTP/1.1\r\nHost: cam\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.[01] 405 Method Not Allowed\r\nServer: TornadoServer/'
+        invert_match: false
+    confidence: Medium
+    comment: "HEAD on the snapshot image /camera.jpg is refused with Tornado's 405 Method Not Allowed: the handler implements only GET. Camera web servers and generic web servers answer HEAD with headers (or 400/404 where the path does not exist: mjpg-streamer 400, motionEye 404). Medium: another Tornado application with a GET-only /camera.jpg handler would also match."
+  - name: honeypot-camera-sample-favicon
+    id: 615
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /favicon.ico HTTP/1.1\r\nHost: cam\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\nServer: TornadoServer/[^\r\n]*\r\nContent-Type: image/(?:vnd\.microsoft\.icon|x-icon)\r\n.*Content-Length: 16958\r\n'
+        invert_match: false
+    confidence: Medium
+    comment: "The 16958-byte sample favicon (one 64x64 32-bit icon) shipped with the project, served by Tornado. Medium: an operator can replace the file."
+  - name: shockpot-http10-default-page
+    id: 620
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.0 200 OK\r\n.*\r\nServer: Apache/[^\r\n]*\r\n.*\r\n\r\n<html><body><h1>[^<\n]*</h1>\n<p>This is the default web page for this server\.</p>\n<p>The web server software is running but no content has been added, yet\.</p>'
+        invert_match: false
+    confidence: High
+    comment: "A request in HTTP/1.1 is answered in HTTP/1.0 (Python's wsgiref server, which bottle uses by default) with a Server: Apache header and Shockpot's default page. Apache 2.x answers HTTP/1.1 requests with HTTP/1.1. The heading of the page (title) is configurable, the rest of the page is not."
+  - name: shockpot-any-cgi-path-200
+    id: 621
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /cgi-bin/hd-7f3a9c2e.cgi HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*Server: Apache/.*\r\n\r\n<html><body><h1>[^<\n]*</h1>\n<p>This is the default web page for this server\.</p>'
+        invert_match: false
+    confidence: High
+    comment: "Shockpot answers every path with 200 OK and its default page, so a CGI script that cannot exist (/cgi-bin/hd-7f3a9c2e.cgi) returns the same 'default web page' as the home page. Apache returns 404 Not Found for a missing script. Matches also when a proxy in front upgrades the status line to HTTP/1.1."
+  - name: shockpot-bottle-405-get-post-only
+    id: 622
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "OPTIONS / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.0 405 Method Not Allowed\r\n.*Server: WSGIServer/.*\r\nAllow: GET,POST\r\n.*<title>Error: 405 Method Not Allowed</title>.*Sorry, the requested URL <tt>.*</tt>\s*caused an error:</p>\s*<pre>Method not allowed\.</pre>'
+        invert_match: false
+    confidence: Medium
+    comment: "OPTIONS (like TRACE, PUT or DELETE) gets bottle's own 405 error page from the wsgiref server, with Allow: GET,POST and Server: WSGIServer/0.2 CPython (WSGIServer/0.1 Python/2.7 for the original under Python 2) instead of the Apache header the honeypot sends on GET. Apache answers OPTIONS with 200 and an Allow list that includes OPTIONS and HEAD. Any bottle application on the wsgiref server with only GET and POST routes would answer the same way, hence Medium."
+  - name: shockpot-default-banner-and-page
+    id: 623
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*Server: Apache/2\.0\.55 \(Debian\) PHP/5\.1\.2-1\+b1 mod_ssl/2\.0\.55 OpenSSL/0\.9\.8b\r\n.*Content-Type: text/html; charset=UTF-8\r\n.*<h1>It Works!</h1>'
+        invert_match: false
+    confidence: Medium
+    comment: "Shockpot's default Server header (Apache 2.0.55 with PHP 5.1.2 from Debian 'etch', 2006) together with its 'It Works!' page. Debian's Apache 2.0 packages did not ship that page (it is a variant of the later Apache 2.2 'It works!' page), and Apache sends Content-Type: text/html without a charset for a static page. Both values are configurable in shockpot.conf, hence Medium."
+  - name: citrixhoneypot-twisted-tls-profile
+    id: 630
+    port: 443
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "1603010068010000640303000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f00000a002fc02fc030009c003501000031000a00080006001d00170018000b00020100000d000e000c0401050106010403050308040023000000170000ff01000100"
+        output_match_type: hex
+        output: "444f574e4752440100c03000000fff01000100000b00020100001700001603030"
+        invert_match: false
+    confidence: Medium
+    comment: "A TLS 1.2 ClientHello that prefers AES128-SHA and offers ECDHE-RSA-AES256-GCM-SHA384, session tickets, extended master secret and secure renegotiation. CitrixHoneypot (Twisted CertificateOptions on pyOpenSSL with the OpenSSL bundled in the cryptography wheel) answers with the TLS 1.3 downgrade marker in the server random, an empty session id, its own choice ECDHE-RSA-AES256-GCM-SHA384 (server preference) and exactly three extensions: renegotiation_info, ec_point_formats offering only uncompressed points, and extended_master_secret; no session ticket, so no resumption at all. A NetScaler (CPX 14.1, default SSL profile) picks AES256-SHA, has no TLS 1.3 marker and returns only renegotiation_info; nginx and Apache httpd add a session ticket and list three point formats. Medium: any Twisted HTTPS server with default TLS options gives the same answer."
+  - name: citrixhoneypot-twisted-tls-default-openssl-cert
+    id: 631
+    port: 443
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "1603010068010000640303000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f00000a002fc02fc030009c003501000031000a00080006001d00170018000b00020100000d000e000c0401050106010403050308040023000000170000ff01000100"
+        output_match_type: regex
+        output: '(?s)^\x16\x03\x03.*DOWNGRD\x01\x00.0\x00\x00\x0f.\x01\x00\x01\x00\x00\x0b\x00\x02\x01\x00\x00\x17\x00\x00\x16\x03\x03.*\x0c\x0aSome-State.*\x0c\x18Internet Widgits Pty Ltd.*\x0c\x0aSome-State.*\x0c\x18Internet Widgits Pty Ltd'
+        invert_match: false
+    confidence: Medium
+    comment: "The Twisted TLS answer of signature 630 together with the self-signed certificate that docs/INSTALL.md creates (openssl req -x509 with the default answers): issuer and subject both C=AU, ST=Some-State, O=Internet Widgits Pty Ltd and no common name. A genuine NetScaler ships the ns-server-certificate (O=Citrix ANG, OU=NS Internal, CN=default ...) or, on a gateway, a CA-signed certificate for its host name; generic servers that use the same default openssl certificate (nginx, Apache httpd) differ in the handshake. Medium: the certificate is the operator's choice."
+  - name: amthoneypot-root-301-redirect
+    id: 640
+    port: 16992
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 301 Moved Permanently\r\n.*Location: /logon\.htm\r\n.*Server: Intel\(R\) Active Management Technology [^\r\n]*\r\n.*<a href="/logon\.htm">Moved Permanently</a>\.'
+        invert_match: false
+    confidence: High
+    comment: "GET / is answered by Go's http.Redirect: '301 Moved Permanently' with Go's '<a href=\"/logon.htm\">Moved Permanently</a>.' body, under an Intel AMT Server header. Genuine AMT answers '303 See Other' (older firmware '302 Found') to /logon.htm with Content-Length: 0 and no body (Nmap service probe database)."
+  - name: amthoneypot-fixed-digest-realm
+    id: 641
+    port: 16992
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /index.htm HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 401 Unauthorized\r\n.*(?i:WWW-Authenticate): Digest realm="Digest:C10000000000000000000000000000"'
+        invert_match: false
+    confidence: High
+    comment: "Protected pages challenge with the hard-coded realm 'Digest:C10000000000000000000000000000': 30 hexadecimal digits after 'Digest:', the same on every installation. A genuine AMT realm carries 32 hexadecimal digits that differ per device (for example Digest:7BA70000000000000000000000000000 in the AMT 8.1.40 capture of Exploit-DB 43385)."
+  - name: amthoneypot-go-header-canonicalisation
+    id: 642
+    port: 16992
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /index.htm HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 401 Unauthorized\r\n(?:[^\r\n]+\r\n)*?Server: Intel\(R\) Active Management Technology [^\r\n]*\r\nWww-Authenticate: Digest [^\r\n]*\r\nDate: [^\r\n]*GMT\r\n'
+        invert_match: false
+    confidence: High
+    comment: "The Digest challenge arrives in Go net/http form: header names sorted and canonicalised ('Www-Authenticate'), followed by a Date header. Genuine AMT sends 'WWW-Authenticate' as the first header, then Content-Type, Server, Content-Length 689 and Connection, and no Date header on the 401 (Exploit-DB 43385)."
+  - name: amthoneypot-hex-nonce
+    id: 643
+    port: 16992
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /hw-sys.htm HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 401 Unauthorized\r\n.*Server: Intel\(R\) Active Management Technology [^\r\n]*\r\n.*(?i:WWW-Authenticate): Digest realm="Digest:[0-9A-F]+", nonce="[0-9a-f]{32}",'
+        invert_match: false
+    confidence: Medium
+    comment: "The Digest nonce is 32 lower-case hexadecimal digits (hex of random bytes). The nonce in the genuine AMT 8.1.40 capture is a 32-character base64-style string (for example /tsfAAYGAADdx+TCLSlXsW7FN7GY/hf7). Medium: one genuine capture only; a hexadecimal nonce from another firmware cannot be ruled out."
+  - name: amthoneypot-logon-servefile-headers
+    id: 644
+    port: 16992
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /logon.htm HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\nAccept-Ranges: bytes\r\nCache-Control: no-cache\r\nContent-Length: \d+\r\n.*Last-Modified: [^\r\n]*\r\nServer: Intel\(R\) Active Management Technology [^\r\n]*\r\n.*<h1>Log On</h1>'
+        invert_match: false
+    confidence: Medium
+    comment: "The logon page is served by Go's http.ServeFile: alphabetically ordered headers with Accept-Ranges, Cache-Control 'no-cache', a fixed Content-Length and the file's Last-Modified time. Genuine AMT pages arrive chunked with 'Cache-Control: no cache' and an Expires date in 1995 (Exploit-DB 43385). Medium: the genuine capture is of /index.htm, not /logon.htm."
+  - name: amthoneypot-range-206
+    id: 645
+    port: 16992
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /logon.htm HTTP/1.1\r\nHost: x\r\nRange: bytes=0-9\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 206 Partial Content\r\n.*Content-Range: bytes 0-9/\d+\r\n.*Server: Intel\(R\) Active Management Technology [^\r\n]*\r\n.*\r\n\r\n<!DOCTYPE'
+        invert_match: false
+    confidence: Medium
+    comment: "Go's file server honours byte ranges, so a Range request for the logon page returns '206 Partial Content' with exactly ten bytes. The embedded AMT web server streams its pages chunked and does not advertise ranges. Medium: range handling on genuine firmware is not documented."
+  - name: amthoneypot-unanswered-authorization
+    id: 646
+    port: 16992
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /logon.htm HTTP/1.1\r\nHost: x\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\n.*Server: Intel\(R\) Active Management Technology [^\r\n]*\r\n.*<h1>Log On</h1>'
+        invert_match: false
+      - input_type: string
+        input: "GET /index.htm HTTP/1.1\r\nHost: x\r\nAuthorization: Negotiate TlRMTVNTUAABAAAAB4IIog\r\nConnection: close\r\n\r"
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+    confidence: Medium
+    comment: "On a connection where the AMT logon page has just been served, a request whose Authorization header has comma-separated parts without an '=' (here an NTLM token offered through Negotiate, a scheme AMT supports on Kerberos-enabled systems) stops the request handler, and the connection closes without any HTTP response. Genuine AMT answers every request on 16992, with a 401 challenge when authentication fails. Medium: genuine AMT's handling of a Negotiate token is not documented in detail."
+  - name: weblogic-honeypot-wsat-page-python-headers
+    id: 650
+    port: 7001
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /wls-wsat/CoordinatorPortType HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\nServer: WebLogic Server [^\r\n]*\r\nDate: [^\r\n]*\r\nContent-Length: \d+\r\nContent-Type: text/html; charset=utf-8\r\n\r\n<html>\r?\n<head><title>\r?\nWeb Services'
+        invert_match: false
+    confidence: High
+    comment: "The wls-wsat endpoint page (CVE-2017-10271 target) comes with Python http.server's header layout: Server first, then Date, Content-Length and Content-Type last, with no X-Powered-By. Genuine WebLogic sends Date first, Server only when explicitly enabled (after Date), and ends with X-Powered-By: Servlet/2.5 JSP/2.1."
+  - name: weblogic-honeypot-wsat-page-any-directory
+    id: 651
+    port: 7001
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /hd-7731/q/CoordinatorPortType11 HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*<h1>Web Services</h1>.*CoordinatorPortType11'
+        invert_match: false
+    confidence: High
+    comment: "Only the last element of the path is used to pick a page, so a wls-wsat endpoint name under any invented directory returns the Web Services page with 200 OK. Genuine WebLogic serves the endpoint only under its /wls-wsat context and answers 404 elsewhere."
+  - name: weblogic-honeypot-error-page-served-as-200
+    id: 652
+    port: 7001
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /wls-wsat/404.html HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*<TITLE>Error 404--Not Found</TITLE>'
+        invert_match: false
+    confidence: High
+    comment: "The honeypot keeps its WebLogic-style error pages (404.html, 403.html) in the same directory as the endpoint pages, so requesting one by name returns the 'Error 404--Not Found' page with status 200 OK. Genuine WebLogic returns that page only with status 404."
+  - name: weblogic-honeypot-canned-soap-fault
+    id: 653
+    port: 7001
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST /wls-wsat/CoordinatorPortType HTTP/1.1\r\nHost: x\r\nContent-Type: text/xml\r\nContent-Length: 4\r\nConnection: close\r\n\r\n<x/>"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 500 [^\r\n]*\r\n.*Content-Type: text/html; charset=utf-8\r\n\r\n<\?xml version=.1\.0. encoding=.UTF-8.\?><S:Envelope [^>]*><S:Body><S:Fault [^>]*><faultcode>S:Server</faultcode><faultstring>The current event is not START_ELEMENT but 2</faultstring>'
+        invert_match: false
+    confidence: High
+    comment: "Any POST without '</void>' in the body gets the same SOAP fault ('The current event is not START_ELEMENT but 2', faultcode S:Server) labelled text/html. Genuine WebLogic parses the message: a body that is not a SOAP envelope gets faultcode S:Client ('Couldn't create SOAP message ...') as text/xml, and paths outside a web service return 404."
+  - name: weblogic-honeypot-10.3.6-with-12c-test-page-script
+    id: 654
+    port: 7001
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /wls-wsat/RegistrationPortTypeRPC HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*Server: WebLogic Server 10\.3\.6\.0\.171017 PSU Patch for BUG26519424 .*<h1>Web Services</h1>.*var testpageUrl = ./wls_utc.;'
+        invert_match: false
+    confidence: Medium
+    comment: "Default Server header claiming WebLogic 10.3.6.0 with the October 2017 PSU, on an endpoint page that ends with the test-client script (testpageUrl /wls_utc) of a later WebLogic release; genuine 10.3.6 wls-wsat pages end at </html>. Medium: the header text is set in the code and can be edited."
+  - name: weblogic-honeypot-internal-app-missing
+    id: 655
+    port: 7001
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /bea_wls_internal/ HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 404 Not Found\r\nServer: WebLogic Server [^\r\n]*\r\nDate: [^\r\n]*\r\n.*<TITLE>Error 404--Not Found</TITLE>'
+        invert_match: false
+    confidence: Medium
+    comment: "A server that claims to be WebLogic in its Server header answers 404 for /bea_wls_internal/, an internal application every WebLogic server deploys (genuine 10.3.6 and 12.2.1.3 both answer 200). Medium: a proxy in front of a genuine server could block the path."
+  - name: micros-honeypot-head-root-directory-listing
+    id: 660
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "HEAD / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\nServer: mCommerceMobileWebServer\r\nDate: [^\r\n]*\r\nContent-type: text/html; charset=(utf|UTF)-8\r\nContent-Length: \d+\s*$'
+        invert_match: false
+    confidence: High
+    comment: "GET / returns the 'Service Host' 404 page, but HEAD is handled by Python's SimpleHTTPRequestHandler, which lists the working directory: 200 OK with the lower-case 'Content-type: text/html; charset=utf-8' header of Python's directory listing under the MICROS Server header. A genuine server answers HEAD with the same status as GET."
+  - name: micros-honeypot-own-source-file-exposed
+    id: 661
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "HEAD /micros_server.py HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\nServer: mCommerceMobileWebServer\r\nDate: [^\r\n]*\r\nContent-type: text/(x-python|plain)\r\nContent-Length: \d+\r\nLast-Modified: '
+        invert_match: false
+    confidence: Medium
+    comment: "HEAD for the honeypot's own program file returns 200 with its size and modification time (text/x-python on Python 3, text/plain on Python 2), because HEAD serves files from the working directory. Medium: depends on the honeypot being started from its own directory, as the README, the upstream Dockerfile and the companion scripts do."
+  - name: micros-honeypot-any-post-empty-octet-stream
+    id: 662
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST / HTTP/1.1\r\nHost: x\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: 3\r\nConnection: close\r\n\r\na=b"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\nServer: mCommerceMobileWebServer\r\nDate: [^\r\n]*\r\nContent-Type: application/octet-stream\r\nContent-Length: 0\s*$'
+        invert_match: false
+    confidence: High
+    comment: "Any POST that is not application/dime, to any path, gets 200 OK with an empty application/octet-stream body, although GET of the same path ('/') is 404. A genuine web service answers a form post to an unknown path with an error status (404, 405 or a SOAP fault)."
+  - name: micros-honeypot-wsdl-on-plain-get
+    id: 663
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /EGateway/EGateway.asmx HTTP/1.1\r\nHost: hd-probe\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\nServer: mCommerceMobileWebServer\r\nDate: [^\r\n]*\r\nContent-Type: text/xml; charset=utf-8\r\nContent-Length: \d+\r\n\r\n<\?xml version="1\.0" encoding="utf-8"\?>\r?\n<definitions .*<service name="EGateway">.*<soap:address location="http://hd-probe:\d+/EGateway/EGateway\.asmx" />'
+        invert_match: false
+    confidence: Medium
+    comment: "A plain GET of the .asmx endpoint (no ?WSDL) returns the WSDL itself as text/xml, with the service address built from the Host header and the listening port, and with Python http.server's header order (Server, then Date, Content-Type, Content-Length). ASP.NET web services return an HTML service help page for a plain GET and the WSDL only for ?WSDL. Medium: compared with documented ASP.NET behaviour, not with a genuine Simphony server."
+  - name: micros-honeypot-service-host-404-python-layout
+    id: 664
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 404 Not Found\r\nServer: mCommerceMobileWebServer\r\nDate: [^\r\n]*\r\nContent-Type: text/html\r\nContent-Length: 382\r\n\r\n<html><head><title>Service Host</title>.*File Not Found.*MICROS Simphony'
+        invert_match: false
+    confidence: Medium
+    comment: "The default 404 page ('Service Host', 'File Not Found', MICROS Simphony link, 382 bytes) for every path except the EGateway endpoint, sent with Python http.server's header order (Server first, then Date). Medium: identifies the default installation; the page and Server header are files and strings an operator can change."
+  - name: log4pot-head-returns-body
+    id: 670
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "HEAD /index.jsp HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.0 200 OK\r\nServer: [^\r\n]*\r\nDate: [^\r\n]*\r\nContent-Type: [^\r\n]*\r\n\r\n.+'
+        invert_match: false
+    confidence: High
+    comment: "A HEAD request is answered like any other: HTTP/1.0 200 OK with only Server, Date and Content-Type headers (in that order, no Content-Length) followed by the full response body. HTTP forbids a body in a HEAD response; Tomcat, Elasticsearch, nginx, Apache and Python's own http.server send headers only. Independent of the response file, content type and server header options."
+  - name: log4pot-any-method-200
+    id: 671
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "LOG4X /manager/html HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.0 200 OK\r\nServer: [^\r\n]*\r\nDate: [^\r\n]*\r\nContent-Type: [^\r\n]*\r\n\r\n.+'
+        invert_match: false
+    confidence: High
+    comment: "An invented HTTP method (LOG4X) on an arbitrary path is accepted with HTTP/1.0 200 OK and the full response body: Log4Pot maps every do_<METHOD> name to one handler. Genuine servers answer an unknown method with 400, 405 or 501 (Python's http.server: 501 Unsupported method). Independent of the response file, content type and server header options."
+  - name: log4pot-default-json-response
+    id: 672
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.0 200 OK\r\n.*Content-Type: text/json\r\n\r\n\{ "status": "ok", "id": "ef8bd454-f292-464c-8646-0669ae713852" \}$'
+        invert_match: false
+    confidence: Medium
+    comment: "The default response file responses/default.json: the same body with a fixed UUID ({ \"status\": \"ok\", \"id\": \"ef8bd454-...\" }) for every request, sent with the non-standard content type text/json and no Content-Length. Medium because both the response file (--response) and content type (--content-type) are options."
+  - name: log4pot-text-json-any-path
+    id: 673
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /log4pot-check-7f3a/does/not/exist.do HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.0 200 OK\r\nServer: [^\r\n]*\r\nDate: [^\r\n]*\r\nContent-Type: text/json\r\n\r\n.+'
+        invert_match: false
+    confidence: Medium
+    comment: "A path that cannot exist returns 200 OK, labelled with Log4Pot's default content type text/json (not a registered media type; JSON is application/json) whatever the body, and without Content-Length. This holds for every response file, including the HTML ones (T-Pot serves the SAP NetWeaver page this way). Medium because the content type is an option."
+  - name: log4pot-elasticsearch-port-not-elasticsearch
+    id: 674
+    port: 9200
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "HEAD / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.0 200 OK\r\nServer: [^\r\n]*\r\nDate: [^\r\n]*\r\nContent-Type: [^\r\n]*\r\n\r\n.+'
+        invert_match: false
+    confidence: High
+    comment: "On the Elasticsearch port 9200 (one of the ports in the upstream example configuration) Log4Pot answers HEAD with HTTP/1.0 and a body. Elasticsearch answers HTTP/1.1 with X-elastic-product, application/json and content-length, and never sends a body to HEAD."
