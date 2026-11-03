@@ -925,18 +925,18 @@ signatures:
         invert_match: false
     confidence: High
     comment: "stats claims memcached 1.4.25, but the version command (supported by every real memcached) returns ERROR."
-  - name: dionaea-memcached-impossible-counters
+  - name: dionaea-memcached-static-rusage
     id: 52
     port: 11211
     proto: tcp
     steps:
       - input_type: string
-        input: "stats\r"
+        input: "stats\r\n"
         output_match_type: regex
-        output: 'STAT curr_items 390\r?\nSTAT total_items 370'
+        output: 'STAT rusage_user 0\.550000\r?\nSTAT rusage_system 0\.253000\r?\n'
         invert_match: false
-    confidence: Medium
-    comment: "Static stats where current items (390) exceed total items ever stored (370), which is impossible on a real server."
+    confidence: High
+    comment: "Dionaea's memcached stats always report the same CPU usage, rusage_user 0.550000 and rusage_system 0.253000, from a fixed table. On real memcached these are the process CPU seconds and grow while the server runs. Dionaea's item and connection counters are randomised at each start, so they are not used here."
   - name: dionaea-http-ascii-no-date
     id: 53
     port: 80
