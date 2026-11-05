@@ -119,7 +119,7 @@ signatures:
         output: bad version 1111
         invert_match: false
     confidence: High
-    comment: "Twisted Conch rejects the malformed version with 'bad version'. Matches OpenCanary 0.9.10 and Cowrie before 3.x; Cowrie 3.1.3 replies 'Invalid SSH identification string.' like OpenSSH (see ids 43-49)."
+    comment: "Twisted Conch rejects the malformed version with 'bad version'. Matches OpenCanary 0.9.10 and Cowrie before 3.x; Cowrie 3.1.3 replies 'Invalid SSH identification string.' like OpenSSH (see ids 43-49). Also matches twisted-honeypots 0a83d90 SSH (2026-11)."
   # WOWHoneypot blocks a scanner after four bad connections, so its signatures run before other web-port signatures
   # wowhoneypot (ids 460-469)
   - name: wowhoneypot-default-page-direct
@@ -264,6 +264,7 @@ signatures:
         output: "500 Syntax error: PASS requires an argument"
         invert_match: false
     confidence: High
+    comment: "Also matches Honeygrove 7dd9291 FTP (Twisted FTP); clean on genuine twistd ftp and vsftpd (2026-11)."
   - name: dionaea-mongodb
     id: 11
     port: 27017
@@ -615,7 +616,7 @@ signatures:
         output: ProductName = Brother HL-L2360
         invert_match: "false"
     confidence: High
-    comment: Qeeqbox PJL honeypot with hardcoded Brother printer responses
+    comment: "Qeeqbox PJL honeypot with hardcoded Brother printer responses. Matched: honeypots 0.66 (current release when added, 2024-12); not matched by honeypots 0.66 retested 2026-11."
   - name: qeeqbox-memcache
     id: 34
     port: 11211
@@ -637,8 +638,7 @@ signatures:
         output: "VALUE test 0 [0-9]+\r\n[0-9]+\r\nEND"
         invert_match: "false"
     confidence: High
-    comment: Qeeqbox Memcache honeypot with hardcoded version and predictable
-      response patterns
+    comment: "Qeeqbox Memcache honeypot with hardcoded version and predictable response patterns. Matched: honeypots 0.66 (current release when added, 2024-12); not matched by honeypots 0.66 retested 2026-11."
   - name: qeeqbox-mssql
     id: 35
     port: 1433
@@ -655,8 +655,7 @@ signatures:
         output: Login Failed
         invert_match: "false"
     confidence: High
-    comment: Qeeqbox MSSQL honeypot with hardcoded version 11.0 and static error
-      response
+    comment: "Qeeqbox MSSQL honeypot with hardcoded version 11.0 and static error response. Matched: honeypots 0.66 (current release when added, 2024-12); not matched by honeypots 0.66 retested 2026-11."
   - name: qeeqbox-elastic
     id: 36
     port: 9200
@@ -681,7 +680,7 @@ signatures:
         output: R&DBackup
         invert_match: "false"
     confidence: High
-    comment: Qeeqbox Elasticsearch honeypot with hardcoded cluster name and node ID
+    comment: "Qeeqbox Elasticsearch honeypot with hardcoded cluster name and node ID. Matched: honeypots 0.66 (current release when added, 2024-12); not matched by honeypots 0.66 retested 2026-11."
   - name: qeeqbox-imap
     id: 37
     port: 143
@@ -721,8 +720,7 @@ signatures:
         output: -ERR POP3 Authentication unsuccessful/Bad username or password
         invert_match: "false"
     confidence: High
-    comment: HoneyGrove POP3 honeypot with distinctive error messages and static
-      response patterns
+    comment: "HoneyGrove POP3 honeypot with distinctive error messages and static response patterns. Matched: honeygrove 7dd9291 v0.6.0 (current when added, 2024-12); not matched by 7dd9291 retested 2026-11."
   - name: honeygrove-modbus
     id: 39
     port: 502
@@ -739,8 +737,7 @@ signatures:
         output: "0002000000050101020001"
         invert_match: "false"
     confidence: High
-    comment: HoneyGrove Modbus honeypot with static slave contexts and fixed
-      response values
+    comment: "HoneyGrove Modbus honeypot with static slave contexts and fixed response values. Matched: honeygrove 7dd9291 v0.6.0 (current when added, 2024-12); not matched by 7dd9291 retested 2026-11."
   - name: honeygrove-s7comm
     id: 40
     port: 102
@@ -757,8 +754,7 @@ signatures:
         output: ml\.machine_memory.*16685318144.*transform\.node.*true
         invert_match: "false"
     confidence: High
-    comment: HoneyGrove S7comm honeypot with hardcoded memory values and static
-      device attributes
+    comment: "HoneyGrove S7comm honeypot with hardcoded memory values and static device attributes. Matched: honeygrove 7dd9291 v0.6.0 (current when added, 2024-12); not matched by 7dd9291 retested 2026-11."
   - name: honeygrove-ssh
     id: 41
     port: 22
@@ -780,7 +776,7 @@ signatures:
         output: File or directory not found
         invert_match: "false"
     confidence: High
-    comment: HoneyGrove SSH honeypot with fake filesystem and specific command behaviors
+    comment: "HoneyGrove SSH honeypot with fake filesystem and specific command behaviors. Matched: honeygrove 7dd9291 v0.6.0 (current when added, 2024-12); not matched by 7dd9291 retested 2026-11."
   - name: wordpot
     id: 42
     port: web-ports
@@ -1625,7 +1621,7 @@ signatures:
         output: '"x1JG6g9PRHy6ClCOO2-C4g"[\s\S]*"host" ?: ?"elk"[\s\S]*"ip" ?: ?"127\.0\.1\.1"[\s\S]*"mac_address" ?: ?"08:01:c7:3F:15:DD"'
         invert_match: false
     confidence: High
-    comment: "Hard-coded /_nodes details in the code: node id x1JG6g9PRHy6ClCOO2-C4g, host 'elk', ip 127.0.1.1, JVM 1.7.0_65, 24 cores in 48 sockets and MAC address 08:01:c7:3F:15:DD. None of these can be changed in the configuration."
+    comment: "Hard-coded /_nodes details in the code: node id x1JG6g9PRHy6ClCOO2-C4g, host 'elk', ip 127.0.1.1, JVM 1.7.0_65, 24 cores in 48 sockets and MAC address 08:01:c7:3F:15:DD. None of these can be changed in the configuration. Also matches HoneyPy 0.7.0 / HoneyPy-nx d30c00b, whose Elasticsearch plugin reuses this reply (2026-11)."
   - name: elastichoney-nodes-anonymous-address
     id: 145
     port: 9200
@@ -1702,7 +1698,7 @@ signatures:
         output: 'ismaster\x00\x01[\s\S]*\x01ok\x00\x00{6}[^\x00]\x3f'
         invert_match: false
     confidence: High
-    comment: "isMaster with client metadata sent twice on one TCP connection. The proxy opens a new connection to the backing mongod for every message it receives, so the second handshake is accepted again (ismaster true, ok 1.0 as a BSON double). Genuine MongoDB (3.4, 3.6, 4.0, 4.2, 4.4, 7.0 and 8.3 tested) refuses it with error 186 ClientMetadataCannotBeMutated ('The client metadata document may only be sent in the first isMaster/hello', ok 0.0). Dionaea also accepts it but encodes ok as an int32. Independent of configuration, of the backing server's version and of where it runs."
+    comment: "isMaster with client metadata sent twice on one TCP connection. The proxy opens a new connection to the backing mongod for every message it receives, so the second handshake is accepted again (ismaster true, ok 1.0 as a BSON double). Genuine MongoDB (3.4, 3.6, 4.0, 4.2, 4.4, 7.0 and 8.3 tested) refuses it with error 186 ClientMetadataCannotBeMutated ('The client metadata document may only be sent in the first isMaster/hello', ok 0.0). Dionaea also accepts it but encodes ok as an int32. Independent of configuration, of the backing server's version and of where it runs. Also matches Glutton 2579767 MongoDB (2026-11)."
   - name: mongodb-honeyproxy-loopback-client-address
     id: 151
     port: 27017
@@ -5237,3 +5233,2383 @@ signatures:
         invert_match: false
     confidence: High
     comment: "On the Elasticsearch port 9200 (one of the ports in the upstream example configuration) Log4Pot answers HEAD with HTTP/1.0 and a body. Elasticsearch answers HTTP/1.1 with X-elastic-product, application/json and content-length, and never sends a body to HEAD."
+  - name: ciscoasa-honeypot-ike-reply-is-new-initiator-request
+    id: 680
+    port: 500
+    proto: udp
+    steps:
+      - input_type: hex
+        input: "f49cbf497d38896f00000000000000002120220800000000000001a8220000600200003401010804f49cbf497d38896f0300000c0100000c800e01000300000802000005030000080300000c000000080400000e00000028020304038514cffe0300000c01000017800e01000300000805000001000000080300000c28000108000e00004ccd364caa0b8618be444518144ba3327bdeef39ee3473482a5d9cd2671877f26a29c7e5eed4b0e87aecb0812b988f1389cd2abb0a1e9236932f78a2c84bd9a0833f843b21b59af4d85abcaaf7e4b6f563c774bea7a438298d46a5dd1fb0be03460bc6db9ddea77ef8bdf7151c84f8131df9c12cebcba076a00a84043016aaec1123438456dbc3b17bda9226cbab3295b3ae8143a7a0009d11cac28bf37215b2186c9a2141a1eccf476fae15bdacd8fd0c055572ace5c4bea9bfaf35786cf817301b4f56eaa63afa8764f132534ad498058a2e56e031ad6585c9dd0cd22bee77bd48d7a1799b14df9e52a4183dfc17570ee410c54a0a4b68198123d88cf6af72000000246007617f7d89049cbd22569b2d4e40b3e10643168024205c8715822f6fdd3f3a"
+        output_match_type: regex
+        output: '(?s)\x00{8}\x21\x20\x22\x08\x00{4}\x00\x00\x01.\x22\x00\x00\x60\x02\x00\x00\x34\x01\x01\x08\x04.{1,8}\x03\x00\x00\x0c\x01\x00\x00\x17'
+        invert_match: false
+    confidence: High
+    comment: "A well-formed IKEv2 IKE_SA_INIT request (initiator SPI f49cbf497d38896f, AES-CBC-256 / HMAC-SHA2-256 / MODP-2048). The honeypot's ike_server answers the first IKE_SA_INIT from a new address and port with ike.init_send(), the library's initiator packet: a fresh random initiator SPI, responder SPI zero, flags 0x08 (Initiator, not Response), 424 bytes, and its own fixed proposal starting with Camellia-CBC (transform 23). A genuine IKEv2 responder (strongSwan; RFC 7296) echoes the initiator SPI, sets the Response flag and answers with a chosen proposal or NO_PROPOSAL_CHOSEN. Applies to every configuration of the honeypot. Matched: ciscoasa_honeypot d6e91f1 (2026-11)."
+  - name: ciscoasa-honeypot-tls-default-selfsigned-cert
+    id: 681
+    port: 443
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "1603010068010000640303000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f00000a002fc02fc030009c003501000031000a00080006001d00170018000b00020100000d000e000c0401050106010403050308040023000000170000ff01000100"
+        output_match_type: regex
+        output: '(?s)^\x16\x03\x03.*\x0c\x0dSan Francisco.*\x0c\x0aMy Company.*\x0c\x0bexample\.com.*\x0c\x0dSan Francisco.*\x0c\x0aMy Company.*\x0c\x0bexample\.com.*\x30\x0b.\x09localhost'
+        invert_match: false
+    confidence: Medium
+    comment: "A TLS 1.2 ClientHello. With --enable_ssl and no -c certificate, gencert.py creates a self-signed RSA certificate whose issuer and subject are both C=US, ST=CA, L=San Francisco, O=My Company, CN=example.com, with a subjectAltName of localhost (the companion LXC script and Docker version generate it the same way at install time). A Cisco ASA presents its own self-signed certificate (named after the device) or a CA-signed certificate for the VPN host name. Medium: the operator can supply any certificate with -c. Matched: ciscoasa_honeypot d6e91f1 (2026-11)."
+  - name: ciscoasa-honeypot-jpeg-served-as-text-html
+    id: 682
+    port: 8443
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /+CSCOU+/login-header-icon.jpg HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\nDate: [^\r\n]*\r\nCache-Control: max-age=0\r\n(?:Set-Cookie: [^\r\n]*\r\n){3}X-Transcend-Version: 1\r\nContent-Length: \d+\r\nContent-Type: text/html\r\n\r\n.{1,8}JFIF'
+        invert_match: false
+    confidence: High
+    comment: "The login page's header image is returned with Content-Type: text/html (send_file labels every file text/html) and the portal's WebVPN cookies, followed by JPEG (JFIF) data. Plain-HTTP mode only (README default, port 8443). Matched: ciscoasa_honeypot d6e91f1 (2026-11)."
+  - name: ciscoasa-honeypot-logon-page-any-directory
+    id: 683
+    port: 8443
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /hd-4411/zz/logon.html HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\nDate: [^\r\n]*\r\nCache-Control: max-age=0\r\n.*X-Transcend-Version: 1\r\n.*<form id="unicorn_form"'
+        invert_match: false
+    confidence: High
+    comment: "Files are looked up by base name only, so the WebVPN logon page is served under any directory (here /hd-4411/zz/logon.html) as well as /+CSCOE+/logon.html. Plain-HTTP mode only (port 8443). Matched: ciscoasa_honeypot d6e91f1 (2026-11)."
+  - name: ciscoasa-honeypot-post-any-path-config-auth-9-0-1
+    id: 684
+    port: 8443
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST /hd-4411 HTTP/1.1\r\nHost: x\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: 3\r\nConnection: close\r\n\r\na=1\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\nDate: [^\r\n]*\r\nContent-Length: \d+\r\nContent-Type: text/html; charset=UTF-8\r\n\r\n<\?xml[^>]*>\s*<config-auth client="vpn" type="complete">\s*<version who="sg">9\.0\(1\)</version>\s*<error id="98" param1="" param2="">VPN Server could not parse request\.</error>'
+        invert_match: false
+    confidence: High
+    comment: "A form POST to a path that does not exist returns 200 with a fixed AnyConnect XML error ('VPN Server could not parse request', version 9.0(1)) labelled text/html. ocserv and generic servers return 404. Plain-HTTP mode only (port 8443). Matched: ciscoasa_honeypot d6e91f1 (2026-11)."
+  - name: ciscoasa-honeypot-anyconnect-init-redirected
+    id: 685
+    port: 8443
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST / HTTP/1.1\r\nHost: x\r\nUser-Agent: AnyConnect Linux_64 4.10.07061\r\nX-Transcend-Version: 1\r\nX-Aggregate-Auth: 1\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: 195\r\nConnection: close\r\n\r\n<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<config-auth client=\"vpn\" type=\"init\"><version who=\"vpn\">v8.10</version><device-id>linux-64</device-id><group-access>https://x/</group-access></config-auth>\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 302 Found\r\nDate: [^\r\n]*\r\nContent-Type: text/html\r\nContent-Length: 0\r\nCache-Control: no-cache\r\nPragma: no-cache\r\nLocation: /\+webvpn\+/index\.html\r\nSet-Cookie: tg=; '
+        invert_match: false
+    confidence: High
+    comment: "The AnyConnect client's first request (an XML config-auth 'init' POSTed to /) is redirected to the clientless login page /+webvpn+/index.html, because every POST to / is. An AnyConnect head-end answers with an XML config-auth auth-request (ocserv: 200 text/xml, 'XML POST enabled' in openconnect), which is how AnyConnect and openconnect clients log in; against the honeypot openconnect cannot authenticate. Plain-HTTP mode only (port 8443). Matched: ciscoasa_honeypot d6e91f1 (2026-11)."
+  - name: ciscoasa-honeypot-root-js-redirect-no-length
+    id: 686
+    port: 8443
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\nDate: [^\r\n]*\r\nContent-Type: text/html\r\nCache-Control: no-cache\r\nPragma: no-cache\r\nSet-Cookie: tg=; [^\r\n]*\r\n(?:Set-Cookie: [^\r\n]*\r\n){5}Set-Cookie: sdesktop=; [^\r\n]*\r\n\r\n<html><script>document\.location\.replace\("/\+CSCOE\+/logon\.html"\)</script></html>\s*$'
+        invert_match: false
+    confidence: Medium
+    comment: "GET / returns the honeypot's fixed portal redirect: Date first, no Server header, seven WebVPN Set-Cookie headers ending with sdesktop, no Content-Length on an HTTP/1.1 response (the body ends when the connection closes; openconnect stops with 'Cannot receive HTTP 1.0 body without closing connection') and the one-line JavaScript redirect to /+CSCOE+/logon.html. Medium: this is the honeypot's default page and could be edited. Plain-HTTP mode only (port 8443). Matched: ciscoasa_honeypot d6e91f1 (2026-11)."
+  - name: ddospot-dns-version-bind-any-class
+    id: 700
+    port: 53
+    proto: udp
+    steps:
+      - input_type: hex
+        input: 1234010000010000000000000776657273696f6e0462696e640000100001
+        output_match_type: hex
+        output: '808000010001000000000776657273696f6e0462696e640000100001c00c0010000100000000'
+        invert_match: false
+    confidence: High
+    comment: "A recursive query (RD set) for version.bind TXT in class IN gets the CHAOS version banner as a class IN answer, with RD cleared and RA set (flags 0x8080, TTL 0). DDoSPot's DNS pot answers the name version.bind itself whatever the class. BIND 9.18 and Unbound 1.17 treat version.bind in class IN as an ordinary name (NXDOMAIN from the root, or a referral) and echo the RD flag. Matched: DDoSPot 49f5152 (2026-11)."
+  - name: ddospot-dns-chaos-no-edns
+    id: 701
+    port: 53
+    proto: udp
+    steps:
+      - input_type: hex
+        input: 1234000000010000000000010776657273696f6e0462696e64000010000300002904d0000000000000
+        output_match_type: hex
+        output: '808000010001000000000776657273696f6e0462696e640000100003c00c0010000300000000'
+        invert_match: false
+    confidence: High
+    comment: "version.bind CH TXT sent with an EDNS(0) OPT record is answered with one TXT record and nothing else: no authority record and no OPT record in the reply (counts 1/0/0). BIND answers with AA set, an NS record for version.bind in the authority section and an OPT record; Unbound answers with an OPT record. DDoSPot builds the reply itself without EDNS support. Matched: DDoSPot 49f5152 (2026-11)."
+  - name: ddospot-dns-default-bind-banner
+    id: 702
+    port: 53
+    proto: udp
+    steps:
+      - input_type: hex
+        input: 1234000000010000000000010776657273696f6e0462696e64000010000300002904d0000000000000
+        output_match_type: hex
+        output: '00010001000000000776657273696f6e0462696e640000100003c00c0010000300000000002726392e382e327263312d5265644861742d392e382e322d302e33372e7263312e656c365f372e32'
+        invert_match: false
+    confidence: Medium
+    comment: "Default DDoSPot banner: version.bind CH TXT answers 9.8.2rc1-RedHat-9.8.2-0.37.rc1.el6_7.2 (bind_version in dnspot.conf) without an authority or OPT record. A genuine BIND 9.8.2 (RHEL/CentOS 6) sends the same text with an NS authority record and EDNS. Configurable, so Medium. Matched: DDoSPot 49f5152 (2026-11)."
+  - name: ddospot-ntp-empty-readvar
+    id: 703
+    port: 123
+    proto: udp
+    steps:
+      - input_type: hex
+        input: 260200010000000000000000
+        output_match_type: hex
+        output: '168200010000000000000000'
+        invert_match: false
+    confidence: High
+    comment: "NTP mode 6 READVAR (version 4, sequence 1) is answered with a bare 12-byte header: version 2 whatever the request, status 0 and a data count of 0, so no system variables at all. ntpd and NTPsec answer READVAR with the request's version, a non-zero system status word and the variable list (version=, stratum=, refid= ...), or not at all when queries are restricted (NTPsec 1.2.2 and chrony 4.3 in the lab do not answer remote mode 6 queries). Matched: DDoSPot 49f5152 (2026-11)."
+  - name: ddospot-ntp-monlist-wrong-code
+    id: 704
+    port: 123
+    proto: udp
+    steps:
+      - input_type: hex
+        input: 170003140000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+        output_match_type: hex
+        output: 'd700032a00060048'
+        invert_match: false
+    confidence: High
+    comment: "NTP mode 7 MON_GETLIST (request code 20) is answered with MON_GETLIST_1 (code 42, 0x2a) monlist packets of six 72-byte entries with the More bit set. ntpd echoes the request code (MON_GETLIST answers carry code 20 and the shorter entry format), and current ntpd, NTPsec and chrony do not answer mode 7 at all. Needs the default peer count (10) or any count above six. Matched: DDoSPot 49f5152 (2026-11)."
+  - name: ddospot-ntp-monlist-default-local-address
+    id: 705
+    port: 123
+    proto: udp
+    steps:
+      - input_type: hex
+        input: 1700032a0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+        output_match_type: hex
+        output: '0a00020f00000000007b0404'
+        invert_match: false
+    confidence: Medium
+    comment: "Every monlist entry DDoSPot returns has the local (destination) address 10.0.2.15, the default local_address in ntpot.conf and the VirtualBox NAT address, followed by port 123, mode 4 and version 4. A genuine monlist reply lists the server's own address. Configurable, so Medium. Matched: DDoSPot 49f5152 (2026-11)."
+  - name: ddospot-ntp-default-client-reply
+    id: 706
+    port: 123
+    proto: udp
+    steps:
+      - input_type: hex
+        input: 1b0006ec0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+        output_match_type: hex
+        output: '640304f30000019600000500b24f99cf'
+        invert_match: false
+    confidence: Medium
+    comment: "NTPv3 client request answered as NTPv4 (version not echoed) with DDoSPot's default server variables: leap indicator 1 (a leap second pending) at all times, stratum 3, poll 4, precision -13, root delay 0x196, root dispersion 0x500 and reference ID 178.79.153.207 (ntpot.conf defaults). NTPsec and chrony echo the client's version and report leap indicator 0 when synchronised (3 when not). Configurable, so Medium. Matched: DDoSPot 49f5152 (2026-11)."
+  - name: ddospot-ssdp-rootdevice-usn
+    id: 707
+    port: 1900
+    proto: udp
+    steps:
+      - input_type: hex
+        input: 4d2d534541524348202a20485454502f312e310d0a484f53543a203233392e3235352e3235352e3235303a313930300d0a4d414e3a2022737364703a646973636f766572220d0a4d583a20310d0a53543a20737364703a616c6c0d0a0d0a
+        output_match_type: regex
+        output: '^HTTP/1\.1 200 OK\r\nCACHE-CONTROL: max-age=\d+\r\nST: upnp:rootdevice\r\nUSN: uuid:[^:\r\n]+\r\n'
+        invert_match: false
+    confidence: High
+    comment: "An ssdp:all M-SEARCH is answered first with ST: upnp:rootdevice and a USN that is the bare device UUID. UPnP and MiniUPnPd (the server DDoSPot imitates) send USN uuid:<device>::upnp:rootdevice for the root device; a bare uuid USN belongs only with ST uuid:<device>. The remaining device replies follow at one-second intervals (MX), so honeydet reads only the first. Matched: DDoSPot 49f5152 (2026-11)."
+  - name: ddospot-ssdp-default-device
+    id: 708
+    port: 1900
+    proto: udp
+    steps:
+      - input_type: hex
+        input: 4d2d534541524348202a20485454502f312e310d0a484f53543a203233392e3235352e3235352e3235303a313930300d0a4d414e3a2022737364703a646973636f766572220d0a4d583a20310d0a53543a20737364703a616c6c0d0a0d0a
+        output_match_type: regex
+        output: 'SERVER: Linux/2\.6\.32-042 UPnP/1\.0 MiniUPnPd/1\.4\r\nLOCATION: http://192\.168\.0\.1:65535/rootDesc\.xml$'
+        invert_match: false
+    confidence: Medium
+    comment: "Default DDoSPot SSDP device (ssdpot.conf): SERVER Linux/2.6.32-042 UPnP/1.0 MiniUPnPd/1.4 and LOCATION http://192.168.0.1:65535/rootDesc.xml, an address that is not the responder's own, as the last header. MiniUPnPd places LOCATION at its own address and, since 1.5, adds OPT, 01-NLS, BOOTID.UPNP.ORG and CONFIGID.UPNP.ORG headers after it. Configurable, so Medium. Matched: DDoSPot 49f5152 (2026-11)."
+  - name: honeypot-ddos-pentbox-access-denied-page
+    id: 710
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^<HEAD>\s*<TITLE>Access denied</TITLE>\s*</HEAD>\s*<H2>Access denied</H2>'
+        invert_match: false
+    confidence: High
+    comment: "An HTTP request is answered, about two seconds later, with PenTBox's hard-coded 'Access denied' page (<HEAD><TITLE>Access denied</TITLE></HEAD><H2>Access denied</H2>, with or without the 'login failed' lines) and no HTTP status line or headers, then the connection closes. This is the page of PenTBox's fast auto configuration (port 80) and of the companion script's default; a genuine web server always starts its reply with an HTTP/1.x status line. Matched: honeypot-ddos f288125 (2026-11)."
+  - name: honeypot-ddos-pentbox-http-no-status-line
+    id: 711
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^(?:[^H]|H[^T]|HT[^T]|HTT[^P])[\x20-\x7e\t\r\n]*$'
+        invert_match: false
+    confidence: Medium
+    comment: "Port 80 answers an HTTP request with plain text that is not an HTTP response (no 'HTTP/' status line): the PenTBox honeypot sends its configured false message whatever the request. Covers operator-chosen messages; Medium because any non-HTTP text service on port 80 would also match. Matched: honeypot-ddos f288125 (2026-11)."
+  - name: honeypot-ddos-pentbox-ssh-default-banner-only
+    id: 712
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "SSH-2.0-OpenSSH_9.2p1 Debian-2\r"
+        output_match_type: regex
+        output: '^SSH-2\.0-OpenSSH_7\.4$'
+        invert_match: false
+    confidence: Medium
+    comment: "Silent until the client sends its identification, then (about two seconds later) the companion script's default message 'SSH-2.0-OpenSSH_7.4' alone, with no line ending and no key exchange, and the connection closes. A genuine SSH server sends its identification first and follows the client's with a binary KEXINIT packet. Medium: the message is configurable. Matched: honeypot-ddos f288125 (2026-11)."
+  - name: honeypot-ddos-pentbox-ssh-port-text-reply
+    id: 713
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "SSH-2.0-OpenSSH_9.2p1 Debian-2\r"
+        output_match_type: regex
+        output: '^(?:[^S]|S[^S]|SS[^H]|SSH[^-])[\x20-\x7e\t\r\n]*$'
+        invert_match: false
+    confidence: Medium
+    comment: "Port 22 answers an SSH client identification with plain text that is not an SSH identification string: the PenTBox honeypot's configured false message (for example 'Access denied'). Covers operator-chosen messages that do not imitate an SSH banner. Matched: honeypot-ddos f288125 (2026-11)."
+  - name: honeypot-ddos-pentbox-telnet-no-negotiation
+    id: 714
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "\r"
+        output_match_type: regex
+        output: '^[\x20-\x7e\t\r\n]+$'
+        invert_match: false
+    confidence: Medium
+    comment: "Port 23 stays silent until the client types, then returns only printable text (default 'login: ') and closes, with no Telnet option negotiation. Genuine telnetd and Telnet honeypots such as OpenCanary open with IAC (0xff) DO/WILL negotiation before any prompt. Medium: a minimal Telnet service without negotiation would also match. Matched: honeypot-ddos f288125 (2026-11)."
+  - name: honeypot-ddos-pentbox-smb-text-reply
+    id: 715
+    port: 445
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "00000045ff534d4272000000001801280000000000000000000000000000fffe00000000002200024e54204c4d20302e31320002534d4220322e3030320002534d4220322e3f3f3f00"
+        output_match_type: regex
+        output: '^[\x20-\x7e\t\r\n]+$'
+        invert_match: false
+    confidence: High
+    comment: "An SMB1 Negotiate Protocol request to port 445 is answered, about two seconds later, with printable text (default 'Access denied') and the connection closes. Genuine SMB servers (Samba, Windows) and SMB honeypots such as Dionaea answer with a binary NetBIOS session message carrying an SMB or SMB2 negotiate response. Matched: honeypot-ddos f288125 (2026-11)."
+  - name: amun-smb-fixed-server-guid
+    id: 720
+    port: 445
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "0000002fff534d4272000000001853c80000000000000000000000000000fffe00000100000c00024e54204c4d20302e313200"
+        output_match_type: hex
+        output: "f0000010002ccbcf9caf55b94ab9e214b6dca51b28"
+        invert_match: false
+    confidence: High
+    comment: "SMB1 negotiate (NT LM 0.12, multiplex ID 1): Amun's SMB module answers with a fixed template and the hard-coded server GUID 2ccbcf9c-af55-b94a-b9e2-14b6dca51b28 (time zone, key length and byte count, then the GUID). A genuine server's GUID is unique per machine; current Samba and Windows refuse an NT LM 0.12-only negotiate or move to SMB2. Matched: Amun 55714de (Python 2) and amun-nx 1c06557 (2026-11)."
+  - name: amun-smb-anonymous-fixed-challenge
+    id: 721
+    port: 445
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "0000002fff534d4272000000001853c80000000000000000000000000000fffe00000000000c00024e54204c4d20302e313200"
+        output_match_type: hex
+        output: "082600d362feb44b2cbc9a57004f0052004b00470052004f0055005000000050004300580050000000"
+        invert_match: false
+    confidence: High
+    comment: "SMB1 negotiate with multiplex ID 0: Amun's anonymous negotiate reply carries the same 8-byte NTLM challenge d362feb44b2cbc9a on every connection, followed by the domain WORKGROUP and the server name PCXP in UTF-16. A genuine server generates a random challenge for every negotiation. Matched: Amun 55714de (Python 2) and amun-nx 1c06557 (2026-11)."
+  - name: amun-dcom-non-dcerpc-reply
+    id: 722
+    port: 135
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "05000b03100000004800000001000000b810b8100000000001000000000001000883afe11f5dc91191a408002b14a0fa03000000045d888aeb1cc9119fe808002b10486002000000"
+        output_match_type: hex
+        output: "00000c0000000000000000000000000000000000010203040000000000000000000000000000000000000000000000000000000000000000000000000000"
+        invert_match: false
+    confidence: High
+    comment: "A standard DCE/RPC bind to the endpoint mapper on 135 is answered by Amun's DCOM module with the canned 62-byte block 00 00 0c 00 ... 01 02 03 04 ... and CRLF, whatever the request. A genuine RPC endpoint mapper (and Dionaea) answers with a DCE/RPC bind_ack beginning 05 00 0c 03. Matched: Amun 55714de (Python 2) and amun-nx 1c06557 (2026-11)."
+  - name: amun-http-apache1329-it-works
+    id: 723
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.0\r\nHost: x\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\nServer: Apache/1\.3\.29 \(Unix\) PHP/4\.3\.4\r\nContent-Length: 181\r\nContent-Language: de\r\n.*<title>It works!</title>.*<br>tim\.bohn@gmx\.net<br>johan83@freenet\.de</body>'
+        invert_match: false
+    confidence: High
+    comment: "GET / on Amun's HTTP module returns a fixed 'It works!' page that lists two e-mail addresses, served as Apache/1.3.29 (Unix) PHP/4.3.4 (2003-2004 releases) with Content-Language: de, an HTTP/1.1 status line for an HTTP/1.0 request and a trailing CRLF after the declared 181-byte body. Matched: Amun 55714de (Python 2) and amun-nx 1c06557 (2026-11)."
+  - name: amun-http-404-with-400-page
+    id: 724
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /hd-amun-probe HTTP/1.0\r\nHost: x\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 404 Not Found\r\nServer: Apache/1\.3\.29 \(Unix\) PHP/4\.3\.4\r\n.*<title>400 Bad Request</title>'
+        invert_match: false
+    confidence: High
+    comment: "Any request the HTTP module does not recognise gets status 404 Not Found with the body of Apache's 400 Bad Request page, under the same Apache/1.3.29 Server header. A genuine Apache sends a 404 page for a missing path and a 400 status for a malformed request. Matched: Amun 55714de (Python 2) and amun-nx 1c06557 (2026-11)."
+  - name: amun-ftp-welcome-500-unknown
+    id: 725
+    port: 21
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "SYST\r"
+        output_match_type: regex
+        output: '^220 Welcome to my FTP Server\r\n500 Unknown Command'
+        invert_match: false
+    confidence: High
+    comment: "Amun's FTP module greets with '220 Welcome to my FTP Server' and answers the standard SYST command (and any other command before USER) with '500 Unknown Command'. Genuine FTP servers answer SYST with 215 (or 530 before login). Matched: Amun 55714de (Python 2) and amun-nx 1c06557 (2026-11)."
+  - name: amun-pop3-port-smtp-greeting
+    id: 726
+    port: 110
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "CAPA\r"
+        output_match_type: regex
+        output: '^220 mailserver$'
+        invert_match: false
+    confidence: High
+    comment: "Port 110 (Amun's POP3 modules for Axigen, SLMail and MDaemon) greets with the SMTP-style '220 mailserver' and closes the connection after CAPA. A POP3 server greeting always starts with +OK (RFC 1939). Matched: Amun 55714de (Python 2) and amun-nx 1c06557 (2026-11)."
+  - name: amun-imap-tagged-greeting
+    id: 727
+    port: 143
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "a1 CAPABILITY\r"
+        output_match_type: regex
+        output: '^a200 Lotus Domino 6\.5\.4 7\.0\.2 IMAP4\r\na001 OK LOGIN completed'
+        invert_match: false
+    confidence: High
+    comment: "Amun's IMAP module (Lotus Domino) greets with the tagged line 'a200 Lotus Domino 6.5.4 7.0.2 IMAP4' instead of an untagged '* OK' greeting (RFC 3501) and answers 'a1 CAPABILITY' with 'a001 OK LOGIN completed', with the wrong tag for the wrong command. Matched: Amun 55714de (Python 2) and amun-nx 1c06557 (2026-11)."
+  - name: amun-smtp-example-banner-help-close
+    id: 728
+    port: 25
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "HELP\r"
+        output_match_type: regex
+        output: '^220 mail\.example\.com SMTP Mailserver$'
+        invert_match: false
+    confidence: High
+    comment: "Amun's SMTP module (IMail) greets with '220 mail.example.com SMTP Mailserver' and answers HELP by closing the connection with a blank line. A genuine MTA names its own host and answers HELP with 214 or 502. Matched: Amun 55714de (Python 2) and amun-nx 1c06557 (2026-11)."
+  - name: amun-telnet-solaris-prompt
+    id: 729
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: string
+        input: ""
+        output_match_type: regex
+        output: '^command unknown\n\nsolaris#$'
+        invert_match: false
+    confidence: High
+    comment: "Port 23 (Amun's vuln-check module, a Solaris telnet emulation) sends no telnet option negotiation or login prompt; any line is answered with 'command unknown', a blank line and the prompt 'solaris#'. A genuine telnet server starts with IAC option negotiation and a login prompt. Matched: Amun 55714de (Python 2) and amun-nx 1c06557 (2026-11)."
+  - name: qeeqbox-ssh-spaced-version-banner
+    id: 730
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^SSH-2\.0-(?:OpenSSH [0-9]\.[0-9]|Serv-U SSH Server 15\.1\.1\.108)(?:\r\n|$)'
+        invert_match: false
+    confidence: High
+    comment: "The SSH server (paramiko) announces 'SSH-2.0-' plus one of 'OpenSSH 7.5', 'OpenSSH 7.3', 'OpenSSH 6.4' or 'Serv-U SSH Server 15.1.1.108', with a space where OpenSSH always writes an underscore and a version without the portable suffix (OpenSSH sends e.g. SSH-2.0-OpenSSH_9.2p1 Debian-2+deb12u3). Chameleon (honeypots 0.34) picks one of the four for every connection, so the banner changes between connections; current honeypots picks one per start. Matched: Chameleon 15df179 (honeypots 0.34) and honeypots 0.66 (2026-11)."
+  - name: qeeqbox-telnet-bare-pc-login
+    id: 731
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^PC login:$'
+        invert_match: false
+    confidence: High
+    comment: "The Telnet service greets with the bare prompt 'PC login: ' and no option negotiation. Genuine telnetd (and network devices) open with IAC DO/WILL negotiation and a host-specific prompt. Matched: Chameleon 15df179 (honeypots 0.34) and honeypots 0.66 (2026-11)."
+  - name: chameleon-ftp-twisted-guest-refused
+    id: 732
+    port: 21
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^220 Twisted [0-9.]+ FTP Server$'
+        invert_match: false
+      - input_type: string
+        input: "USER anonymous\r"
+        output_match_type: regex
+        output: '^331 Guest login ok, type your email address as password\.$'
+        invert_match: false
+      - input_type: string
+        input: "PASS guest@example.com\r"
+        output_match_type: regex
+        output: '^530 Sorry, Authentication failed\.$'
+        invert_match: false
+    confidence: High
+    comment: "Chameleon's FTP service is Twisted's FTP server with the password check replaced: Twisted's own banner (220 Twisted <version> FTP Server), the guest prompt for USER anonymous, and then 530 for every password, including the guest login Twisted offers and the configured credentials. A genuine Twisted FTP server that offers the guest prompt accepts the guest login (230); vsftpd, ProFTPD and Pure-FTPd use different banners. Current honeypots releases send a different banner. Matched: Chameleon 15df179 (honeypots 0.34) (2026-11)."
+  - name: chameleon-smtp-smtpd-auth-accepts-anything
+    id: 733
+    port: 25
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^220 \S+ Python SMTP proxy version 0\.3$'
+        invert_match: false
+      - input_type: string
+        input: "EHLO probe\r"
+        output_match_type: regex
+        output: '^250-\S+ Hello probe\r\n250-8BITMIME\r\n250-AUTH LOGIN PLAIN\r\n250 STARTTLS$'
+        invert_match: false
+      - input_type: string
+        input: "AUTH PLAIN AGNoYW1lbGVvbnByb2JlAHdyb25n\r"
+        output_match_type: regex
+        output: '^235 Authentication successful$'
+        invert_match: false
+    confidence: High
+    comment: "The SMTP service is Python's smtpd module (banner '220 <fqdn> Python SMTP proxy version 0.3') with a fixed EHLO reply advertising AUTH LOGIN PLAIN and STARTTLS, and AUTH PLAIN answers '235 Authentication successful' for any user name and password. Python's own smtpd answers EHLO with SIZE/8BITMIME/HELP and does not implement AUTH; Postfix and Exim refuse wrong credentials with 535. Current honeypots releases use Twisted's ESMTP instead. Matched: Chameleon 15df179 (honeypots 0.34) (2026-11)."
+  - name: qeeqbox-http-back-soon-any-path
+    id: 734
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /chameleon-probe-missing-page HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: "(?s)^HTTP/1\\.1 200 OK\\r\\n.*<title>Login</title>.*<b>We'll back soon\\.\\.</b>"
+        invert_match: false
+    confidence: High
+    comment: "Every path except /login.html returns 200 OK with the same page: title 'Login' and the text \"We'll back soon..\" (the HTTPS service serves the same page). A genuine site, including one showing a maintenance page, answers a missing path with 404 or a redirect. Matched: Chameleon 15df179 (honeypots 0.34) (2026-11); not matched by honeypots 0.66 (2026-11)."
+  - name: qeeqbox-mysql-static-greeting
+    id: 735
+    port: 3306
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: hex
+        output: "0a352e372e30300036000000313233343536373800fff7"
+        invert_match: false
+    confidence: High
+    comment: "The MySQL handshake is a constant: protocol 10, server version '5.7.00', connection id 54 on every connection and the authentication salt '12345678' + '123456789012' in plain ASCII digits. Genuine MySQL and MariaDB send a real version (e.g. 5.7.44, 8.4.x, 10.11.x-MariaDB), an incrementing connection id and a random 20-byte salt. Matched: Chameleon 15df179 (honeypots 0.34) and honeypots 0.66 (2026-11)."
+  - name: qeeqbox-postgres-startup-answered-n
+    id: 736
+    port: 5432
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "00000029000300007573657200706f73746772657300646174616261736500706f7374677265730000"
+        output_match_type: regex
+        output: '^N$'
+        invert_match: false
+      - input_type: hex
+        input: "00000029000300007573657200706f73746772657300646174616261736500706f7374677265730000"
+        output_match_type: hex
+        output: "520000000800000003"
+        invert_match: false
+    confidence: High
+    comment: "A PostgreSQL StartupMessage (protocol 3.0, user postgres) sent without an SSL request is answered with the single byte 'N', the reply PostgreSQL reserves for an SSLRequest; a second StartupMessage then gets AuthenticationCleartextPassword (R, code 3). The service answers its first packet with 'N' whatever it is. Genuine PostgreSQL answers a StartupMessage with an authentication request (SCRAM-SHA-256 code 10 or MD5 code 5 by default) or an error. Matched: Chameleon 15df179 (honeypots 0.34) and honeypots 0.66 (2026-11)."
+  - name: qeeqbox-vnc-fixed-challenge
+    id: 737
+    port: 5900
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^RFB 003\.008$'
+        invert_match: false
+      - input_type: hex
+        input: "524642203030332e3030380a"
+        output_match_type: hex
+        output: "0102"
+        invert_match: false
+      - input_type: hex
+        input: "02"
+        output_match_type: hex
+        output: "00000000901234567890123456789012"
+        invert_match: false
+    confidence: High
+    comment: "After the RFB 3.8 handshake and a choice of VNC authentication, the 16-byte challenge is always 00000000 90123456 78901234 56789012. VNC authentication relies on a random challenge per connection; genuine servers (TigerVNC, RealVNC, x11vnc) never repeat it. Matched: Chameleon 15df179 (honeypots 0.34) and honeypots 0.66 (2026-11)."
+  - name: qeeqbox-ldap-searchdone-for-bind
+    id: 738
+    port: 389
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "300c020105600702010304008000"
+        output_match_type: hex
+        output: "300c02010165070a013204000400"
+        invert_match: false
+    confidence: High
+    comment: "An anonymous LDAPv3 simple bind with message id 5 is answered with a fixed packet: message id 1 (not the request's 5), a SearchResultDone (application tag 5) instead of a BindResponse, and result code 50 (insufficientAccessRights). Genuine LDAP servers echo the message id and answer a bind with a BindResponse (OpenLDAP: success for anonymous binds by default). Matched: Chameleon 15df179 (honeypots 0.34) and honeypots 0.66 (2026-11)."
+  - name: qeeqbox-redis-auth-two-args-invalid-password
+    id: 739
+    port: 6379
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "2a330d0a24340d0a415554480d0a24340d0a757365720d0a24340d0a706173730d0a"
+        output_match_type: regex
+        output: '^-ERR invalid password$'
+        invert_match: false
+    confidence: High
+    comment: "AUTH with a user name and a password (the Redis 6 ACL form) is answered '-ERR invalid password', the message of Redis 5 and earlier for a wrong single password, and the connection is closed. Redis 6 and later answer the two-argument form with -WRONGPASS; Redis 5 and earlier reject it as a wrong number of arguments; an open Redis keeps the connection for further commands. Matched: Chameleon 15df179 (honeypots 0.34) and honeypots 0.66 (2026-11)."
+  - name: dshp-default-port-silent-close
+    id: 740
+    port: 8888
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+    confidence: Medium
+    comment: "DSHP's default port 8888 accepts the connection and closes it at once without sending a byte (the default reply is empty). Services found on 8888 (Jupyter, HTTP proxies and alternative web servers) keep the connection open and wait for a request. A TCP-wrapped service or a port forwarder with no backend also closes at once, hence Medium. Matched: dshp 238aad4 (Docker Hub image) and dshp-ng 42cf488 (2026-11)."
+  - name: dshp-mysql-port-silent-close
+    id: 741
+    port: 3306
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+    confidence: Medium
+    comment: "DSHP mapped to the MySQL port (the README's own example, -p 3306:8888) accepts and closes without data. MySQL and MariaDB always send a greeting packet, or an error packet when the host is not allowed or the server is busy, before closing. TCP wrappers or a forwarder with no backend give the same silent close, hence Medium. Matched: dshp 238aad4 (Docker Hub image) and dshp-ng 42cf488 (2026-11)."
+  - name: dshp-ftp-banner-then-close
+    id: 742
+    port: 21
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^220[ -]'
+        invert_match: false
+      - input_type: string
+        input: "USER anonymous\r"
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+    confidence: Medium
+    comment: "DSHP configured with an FTP greeting as its reply sends the 220 banner and closes the connection, so USER gets no answer at all. A genuine FTP server answers USER (331 or 530) on the same connection. Medium: it detects DSHP only when it is configured with an FTP banner on port 21. Matched: dshp 238aad4 (Docker Hub image) and dshp-ng 42cf488 (2026-11)."
+  - name: dshp-smtp-banner-then-close
+    id: 743
+    port: 25
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^220[ -]'
+        invert_match: false
+      - input_type: string
+        input: "EHLO example.com\r"
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+    confidence: Medium
+    comment: "DSHP configured with an SMTP greeting sends the 220 banner and closes, so EHLO gets no answer. A genuine mail server answers EHLO with 250 (or rejects it with a 4xx/5xx code) on the same connection. Medium: it applies only to DSHP configured with an SMTP banner on port 25. Matched: dshp 238aad4 (Docker Hub image) and dshp-ng 42cf488 (2026-11)."
+  - name: dshp-ssh-banner-then-close
+    id: 744
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^SSH-[12]\.'
+        invert_match: false
+      - input_type: string
+        input: "SSH-2.0-OpenSSH_9.2p1\r"
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+    confidence: Medium
+    comment: "DSHP configured with an SSH identification string sends it and closes, so the client's own identification gets an empty, closed connection. A genuine SSH server keeps the connection open for key exchange (it sends its KEXINIT, or waits for the client's). Applies when honeydet probes port 22 without SSH credentials. Medium: only DSHP configured with an SSH banner. Matched: dshp-ng 42cf488 (2026-11)."
+  - name: dshp-ftp-port-silent-close
+    id: 745
+    port: 21
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+    confidence: Medium
+    comment: "DSHP with its default empty reply on the FTP port accepts and closes without a greeting. FTP servers always send a 220 greeting (or 421 when busy) first. TCP wrappers or a forwarder with no backend give the same silent close, hence Medium. Matched: dshp 238aad4 (Docker Hub image) and dshp-ng 42cf488 (2026-11)."
+  - name: dshp-smtp-port-silent-close
+    id: 746
+    port: 25
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+    confidence: Medium
+    comment: "DSHP with its default empty reply on the SMTP port accepts and closes without a greeting. Mail servers always send a 220 greeting (or a 421/554 refusal) first. TCP wrappers or a forwarder with no backend give the same silent close, hence Medium. Matched: dshp 238aad4 (Docker Hub image) and dshp-ng 42cf488 (2026-11)."
+  - name: beelzebub-ssh-banner-without-version
+    id: 750
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^SSH-2\.0-OpenSSH$'
+        invert_match: false
+    confidence: Medium
+    comment: "Beelzebub's example SSH services set serverVersion: OpenSSH, so the identification string is 'SSH-2.0-OpenSSH' with no version. OpenSSH always sends its version (SSH-2.0-OpenSSH_9.2p1 Debian-2+deb12u10 and similar). Medium because serverVersion is configurable. Matched: Beelzebub v3.10.0 (2026-11)."
+  - name: beelzebub-go-ssh-kexinit-claiming-openssh
+    id: 751
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^SSH-2\.0-OpenSSH'
+        invert_match: false
+      - input_type: string
+        input: "SSH-2.0-OpenSSH_9.2p1\r"
+        output_match_type: regex
+        output: '(?s)rsa-sha2-256,rsa-sha2-512,ssh-rsa.{4}aes128-gcm@openssh\.com,aes256-gcm@openssh\.com,chacha20-poly1305@openssh\.com,aes128-ctr,aes192-ctr,aes256-ctr.{4}aes128-gcm@openssh\.com'
+        invert_match: false
+    confidence: High
+    comment: "A server that announces itself as OpenSSH but whose KEXINIT is that of Go's golang.org/x/crypto/ssh (via gliderlabs/ssh): a single RSA host key offered as rsa-sha2-256,rsa-sha2-512,ssh-rsa and Go's cipher order beginning aes128-gcm@openssh.com,aes256-gcm@openssh.com,chacha20-poly1305@openssh.com. OpenSSH puts chacha20-poly1305 first, offers ed25519 and ECDSA host keys and zlib@openssh.com. Holds whatever serverVersion is set to, as long as it claims OpenSSH. Matched: Beelzebub v3.10.0 (2026-11)."
+  - name: beelzebub-telnet-login-without-negotiation
+    id: 752
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^login:$'
+        invert_match: false
+      - input_type: string
+        input: "root\r"
+        output_match_type: hex
+        output: 'fffb0150617373776f72643a'
+        invert_match: false
+    confidence: High
+    comment: "Beelzebub's TELNET service opens with a bare CRLF 'login: ' and no option negotiation, then answers a user name with IAC WILL ECHO and 'Password: '. Both are fixed in the code. telnetd (inetutils, netkit, BusyBox) starts with IAC DO/WILL negotiation (terminal type, speed, echo) before any prompt. Matched: Beelzebub v3.10.0 (2026-11)."
+  - name: beelzebub-go-http-claiming-apache
+    id: 753
+    port: web-ports
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] \d{3} [^\r\n]*\r\n(?:[^\r\n]+\r\n)*Server: Apache[^\r\n]*\r\n(?:[^\r\n]+\r\n)*Date: [^\r\n]+\r\n(?:Content-Length: \d+\r\n)?(?:Content-Type: [^\r\n]*\r\n)?Connection: close\r\n'
+        invert_match: false
+    confidence: High
+    comment: "Beelzebub's HTTP services are Go net/http: configured headers are written in sorted order and Go adds Date (and Content-Length) after them, so a response that claims 'Server: Apache...' carries Date after Server, followed only by the headers Go adds itself (Content-Length, a sniffed Content-Type, then Connection: close). Apache httpd always sends Date first and Server second; Twisted-based honeypots that claim Apache (OpenCanary) send Connection before Server. Holds for any configured Apache Server header (WordPress example on 80, 401 example on 8080, directory maze on 8888). Matched: Beelzebub v3.10.0 (2026-11)."
+  - name: beelzebub-mysql-text-banner
+    id: 754
+    port: 3306
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^[0-9]+\.[0-9]+\.[0-9]+[0-9A-Za-z.+_-]*$'
+        invert_match: false
+    confidence: High
+    comment: "Beelzebub's MySQL example is a plain TCP service whose banner is the version text followed by a newline ('8.0.29' and LF). MySQL and MariaDB greet with a binary handshake packet (3-byte length, sequence number, protocol version 10, version string, connection id, salt), never with bare text. Matched: Beelzebub v3.10.0 (2026-11)."
+  - name: beelzebub-redis-short-info
+    id: 755
+    port: 6379
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "INFO\r"
+        output_match_type: regex
+        output: '(?s)^\$\d+\r\n# Server\r\nredis_version:[^\r\n]*\r\nos:'
+        invert_match: false
+    confidence: Medium
+    comment: "The Redis example answers INFO with a seven-line Server section in which os: follows redis_version directly (uptime 0). Redis puts redis_git_sha1, redis_git_dirty, redis_build_id and redis_mode between redis_version and os, and INFO returns all sections. Medium because the reply comes from the example configuration. Matched: Beelzebub v3.10.0 (2026-11)."
+  - name: beelzebub-memcached-short-stats
+    id: 756
+    port: 11211
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "stats\r"
+        output_match_type: regex
+        output: '(?s)^STAT pid \d+\r\nSTAT uptime \d+\r\nSTAT time \d+\r\nSTAT version [^\r\n]+\r\nSTAT curr_connections '
+        invert_match: false
+    confidence: Medium
+    comment: "The Memcached example answers stats with nine fixed lines (pid 12345, a 2023 timestamp) in which curr_connections follows version. memcached sends libevent, pointer_size, rusage and many more fields after version. Medium because the reply comes from the example configuration. Matched: Beelzebub v3.10.0 (2026-11)."
+  - name: beelzebub-ldap-fixed-message-id
+    id: 757
+    port: 389
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "300c020105600702010304008000"
+        output_match_type: regex
+        output: '(?s)^0.{1,5}\x02\x01\x01a'
+        invert_match: false
+    confidence: High
+    comment: "An anonymous simple bind with message ID 5 is answered with a BindResponse carrying message ID 1. The LDAP example is a static TCP handler that replays the same bytes whatever the request; RFC 4511 requires the response to carry the request's message ID, as OpenLDAP and Active Directory do. Matched: Beelzebub v3.10.0 (2026-11)."
+  - name: beelzebub-rdp-unrequested-protocol
+    id: 758
+    port: 3389
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "030000130ee000000000000100080000000000"
+        output_match_type: regex
+        output: '(?s)^\x03\x00\x00\x13\x0e.{6}\x02\x01\x08\x00\x02\x00\x00\x00$'
+        invert_match: false
+    confidence: High
+    comment: "An X.224 Connection Request that asks only for standard RDP security (requestedProtocols 0) is confirmed with an RDP_NEG_RSP (flags 0x01) selecting CredSSP (selectedProtocol 2). The RDP example replays a fixed confirm, byte for byte xrdp's except for the protocol; MS-RDPBCGR servers select one of the requested protocols or send RDP_NEG_FAILURE, as xrdp (which selects 0 here) and Windows do. OpenCanary's RDP module also selects CredSSP unconditionally but with flags 0x09, so it does not match. Matched: Beelzebub v3.10.0 (2026-11)."
+  - name: beelzebub-smb2-negotiate-without-netbios
+    id: 759
+    port: 445
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "0000006cfe534d424000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002400040001000000000000001111111111111111111111111111111100000000000000000202100200030203"
+        output_match_type: regex
+        output: '(?s)^.SMB@\x00{9}$'
+        invert_match: false
+    confidence: High
+    comment: "An SMB2 NEGOTIATE request (dialects 2.0.2 to 3.0.2, with the direct-TCP 4-byte header) is answered with 14 bytes: an SMB2 protocol id and header length and nothing else, without the 4-byte length header that every SMB message over TCP 445 carries and without a NEGOTIATE response body. Samba and Windows answer with a full framed negotiate response. Matched: Beelzebub v3.10.0 (2026-11)."
+  - name: heralding-ftp-replies
+    id: 760
+    port: 21
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^220 '
+        invert_match: false
+      - input_type: string
+        input: "USER anonymous\r"
+        output_match_type: regex
+        output: '^331 Now specify the Password\.$'
+        invert_match: false
+      - input_type: string
+        input: "PASS honeydet@example.com\r"
+        output_match_type: regex
+        output: '^530 Authentication Failed\.$'
+        invert_match: false
+    confidence: High
+    comment: "Heralding FTP: whatever the configured banner (default 'Microsoft FTP Server'), USER is answered '331 Now specify the Password.' and every password '530 Authentication Failed.' (capitalised as shown). vsFTPd says '331 Please specify the password.' and '530 Login incorrect.', Twisted FTP '331 Guest login ok'. Matched: Heralding ac12724 (1.0.7) (2026-11)."
+  - name: heralding-ssh-asyncssh-behind-openssh-banner
+    id: 761
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^SSH-2\.0-OpenSSH_'
+        invert_match: false
+      - input_type: string
+        input: "SSH-2.0-OpenSSH_9.2p1\r"
+        output_match_type: regex
+        output: '(?s)ecdh-sha2-1\.3\.132\.0\.10.*ssh-rsa-sha224@ssh\.com'
+        invert_match: false
+    confidence: High
+    comment: "Heralding SSH is asyncssh behind an OpenSSH banner (default SSH-2.0-OpenSSH_6.6.1p1 Ubuntu-2ubuntu2.8). Its key exchange offer lists asyncssh-only algorithms that no OpenSSH release offers, such as ecdh-sha2-1.3.132.0.10 and the ssh.com names ssh-rsa-sha224@ssh.com, and only an RSA host key. Matched: Heralding ac12724 (1.0.7) (2026-11)."
+  - name: heralding-telnet-negotiation
+    id: 762
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: hex
+        output: 'fffb01fffb03fffc27fffe01fffd03fffe1ffffd18fffe22fffd27557365726e616d653a'
+        invert_match: false
+    confidence: High
+    comment: "Heralding Telnet (its bundled telnetsrvlib) opens with WILL ECHO, WILL SGA, WONT NEW-ENVIRON, DONT ECHO, DO SGA, DONT NAWS, DO TTYPE, DONT LINEMODE, DO NEW-ENVIRON and then 'Username: ' in the same burst, without waiting for answers. Linux telnetd negotiates terminal type, speed and environment first and prompts 'login:'. Matched: Heralding ac12724 (1.0.7) (2026-11)."
+  - name: heralding-smtp-ehlo
+    id: 763
+    port: 25
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^220 '
+        invert_match: false
+      - input_type: string
+        input: "EHLO probe.example\r"
+        output_match_type: regex
+        output: '(?s)^250-[^\r\n]* Hello probe\.example\r\n250-AUTH PLAIN LOGIN CRAM-MD5\r\n250 EHLO$'
+        invert_match: false
+    confidence: High
+    comment: "Heralding SMTP (aiosmtpd with its own EHLO handler) answers EHLO with exactly three lines: '<banner> Hello <name>', 'AUTH PLAIN LOGIN CRAM-MD5' and a literal '250 EHLO'. Real servers end the list with an extension such as CHUNKING, 8BITMIME or HELP, and advertise SIZE, PIPELINING and STARTTLS. Matched: Heralding ac12724 (1.0.7) (2026-11)."
+  - name: heralding-http-basic-auth
+    id: 764
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nAuthorization: Basic aG9uZXlkZXQ6aG9uZXlkZXQ=\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.0 401 Unauthorized\r\nServer: BaseHTTP/[0-9.]+ Python/[0-9.]+\r\n.*WWW-Authenticate: Basic realm=""\r\n.*\r\n\r\nBasic aG9uZXlkZXQ6aG9uZXlkZXQ=not authenticated$'
+        invert_match: false
+    confidence: High
+    comment: "Heralding HTTP answers every request with 'HTTP/1.0 401 Unauthorized' from Python's BaseHTTP server, an empty Basic realm, and, when credentials are sent, a body made of the Authorization header value followed by 'not authenticated'. Web servers with Basic authentication name a realm and do not echo the credentials. Matched: Heralding ac12724 (1.0.7) (2026-11)."
+  - name: heralding-pop3-bare-lf
+    id: 765
+    port: 110
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^\+OK'
+        invert_match: false
+      - input_type: string
+        input: "USER honeydet\r\nQUIT\r"
+        output_match_type: regex
+        output: '^\+OK User accepted\n\+OK Logging out$'
+        invert_match: false
+    confidence: High
+    comment: "Heralding POP3 ends its replies with a bare line feed instead of the CRLF that RFC 1939 requires, and accepts any user name ('+OK User accepted'). Dovecot, Courier and Exchange use CRLF and either refuse plain-text USER before TLS or say '+OK' without that text. Matched: Heralding ac12724 (1.0.7) (2026-11)."
+  - name: heralding-imap-capability
+    id: 766
+    port: 143
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^\* OK'
+        invert_match: false
+      - input_type: string
+        input: "a1 CAPABILITY\r"
+        output_match_type: regex
+        output: '^\* CAPABILITY IMAP4rev1 AUTH=PLAIN\r\na1 OK CAPABILITY completed$'
+        invert_match: false
+    confidence: High
+    comment: "Heralding IMAP lists a single capability, AUTH=PLAIN, without STARTTLS, LITERAL+, ID or IDLE, and answers 'OK CAPABILITY completed'. Dovecot, Courier, Cyrus and Exchange advertise STARTTLS and many more capabilities and use their own completion texts. Matched: Heralding ac12724 (1.0.7) (2026-11)."
+  - name: heralding-socks5-auth-reply-version
+    id: 767
+    port: 1080
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "050102"
+        output_match_type: hex
+        output: '0502'
+        invert_match: false
+      - input_type: hex
+        input: "0108686f6e657964657408686f6e6579646574"
+        output_match_type: hex
+        output: '02ff'
+        invert_match: false
+    confidence: High
+    comment: "Heralding SOCKS5 asks for username/password authentication and then answers the RFC 1929 sub-negotiation with version byte 0x02 and status 0xFF. RFC 1929 replies start with version 0x01 (Dante answers 01 01 to a wrong password). Matched: Heralding ac12724 (1.0.7) (2026-11)."
+  - name: heralding-postgresql-startup-n
+    id: 768
+    port: 5432
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "00000029000300007573657200706f73746772657300646174616261736500706f7374677265730000"
+        output_match_type: regex
+        output: '^N$'
+        invert_match: false
+      - input_type: hex
+        input: "00000029000300007573657200706f73746772657300646174616261736500706f7374677265730000"
+        output_match_type: hex
+        output: '520000000800000003'
+        invert_match: false
+      - input_type: hex
+        input: "700000000d686f6e657964657400"
+        output_match_type: regex
+        output: '(?s)^E.*SFATAL\x00C28P01\x00Mpassword authentication failed for user "postgres"\x00Fauth\.c\x00L288\x00Rauth_failed\x00\x00$'
+        invert_match: false
+    confidence: High
+    comment: "Heralding PostgreSQL answers whatever the client sends first with a single 'N' (the reply to an SSL request), even an ordinary startup message; it then asks for a clear-text password and refuses it with a fixed error that names auth.c line 288 and has no 'V' (non-localised severity) field. PostgreSQL answers a startup message directly with an authentication request ('R') or an error, and its errors carry a V field and the line numbers of the running release. Chameleon also answers 'N' first but closes the connection after the password. Matched: Heralding ac12724 (1.0.7) (2026-11)."
+  - name: heralding-mysql-greeting
+    id: 769
+    port: 3306
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: hex
+        output: '0a352e372e313600e1100000'
+        invert_match: false
+    confidence: High
+    comment: "Heralding MySQL greets every client as server version 5.7.16 with the same connection (thread) id, 4321, on every connection. MySQL and MariaDB number connections from 1 upwards and change the id on every connection. Matched: Heralding ac12724 (1.0.7) (2026-11)."
+  - name: honeycomb-http-python-error-page-product-server
+    id: 770
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /hc-probe-404-a7f3 HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.0 404 File not found\r\nServer: (?:Apache 2|nginx)\r\n.*<h1>Error response</h1>.*Error code explanation: 404 [=-] Nothing matches the given URI\.'
+        invert_match: false
+    confidence: High
+    comment: "Honeycomb's HTTP plugins (drupal and xerox on port 80) are Python SimpleHTTPRequestHandler servers with the Server header replaced by a product name ('Apache 2', 'nginx'). A missing page gets Python's own HTTP/1.0 'File not found' error page under that header. Genuine Apache and nginx send their own 404 pages over HTTP/1.1; a plain Python server announces SimpleHTTP or BaseHTTP. Matched: Honeycomb 33ea91b with plugins 114a3d5 (2026-11)."
+  - name: honeycomb-drupal-python-directory-listing
+    id: 771
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /core/ HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.0 200 OK\r\nServer: Apache 2\r\n.*<title>Directory listing for /core/</title>'
+        invert_match: false
+    confidence: High
+    comment: "The drupal plugin serves a saved Drupal 8 page from a directory tree; /core/ returns Python's 'Directory listing for /core/' page under 'Server: Apache 2'. A genuine Drupal site on Apache denies directory requests, and Apache's own listing is titled 'Index of'. Matched: Honeycomb 33ea91b with plugins 114a3d5 (2026-11)."
+  - name: honeycomb-xerox-httrack-index
+    id: 772
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.0 200 OK\r\nServer: nginx\r\n.*<title>Local index - HTTrack Website Copier</title>'
+        invert_match: false
+    confidence: High
+    comment: "The xerox plugin (Xerox WorkCentre 6605DN) serves a website mirror made with HTTrack, and its home page is HTTrack's own 'Local index - HTTrack Website Copier' page, under 'Server: nginx'. A printer's embedded web server shows its status page. Matched: Honeycomb 33ea91b with plugins 114a3d5 (2026-11)."
+  - name: honeycomb-intel-amt-plugin-config-exposed
+    id: 773
+    port: 16992
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /config.json HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.0 200 OK\r\nServer: Intel\(R\) Active Management Technology [^\r\n]*\r\n.*"name": "intel_amt_auth"'
+        invert_match: false
+    confidence: High
+    comment: "The intel_amt plugin serves files from its own plugin directory, so /config.json returns the Honeycomb plugin definition (event types intel_amt_auth and intel_amt_bypass), and the plugin's Python source is readable the same way. Genuine Intel AMT firmware has no such files. Matched: Honeycomb 33ea91b with plugins 114a3d5 (2026-11)."
+  - name: honeycomb-intel-amt-static-digest-nonce
+    id: 774
+    port: 16992
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /index.htm HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.0 401 Unauthorized\r\nServer: Intel\(R\) Active Management Technology [^\r\n]*\r\n.*(?i:WWW-Authenticate): Digest realm="Intel\(R\) AMT \(ID:FE2DAD21-AA72-E211-9722-9134FDA321A2\)", nonce="5911b8f9de20f6f1e7c71309a8af03c2", qop="auth"'
+        invert_match: false
+    confidence: High
+    comment: "Every intel_amt plugin answers the Digest challenge with the same realm (a fixed system ID) and the same nonce. Genuine AMT puts the machine's own ID in the realm and issues a fresh nonce for each challenge. Matched: Honeycomb 33ea91b with plugins 114a3d5 (2026-11)."
+  - name: honeycomb-pjl-fsquery-phantom-file
+    id: 775
+    port: 9100
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "@PJL FSQUERY NAME=\"0:/hcprobe/nonexistent-a7f3.dat\"\r"
+        output_match_type: regex
+        output: '^@PJL FSQUERY NAME="0:/hcprobe/nonexistent-a7f3\.dat"\r? TYPE=FILE SIZE=4096$'
+        invert_match: false
+    confidence: High
+    comment: "The hp_officejet and xerox plugins answer every PJL FSQUERY by echoing the query and claiming a 4096-byte file, so a random path that cannot exist is reported as present. A genuine PJL printer answers FILEERROR for a missing file (HP PJL Technical Reference). Matched: Honeycomb 33ea91b with plugins 114a3d5 (2026-11)."
+  - name: honeycomb-libssh-banner-paramiko-kexinit
+    id: 776
+    port: 2222
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^SSH-2\.0-libssh[-_]'
+        invert_match: false
+      - input_type: string
+        input: "SSH-2.0-OpenSSH_9.2p1\r"
+        output_match_type: regex
+        output: '(?s)\x00\x00\x00.ecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521,(?:diffie-hellman-group-exchange-sha256,diffie-hellman-group-exchange-sha1,)?diffie-hellman-group14-sha1,diffie-hellman-group1-sha1\x00\x00\x00\x07ssh-rsa\x00'
+        invert_match: false
+    confidence: High
+    comment: "The libssh plugin (CVE-2018-10933) is built on paramiko: it announces SSH-2.0-libssh_0.7.4 but sends paramiko 2.4's key-exchange list (three NIST ECDH curves, group exchange only when a moduli file is present, group14 and group1, ssh-rsa host key only). The list begins with ecdh-sha2-nistp256; genuine libssh servers put curve25519 first (0.7.4: curve25519-sha256@libssh.org, ecdh-sha2-nistp256, group14, group1; 0.8.1 in the lab: curve25519-sha256 and the same NIST, group14 and group1 entries). Matched: Honeycomb 33ea91b with plugins 114a3d5 (2026-11)."
+  - name: honeycomb-mirai-telnet-any-login
+    id: 777
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: hex
+        output: "fffb01"
+        invert_match: false
+      - input_type: string
+        input: "hcprobe\r"
+        output_match_type: regex
+        output: 'Username: hcprobe'
+        invert_match: false
+      - input_type: string
+        input: "hc-wrong-a7f3\r"
+        output_match_type: regex
+        output: '(?m)^welcome\r?$'
+        invert_match: false
+      - input_type: string
+        input: "hcprobecmd\r"
+        output_match_type: regex
+        output: "Unknown command 'HCPROBECMD'"
+        invert_match: false
+    confidence: High
+    comment: "The mirai_worm_monitor plugin (telnetsrvlib, a BusyBox-style shell) accepts any user name and password, greets with 'welcome' and a bare '>' prompt, and answers an unknown command with \"Unknown command '<COMMAND IN CAPITALS>'\". BusyBox telnetd refuses wrong passwords and reports '<command>: not found'. Matched: Honeycomb 33ea91b with plugins 114a3d5 (2026-11)."
+  - name: honeycomb-banner-default-acme
+    id: 778
+    port: 2323
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^Connected to ACME Service$'
+        invert_match: false
+    confidence: Medium
+    comment: "The banner plugin sends its default banner 'Connected to ACME Service' (no line ending) and nothing else. The banner text and the port are options (the port has no default; 2323 in the companion script), hence Medium. Matched: Honeycomb 33ea91b with plugins 114a3d5 (2026-11)."
+  - name: honeycomb-simple-http-python-501-nginx
+    id: 779
+    port: 8888
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST / HTTP/1.1\r\nHost: x\r\nContent-Length: 0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.0 501 Unsupported method \(''POST''\)\r\nServer: nginx\r\n.*<h1>Error response</h1>'
+        invert_match: false
+    confidence: Medium
+    comment: "The simple_http plugin (Honeycomb's example service, default port 8888 in its code, default Server 'nginx') is Python's SimpleHTTPRequestHandler: POST gets Python's '501 Unsupported method' page under 'Server: nginx'. nginx answers POST to a static page with 405 Not Allowed. Port and Server value are options, hence Medium. Matched: Honeycomb 33ea91b with plugins 114a3d5 (2026-11)."
+  - name: qeeqbox-ftp-proftpd-banner-guest-login
+    id: 780
+    port: 21
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^220 ProFTPD 1\.2\.10$'
+        invert_match: false
+      - input_type: string
+        input: "USER anonymous\r\n"
+        output_match_type: string
+        output: "331 Guest login ok, type your email address as password."
+        invert_match: false
+    confidence: High
+    comment: "Greets with the bare text '220 ProFTPD 1.2.10' and then answers USER anonymous with Twisted's '331 Guest login ok, type your email address as password.' (the FTP service is Twisted's FTP server with a fixed welcome message). ProFTPD's banner carries more than the version ('220 ProFTPD Server (Debian) [address]'; 1.2.x: 'ProFTPD 1.2.10 Server (ProFTPD Default Installation) [host]') and its anonymous reply is '331 Anonymous login ok, send your complete email address as your password'; a genuine Twisted FTP server announces itself as 'Twisted <version> FTP Server'. Matched: honeypots 0.66 (2026-11)."
+  - name: qeeqbox-smtp-ehlo-python-bytes-repr
+    id: 781
+    port: 25
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^220 \S+ NO UCE NO UBE NO RELAY PROBES ESMTP$'
+        invert_match: false
+      - input_type: string
+        input: "EHLO probe.example\r\n"
+        output_match_type: regex
+        output: "^250-ip-127-0-0-1\\.ec2\\.internal Hello b'probe\\.example'"
+        invert_match: false
+    confidence: High
+    comment: "Twisted ESMTP banner, then an EHLO reply that names the host 'ip-127-0-0-1.ec2.internal' whatever the banner said and greets the client with a Python bytes literal (Hello b'probe.example'). It then advertises 8BITMIME, AUTH LOGIN PLAIN and STARTTLS and answers any AUTH PLAIN with 235. Genuine Twisted ESMTP says 'Hello <client address>, nice to meet you' and offers only the authenticators it has; Postfix answers with its own host name and extensions. Matched: honeypots 0.66 (2026-11)."
+  - name: qeeqbox-http-login-page-any-path
+    id: 782
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /qeeqbox-probe-7f3a9c.php HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n"
+        output_match_type: regex
+        output: "(?s)^HTTP/1\\.1 200 OK\r\n.*<title>Login</title>.*name='password' type='password' placeholder='password'"
+        invert_match: false
+    confidence: High
+    comment: "Every GET, for any path, returns 200 and the same bare Bootstrap 'Login' form (username and password fields, single-quoted attributes); a POST or other method returns a second page reading \"We'll back soon..\". The Server header is picked at each start from a list of 19 values (Apache, nginx, IIS, cloudflare, AkamaiGHost, SmartXFilter and others), so it cannot be relied on, but a server that answers a random .php path with 200 and this form is the honeypot. Genuine servers return 404 for a missing path. Matched: honeypots 0.66 (2026-11)."
+  - name: qeeqbox-pop3-exchange-capa-auth-failed
+    id: 783
+    port: 110
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^\+OK Microsoft Exchange POP3 service is ready$'
+        invert_match: false
+      - input_type: string
+        input: "CAPA\r\n"
+        output_match_type: regex
+        output: '^-ERR Authentication failed$'
+        invert_match: false
+    confidence: High
+    comment: "Greets with '+OK Microsoft Exchange POP3 service is ready' and answers every command other than USER and PASS, CAPA included, with '-ERR Authentication failed'. Exchange's banner reads '+OK The Microsoft Exchange POP3 service is ready.' and Exchange, like Dovecot, answers CAPA with a capability list ending in '.'. Matched: honeypots 0.66 (2026-11)."
+  - name: qeeqbox-ipp-shifted-request-id
+    id: 784
+    port: 631
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "504f5354202f6970702f7072696e7420485454502f312e310d0a486f73743a206c6f63616c686f73740d0a436f6e74656e742d547970653a206170706c69636174696f6e2f6970700d0a436f6e74656e742d4c656e6774683a203130350d0a436f6e6e656374696f6e3a20636c6f73650d0a0d0a0101000b0000000101470012617474726962757465732d6368617273657400057574662d3848001b617474726962757465732d6e61747572616c2d6c616e67756167650005656e2d757345000b7072696e7465722d757269000e6970703a2f2f782f6970702f707203"
+        output_match_type: regex
+        output: "(?s)^HTTP/1\\.1 200 OK\r\n.*Content-Type: text/html\r\n\r\n\\x01\\x01\\x00\\x00\\x0b\\x00\\x00\\x00\\x01G\\x00\\x12attributes-charset"
+        invert_match: false
+    confidence: High
+    comment: "An IPP Get-Printer-Attributes request (request-id 1) is answered with Content-Type text/html, only the charset and language attributes, and a request-id copied from the wrong bytes of the request (0x0b000000, taken from the operation code and the first three bytes of the request-id). An IPP printer or CUPS returns application/ipp and echoes request-id 1 (CUPS 2.4 in the lab, answering for an unknown printer: status 0x0406, request-id 1). Matched: honeypots 0.66 (2026-11)."
+  - name: qeeqbox-mssql-prelogin-version-17-build-0
+    id: 785
+    port: 1433
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "1201002f0000010000001a00060100200001020021000103002200040400260001ff0e000000000000000000000000"
+        output_match_type: hex
+        output: "0401002500000100000015000601001b000102001c000103001d0000ff1100000000000200"
+        invert_match: false
+      - input_type: hex
+        input: "10010092000001008a0000000400007400100000070000000000000000000000e003000000000000090400005e000500680002006c000a00800005008a0000008a0000008a0000008a0000008a0000000000000000008a0000008a0000008a00000000000000700072006f006200650073006100d0a533a543a5e2a5f3a582a586a5a6a586a5c6a5700072006f0062006500"
+        output_match_type: hex
+        output: "4c006f00670069006e0020004600610069006c0065006400095200260044006200610063006b0075007000"
+        invert_match: false
+    confidence: High
+    comment: "The pre-login reply is always the same 37 bytes: version 17.0 build 0 (11 00 00 00 00 00), encryption not supported and an empty THREADID. SQL Server fills in its real version and build (SQL Server 2022 answered 16.0.4305 here) and supports encryption. A LOGIN7 packet on the same connection is then refused with the message 'Login Failed' from a server named 'R&Dbackup'; SQL Server's error 18456 reads \"Login failed for user '<name>'.\" with the instance's own name. Matched: honeypots 0.66 (2026-11)."
+  - name: qeeqbox-oracle-tns-refuse-without-data
+    id: 786
+    port: 1521
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "005a0000010000000136012c000008007fff7f08000000010020003a0000000000000000000000000000000034e600000001000000000000000028434f4e4e4543545f444154413d28434f4d4d414e443d76657273696f6e2929"
+        output_match_type: regex
+        output: '^\x00\x08\x00\x00\x04\x00\x00\x00$'
+        invert_match: false
+    confidence: High
+    comment: "Answers a TNS CONNECT (nmap's oracle-tns probe, COMMAND=version) with an 8-byte REFUSE packet that carries no data, and closes. The Oracle listener's REFUSE always carries the reason as a (DESCRIPTION=(ERR=...)(VSNNUM=...)) string; the listener of Oracle Database 23ai Free (23.26.3) answered '(DESCRIPTION=(TMP=)(VSNNUM=0)(ERR=1189)(ERROR_STACK=...))' in the lab. Matched: honeypots 0.66 (2026-11)."
+  - name: qeeqbox-memcache-python-boolean-stats
+    id: 787
+    port: 11211
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "stats\r\n"
+        output_match_type: regex
+        output: 'STAT version 1\.5\.6\r\n(?s:.*)STAT hash_is_expanding False\r\n'
+        invert_match: false
+    confidence: High
+    comment: "The stats reply claims memcached 1.5.6 and prints two fields as Python booleans ('STAT hash_is_expanding False', 'STAT slab_reassign_running False'); memcached prints 0 or 1. Other figures are random on every call (curr_connections up to 1024, threads up to 9000), and the server closes the connection after each command, so a second command on the same connection gets no answer. Matched: honeypots 0.66 (2026-11)."
+  - name: qeeqbox-pjl-echo-without-keyword
+    id: 788
+    port: 9100
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "40504a4c204543484f2071656571626f783738380d0a"
+        output_match_type: regex
+        output: '^@PJL qeeqbox788\r\n\x1b$'
+        invert_match: false
+    confidence: High
+    comment: "PJL ECHO returns '@PJL <text>' without the ECHO keyword, ends with ESC (0x1b) and the server closes the connection. HP's PJL reference returns '@PJL ECHO <text>' followed by <CR><LF> and a form feed (<FF>). INFO ID always answers 'Brother HL-L2360' and the non-standard '@PJL PRODINFO' returns a fixed product sheet (serial VNB1897514, IPAddress 172.17.0.2). Matched: honeypots 0.66 (2026-11)."
+  - name: qeeqbox-rdp-selects-unoffered-tls
+    id: 789
+    port: 3389
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "030000130ee000000000000100080000000000"
+        output_match_type: hex
+        output: "030000130ed000001234000200080001000000"
+        invert_match: false
+    confidence: High
+    comment: "An X.224 Connection Request that offers only standard RDP security (requestedProtocols 0) is answered with a fixed Connection Confirm that selects TLS (selectedProtocol 1), a protocol the client did not offer, with no flags. The reply is the same 19 bytes whatever the client asks for. A server that will not use standard RDP security sends an RDP Negotiation Failure (Windows: SSL_REQUIRED_BY_SERVER); xrdp selected standard RDP security here, as the client asked. Matched: honeypots 0.66 (2026-11)."
+  - name: honeytrap-ssh-simulator-banner
+    id: 790
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^SSH-2\.0-OpenSSH_6\.6\.1p1 2020Ubuntu-2ubuntu2$'
+        invert_match: false
+    confidence: Medium
+    comment: "Honeytrap's ssh-simulator default version string 'SSH-2.0-OpenSSH_6.6.1p1 2020Ubuntu-2ubuntu2'. Ubuntu 14.04 sends 'OpenSSH_6.6.1p1 Ubuntu-2ubuntu2'; the '2020Ubuntu' form is not produced by any OpenSSH package. Configurable (banner option), hence Medium. Matched: honeytrap 05965fc (2026-11)."
+  - name: honeytrap-ssh-go-kexinit-claims-openssh
+    id: 791
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^SSH-2\.0-OpenSSH_'
+        invert_match: false
+      - input_type: string
+        input: "SSH-2.0-OpenSSH_9.2p1 Debian-2+deb12u3\r"
+        output_match_type: regex
+        output: '(?s)curve25519-sha256@libssh\.org,ecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521,diffie-hellman-group14-sha1\x00\x00\x00\x07ssh-rsa\x00\x00\x00.aes128-gcm@openssh\.com,chacha20-poly1305@openssh\.com,aes128-ctr,aes192-ctr,aes256-ctr\x00'
+        invert_match: false
+    confidence: High
+    comment: "Banner claims OpenSSH, but the server KEXINIT is that of the Go golang.org/x/crypto/ssh server of early 2020 (five key exchanges ending in diffie-hellman-group14-sha1, a single ssh-rsa host key, AES-GCM/ChaCha20/AES-CTR ciphers). OpenSSH always offers its own, longer lists (and ssh-ed25519 or ECDSA host keys). Matched: honeytrap 05965fc (2026-11)."
+  - name: honeytrap-ssh-exec-ls-not-found
+    id: 792
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "id"
+        output_match_type: regex
+        output: '^ls: command not found$'
+        invert_match: false
+    confidence: High
+    comment: "Authenticated check (run honeydet with -username/-password; the ssh-simulator accepts any password by default): every exec request, whatever the command, returns 'ls: command not found'. A genuine shell runs the command or reports the command that was actually sent. Matched: honeytrap 05965fc (2026-11)."
+  - name: honeytrap-telnet-huawei-banner-sh
+    id: 793
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '(?s)^\*+\r\n\* +Copyright\(C\) 2008-2015 Huawei Technologies Co\., Ltd\..*Login authentication\r\n.*Username:$'
+        invert_match: false
+      - input_type: string
+        input: "admin\r"
+        output_match_type: regex
+        output: 'Password:$'
+        invert_match: false
+      - input_type: string
+        input: "admin\r"
+        output_match_type: regex
+        output: '\$$'
+        invert_match: false
+      - input_type: string
+        input: "display version\r"
+        output_match_type: string
+        output: "sh: display version: command not found"
+        invert_match: false
+    confidence: High
+    comment: "Telnet greets with the text of a Huawei VRP login banner straight away, without the option negotiation (IAC) a Huawei device or any telnetd starts with, accepts any user name and password and then answers a VRP command with a Unix shell error ('sh: display version: command not found'). The banner and prompt are configurable; the 'sh:' reply is not. Matched: honeytrap 05965fc (2026-11)."
+  - name: honeytrap-http-empty-200
+    id: 794
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /honeydet-794-no-such-page HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 200 OK\r\nServer: [^\r\n]*\r\n(?:Connection: close\r\n)?Content-Length: 0$'
+        invert_match: false
+    confidence: High
+    comment: "The http service answers every method and path, including a page that cannot exist, with '200 OK', a Server header (default 'Apache') and an empty body, and nothing else: no Date, no Content-Type. Apache, nginx and other origin servers send a Date header and a 404 for missing pages. Matched: honeytrap 05965fc (2026-11)."
+  - name: honeytrap-redis-ping-unknown
+    id: 795
+    port: 6379
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "2a310d0a24340d0a50494e470d0a"
+        output_match_type: string
+        output: "-ERR unknown command 'ping'"
+        invert_match: false
+    confidence: High
+    comment: "The redis service implements only INFO: a RESP PING returns \"-ERR unknown command 'ping'\". Every genuine Redis answers PING with +PONG (or -NOAUTH when a password is set). Matched: honeytrap 05965fc (2026-11)."
+  - name: honeytrap-memcached-version-error
+    id: 796
+    port: 11211
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "version\r"
+        output_match_type: regex
+        output: '^ERROR$'
+        invert_match: false
+      - input_type: string
+        input: "stats\r"
+        output_match_type: regex
+        output: '^STAT pid 2080\nSTAT uptime 3151236\nSTAT time 1520550684\nSTAT version 1\.4\.13\n'
+        invert_match: false
+    confidence: High
+    comment: "The memcached service answers 'version' with ERROR, and 'stats' with a fixed block (pid 2080, uptime 3151236, a time stamp of March 2018, version 1.4.13) whose lines end in a bare LF. Genuine memcached answers 'VERSION x.y.z', reports the current time and ends every line with CRLF. Matched: honeytrap 05965fc (2026-11)."
+  - name: honeytrap-elasticsearch-go-root
+    id: 797
+    port: 9200
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\nConnection: close\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n\{"cluster_name":"[^"]*","cluster_uuid":"[^"]*","name":"[^"]*","tagline":"You Know, for Search","version":\{"build_date":'
+        invert_match: false
+    confidence: High
+    comment: "The elasticsearch service returns its root document with the keys in alphabetical order (cluster_name first, as Go encodes a map), without a Content-Length header and with 'Connection: close'. Genuine Elasticsearch lists 'name' first and sends content-length (and, from 7.x, X-elastic-product). The names are empty by default. Matched: honeytrap 05965fc (2026-11)."
+  - name: honeytrap-docker-ping-json
+    id: 798
+    port: 2375
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /_ping HTTP/1.1\r\nHost: x\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 200 OK\r\nConnection: close\r\nApi-Version: [^\r\n]+\r\nContent-Type: application/json; charset=UTF-8\r\nDocker-Experimental: false\r\nOstype: linux\r\nServer: [^\r\n]*\r\n\r\nOK$'
+        invert_match: false
+    confidence: High
+    comment: "The docker service answers /_ping with 'OK' labelled application/json, closes the connection and sends no Date or Content-Length header. dockerd answers /_ping with text/plain, Content-Length: 2, a Date header and keep-alive. Matched: honeytrap 05965fc (2026-11)."
+  - name: honeytrap-ftp-feat-bare-lf
+    id: 799
+    port: 21
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^220 '
+        invert_match: false
+      - input_type: string
+        input: "FEAT\r"
+        output_match_type: regex
+        output: '^211-Extensions supported:\n(?: [A-Z][A-Z ]*\n)+\r\n211 END$'
+        invert_match: false
+    confidence: High
+    comment: "The ftp service (built on the goftp server library) lists its FEAT extensions (EPSV, EPRT and, with TLS, AUTH TLS, PBSZ, PROT, in varying order) with bare LF line endings followed by an empty CRLF line before '211 END'; the AUTH TLS, PBSZ and PROT lines are appended again on every FEAT request, so the list grows while the service runs. vsftpd, ProFTPD, Pure-FTPd and Windows FTP end every line with CRLF and list features such as SIZE, MDTM and UTF8. The default banner is '220 Welcome to the Go FTP Server'. Matched: honeytrap 05965fc (2026-11)."
+  - name: honeypy-telnetunix-banner
+    id: 800
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '\ADebian GNU/Linux 7\r\nLogin:\z'
+        invert_match: false
+    confidence: High
+    comment: "The TelnetUnix plugin greets with exactly 'Debian GNU/Linux 7\\r\\nLogin: ' and sends no telnet option negotiation. A genuine telnetd opens with IAC DO/WILL negotiation (terminal type, speed, environment) before any text, and login(1) prompts with '<hostname> login: '. Matched: HoneyPy 0.7.0 on Python 2.7 and HoneyPy-nx 0.7.0 (2026-11)."
+  - name: honeypy-telnetwindows-banner
+    id: 801
+    port: 23-24
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '\AWelcome to Microsoft Telnet Service\n\nlogin:\z'
+        invert_match: false
+    confidence: High
+    comment: "The TelnetWindows plugin (default port 24) sends 'Welcome to Microsoft Telnet Service\\n\\nlogin: ' with bare line feeds and no telnet option negotiation. Telnet servers, including Microsoft's, open with IAC option negotiation and end lines with CR LF (RFC 854). Matched: HoneyPy 0.7.0 on Python 2.7 and HoneyPy-nx 0.7.0 (2026-11)."
+  - name: honeypy-smtpexim-banner-ehlo
+    id: 802
+    port: 25
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '\A220 localhost ESMTP Exim 4\.80 [A-Z][a-z]{2}, \d{2} [A-Z][a-z]{2} \d{2}:\d{2}:\d{2} [+-]\d{4}\z'
+        invert_match: false
+      - input_type: string
+        input: "EHLO hd802.example"
+        output_match_type: regex
+        output: '\A250 localhost Hello hd802\.example \[::1\]\n250-SIZE 52428800\n'
+        invert_match: false
+    confidence: High
+    comment: "The SmtpExim plugin's banner names host 'localhost' and Exim 4.80 with a date that has no year, ended by a bare LF; the EHLO reply starts with a final '250 ' line followed by '250-' continuation lines, quotes the client as [::1] and uses bare LF. Exim writes '220 <host> ESMTP Exim <version> <day>, <dd> <Mon> <yyyy> <time> <zone>' with CR LF, and every line of a multi-line reply except the last uses '250-'. Matched: HoneyPy 0.7.0 on Python 2.7 and HoneyPy-nx 0.7.0 (2026-11)."
+  - name: honeypy-web-ok-bare-lf
+    id: 803
+    port: web-ports
+    proto: tcp
+    steps:
+      - input_type: GET
+        input: GET
+        output_match_type: regex
+        output: '\AHTTP/1\.1 200 OK\nServer: Apache/2\.4\.10 \(Debian\)\nConnection: close\nContent-Type: text/html\n\nOK!\z'
+        invert_match: false
+    confidence: High
+    comment: "The Web plugin answers GET / (and any path it does not recognise) with 'OK!' under four headers separated by bare line feeds, claiming Apache/2.4.10 (Debian) but with no Date or Content-Length header. Apache and nginx always end header lines with CR LF and send Date. Matched: HoneyPy 0.7.0 on Python 2.7 and HoneyPy-nx 0.7.0 (2026-11)."
+  - name: honeypy-hashcountrandom
+    id: 804
+    port: 4096
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '\AACCEPT_CONN: \d{1,3}(\.\d{1,3}){3}\z'
+        invert_match: false
+      - input_type: string
+        input: "a"
+        output_match_type: regex
+        output: '\Ac4ca4238a0b923820dcc509a6f75849b:'
+        invert_match: false
+    confidence: High
+    comment: "The HashCountRandom plugin (default profile, port 4096) greets with 'ACCEPT_CONN: <client address>' and answers each message with the MD5 of a counter (the first is md5('1') = c4ca4238...) followed by random bytes. No genuine service behaves this way. Matched: HoneyPy 0.7.0 on Python 2.7 and HoneyPy-nx 0.7.0 (2026-11)."
+  - name: honeypy-elasticsearch-no-http
+    id: 805
+    port: 9200
+    proto: tcp
+    steps:
+      - input_type: GET
+        input: GET
+        output_match_type: regex
+        output: '\A\{ "status" : 200, "name" : "Flake", "cluster_name" : "elasticsearch", "version" : \{"number" : "1\.4\.1"'
+        invert_match: false
+    confidence: High
+    comment: "The Elasticsearch plugin answers GET / with a JSON body only, no HTTP status line or headers, naming node 'Flake' and version 1.4.1 on one line. Elasticsearch always answers over HTTP ('HTTP/1.1 200 OK' with Content-Type and Content-Length) and pretty-prints the root document. Matched: HoneyPy 0.7.0 on Python 2.7 and HoneyPy-nx 0.7.0 (2026-11)."
+  - name: honeypy-dnsudp-version-bind
+    id: 806
+    port: 53
+    proto: udp
+    steps:
+      - input_type: hex
+        input: 1234010000010000000000000776657273696f6e0462696e640000100003
+        output_match_type: hex
+        output: 'c00c0010000100000000000908382e322e322d5035'
+        invert_match: false
+    confidence: High
+    comment: "version.bind CH TXT is answered with the TXT string '8.2.2-P5' in class IN (not CHAOS) with TTL 0. The DnsUdp plugin hard-codes this BIND 8 version string; BIND 9 answers in class CH with its own version (or refuses), and other servers refuse or return NXDOMAIN. Matched: HoneyPy 0.7.0 on Python 2.7 and HoneyPy-nx 0.7.0 (2026-11)."
+  - name: honeypy-tftp-fixed-file
+    id: 807
+    port: 69
+    proto: udp
+    steps:
+      - input_type: hex
+        input: 0001686438303770726f62652e636667006e6574617363696900
+        output_match_type: hex
+        output: '000300016163636573735f6b65795f69643d22414b4941494f53464f444e4e3722'
+        invert_match: false
+    confidence: High
+    comment: "A read request for any file name in netascii mode is answered from port 69 itself with block 1 of the plugin's bait file, which starts access_key_id=\"AKIAIOSFODNN7\". A genuine TFTP server answers from a new port (RFC 1350 transfer identifier) and returns 'File not found' for a name that does not exist. Matched: HoneyPy 0.7.0 on Python 2.7 and HoneyPy-nx 0.7.0 (2026-11)."
+  - name: honeypy-ntpudp-mode6-answered
+    id: 808
+    port: 123
+    proto: udp
+    steps:
+      - input_type: hex
+        input: "160200010000000000000000"
+        output_match_type: hex
+        output: '1c020a00000000000000000000000000'
+        invert_match: false
+    confidence: High
+    comment: "An NTP mode 6 (control) READVAR request is answered with a 48-byte mode 4 server reply: version 3, stratum 2, poll 10, precision 0, root delay, dispersion and reference ID all zero. The NtpUdp plugin answers every packet the same way. chrony does not answer mode 6, ntpd answers with a mode 6 response (or not at all when queries are restricted), and no genuine server reports a zero reference ID at stratum 2. Matched: HoneyPy 0.7.0 on Python 2.7 and HoneyPy-nx 0.7.0 (2026-11)."
+  - name: honeypy-sip-options-489
+    id: 809
+    port: 5060
+    proto: udp
+    steps:
+      - input_type: hex
+        input: 4f5054494f4e53207369703a6864403139322e302e322e3130205349502f322e300d0a5669613a205349502f322e302f554450203139322e302e322e313a353036303b6272616e63683d7a39684734624b2d68643830390d0a4d61782d466f7277617264733a2037300d0a46726f6d3a203c7369703a6864403139322e302e322e313e3b7461673d68643830390d0a546f3a203c7369703a6864403139322e302e322e31303e0d0a43616c6c2d49443a206864383039403139322e302e322e310d0a435365713a2031204f5054494f4e530d0a436f6e746163743a203c7369703a6864403139322e302e322e313e0d0a4163636570743a206170706c69636174696f6e2f7364700d0a436f6e74656e742d4c656e6774683a20300d0a0d0a
+        output_match_type: regex
+        output: '\ASIP/2\.0 489 Event Package Not Supported\r\nVia: [^\r\n]*\r\nFrom: [^\r\n]*\r\nTo: <sip:hd@192\.0\.2\.10>\r\nCall-ID: [^\r\n]*\r\nAllow: INVITE,ACK,BYE,CANCEL,REGISTER\r\nContent-Length: 0'
+        invert_match: false
+    confidence: High
+    comment: "An OPTIONS request is answered '489 Event Package Not Supported' (a response defined for SUBSCRIBE event packages) with no CSeq header and no To tag. The SIP plugin answers every request other than REGISTER, INVITE, BYE and CANCEL this way. SIP servers answer OPTIONS with 200 OK (or an authentication or policy refusal) that echoes CSeq and adds a To tag, as RFC 3261 requires. Matched: HoneyPy 0.7.0 on Python 2.7 and HoneyPy-nx 0.7.0 (2026-11)."
+  - name: honeygrove-http-bare-lf-response
+    id: 810
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 200 OK\nLast-Modified: Sun, 07 Aug 2019 08:02:22 GMT\nCache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0\nPragma: no-cache\nContent-Type: text/html; charset=UTF-8\n\n'
+        invert_match: false
+    confidence: High
+    comment: "The HTTP service writes its status line and headers itself, ending every line with a bare LF instead of CRLF, and sends the default header set from config.py (Last-Modified of 'Sun, 07 Aug 2019', no Date, Server or Content-Length). Every genuine HTTP server ends header lines with CRLF. Matched: Honeygrove 7dd9291 (v0.6.0) (2026-11)."
+  - name: honeygrove-http-headers-only-404
+    id: 811
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /logo.png HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 404 Not Found\nDate: [A-Z][a-z]{2}, \d{2} [A-Z][a-z]{2} \d{4} \d{2}:\d{2}:\d{2} GMT\nContent-Type: text/html; charset=UTF-8$'
+        invert_match: false
+    confidence: High
+    comment: "Requests for images and fonts (.png, .gif, .jpg, .svg, .woff, .ttf) get a 404 status line and two headers separated by bare LF, with no blank line and no body before the connection closes; the Date header is fixed at the time the service started. Genuine servers send CRLF, a header terminator and normally an error body. Matched: Honeygrove 7dd9291 (v0.6.0) (2026-11)."
+  - name: honeygrove-http-wp-login-honeypot-icon
+    id: 812
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /wp-admin HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\n.*<title>Login</title>.*honey_pot-100613200-primary\.idge\.jpg'
+        invert_match: false
+    confidence: Medium
+    comment: "The bundled WordPress-style login page (/wp-admin, resources/http/wp-admin_login.html) sets its shortcut icon to an external image named honey_pot-100613200-primary.idge.jpg. Medium: the HTML resources are meant to be replaced by the operator. Matched: Honeygrove 7dd9291 (v0.6.0) (2026-11)."
+  - name: honeygrove-ssh-default-banner
+    id: 813
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^SSH-2\.0-euve256525\r?\n'
+        invert_match: false
+    confidence: Medium
+    comment: "The SSH service (Twisted Conch) announces SSH-2.0- followed by the default host name from config.py, euve256525, with no software version; the same name appears in the shell prompt. Medium: general.hostname is configurable. Matched: Honeygrove 7dd9291 (v0.6.0) (2026-11)."
+  - name: honeygrove-ftp-anonymous-internal-error
+    id: 814
+    port: 21
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^220 Twisted [0-9.]+ FTP Server$'
+        invert_match: false
+      - input_type: string
+        input: "USER anonymous\r"
+        output_match_type: regex
+        output: '^331 Guest login ok, type your email address as password\.$'
+        invert_match: false
+      - input_type: string
+        input: "PASS guest@example.com\r"
+        output_match_type: regex
+        output: '^550 Requested action not taken: internal server error$'
+        invert_match: false
+    confidence: High
+    comment: "The FTP service is Twisted's FTP server with its stock banner ('220 Twisted <version> FTP Server'); a refused login (here the anonymous guest login) ends in '550 Requested action not taken: internal server error' instead of a 530. Genuine twistd ftp logs an anonymous user in (230); other servers answer 230 or 530. Matched: Honeygrove 7dd9291 (v0.6.0) (2026-11)."
+  - name: honeygrove-telnet-bare-username-prompt
+    id: 815
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^Username:$'
+        invert_match: false
+      - input_type: string
+        input: "root\r"
+        output_match_type: regex
+        output: '^Password:$'
+        invert_match: false
+    confidence: Medium
+    comment: "The Telnet service sends a bare 'Username: ' prompt with no Telnet option negotiation (no IAC bytes) and answers any user name with 'Password: '; after the password it closes the connection. Genuine telnet daemons and network devices open with IAC option negotiation before the login prompt. Medium: the prompt is short and generic. Matched: Honeygrove 7dd9291 (v0.6.0) (2026-11)."
+  - name: honeygrove-smtp-anonymous-greeting
+    id: 816
+    port: 25
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^220 Service ready ESMTP$'
+        invert_match: false
+      - input_type: string
+        input: "EHLO probe.example\r"
+        output_match_type: regex
+        output: '^250 AUTH PLAIN LOGIN$'
+        invert_match: false
+    confidence: High
+    comment: "The SMTP service greets with '220 Service ready ESMTP' (no host name, which RFC 5321 requires) and answers EHLO with the single line '250 AUTH PLAIN LOGIN', without the first line naming the server or any other extension. Matched: Honeygrove 7dd9291 (v0.6.0) (2026-11)."
+  - name: honeygrove-pop3-example-greeting-no-capa
+    id: 817
+    port: 110
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^\+OK example\.com POP3 server$'
+        invert_match: false
+      - input_type: string
+        input: "CAPA\r"
+        output_match_type: regex
+        output: "^-ERR Unrecognized command 'CAPA'$"
+        invert_match: false
+    confidence: High
+    comment: "The POP3 service greets with the fixed '+OK example.com POP3 server' and rejects CAPA (RFC 2449) as an unrecognised command; current POP3 servers list their capabilities. Matched: Honeygrove 7dd9291 (v0.6.0) (2026-11)."
+  - name: honeygrove-imap-capability-drop
+    id: 818
+    port: 143
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^\* OK IMAP4rev1 Service Ready$'
+        invert_match: false
+      - input_type: string
+        input: "a1 CAPABILITY\r"
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+    confidence: High
+    comment: "The IMAP service greets with '* OK IMAP4rev1 Service Ready' (no capability list or host name) and closes the connection without a reply when the client sends its first command, CAPABILITY included. Genuine IMAP servers always answer CAPABILITY. Matched: Honeygrove 7dd9291 (v0.6.0) (2026-11)."
+  - name: honeygrove-s7-snap7-server-identity
+    id: 819
+    port: 102
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "0300001611e00000000100c0010ac1020100c2020102"
+        output_match_type: hex
+        output: "0300001611d0"
+        invert_match: false
+      - input_type: hex
+        input: "0300001902f08032010000000000080000f0000001000101e0"
+        output_match_type: hex
+        output: "02f08032030000"
+        invert_match: false
+      - input_type: hex
+        input: "0300002102f080320700000000000800080001120411440100ff090004001c0000"
+        output_match_type: regex
+        output: 'SNAP7-SERVER\x00+\x02CPU 315-2 PN/DP\x00'
+        invert_match: false
+    confidence: High
+    comment: "The S7comm service is the Snap7 library's server with its built-in identity: the component identification list (SZL 0x001C) names the PLC 'SNAP7-SERVER', module 'CPU 315-2 PN/DP', serial 'S C-C2UR28922012'. A genuine S7-300 reports the station name set in its hardware configuration. Any other Snap7 server left at its defaults answers the same way. Matched: Honeygrove 7dd9291 (v0.6.0) (2026-11)."
+  - name: lyrebird-ftp-lab-banner
+    id: 820
+    port: 21
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^220 Lab FTP ready$'
+        invert_match: false
+      - input_type: string
+        input: "USER hdprobe\r"
+        output_match_type: regex
+        output: '^331 password required$'
+        invert_match: false
+    confidence: High
+    comment: "The FTP service greets with the fixed banner '220 Lab FTP ready' and answers USER with a lower-case '331 password required'; both strings are hard-coded. Genuine servers name themselves (vsFTPd, ProFTPD, Pure-FTPd, Microsoft FTP Service) and use their own wording. Matched: Lyrebird 0.2.0 (05cbe40) (2026-11)."
+  - name: lyrebird-pop3-lab-banner
+    id: 821
+    port: 110
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^\+OK Lab POP3 ready$'
+        invert_match: false
+    confidence: High
+    comment: "The POP3 service greets with the fixed banner '+OK Lab POP3 ready' (hard-coded). Genuine servers such as Dovecot ('+OK Dovecot ready.') and Courier use their own greeting. Matched: Lyrebird 0.2.0 (05cbe40) (2026-11)."
+  - name: lyrebird-imap-lab-banner
+    id: 822
+    port: 143
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^\* OK Lab IMAP ready$'
+        invert_match: false
+    confidence: High
+    comment: "The IMAP service greets with the fixed banner '* OK Lab IMAP ready' (hard-coded), without the CAPABILITY response code that Dovecot, Cyrus and Exchange put in their greeting. Matched: Lyrebird 0.2.0 (05cbe40) (2026-11)."
+  - name: lyrebird-smtp-aiosmtpd-accepts-all
+    id: 823
+    port: 25
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^220 \S+ Python SMTP \d'
+        invert_match: false
+      - input_type: string
+        input: "EHLO probe.example\r\nMAIL FROM:<hd@probe.example>\r\nRCPT TO:<hd@probe.example>\r\nDATA\r"
+        output_match_type: regex
+        output: '(?s)250 OK\r\n250 OK\r\n354 End data with <CR><LF>\.<CR><LF>$'
+        invert_match: false
+      - input_type: string
+        input: "Subject: probe\r\n\r\nprobe\r\n.\r"
+        output_match_type: regex
+        output: '^250 Message accepted for delivery$'
+        invert_match: false
+    confidence: High
+    comment: "The SMTP service is the aiosmtpd library's server (banner '220 <host> Python SMTP <version>') with a handler that accepts any sender and recipient without relay checks and acknowledges the message with '250 Message accepted for delivery'. A plain aiosmtpd server answers '250 OK'; Postfix, Exim and Exchange refuse unauthenticated relaying. Matched: Lyrebird 0.2.0 (05cbe40) (2026-11)."
+  - name: lyrebird-ssh-asyncssh-as-openssh
+    id: 824
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "SSH-2.0-OpenSSH_9.2p1\r"
+        output_match_type: regex
+        output: '(?s)^SSH-2\.0-OpenSSH_[^\r\n]*\r\n.*ecdh-sha2-1\.3\.132\.0\.10.*hmac-sha256-2@ssh\.com'
+        invert_match: false
+    confidence: High
+    comment: "The SSH honeypot announces an OpenSSH version (default 'OpenSSH_8.9p1 Ubuntu-3ubuntu0.1') but the key exchange is AsyncSSH's: its KEXINIT offers algorithms no OpenSSH release implements, such as ecdh-sha2-1.3.132.0.10 and the ssh.com MACs (hmac-sha256-2@ssh.com), together with ML-KEM key exchange that OpenSSH 8.9 predates. Genuine OpenSSH 8.9p1 and 9.2p1 offer neither. Matched: Lyrebird 0.2.0 (05cbe40), asyncssh 2.24.1 (2026-11)."
+  - name: lyrebird-telnet-default-banner
+    id: 825
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^AM335x/Linux login service\r\nlogin:$'
+        invert_match: false
+    confidence: Medium
+    comment: "The Telnet honeypot sends its default banner 'AM335x/Linux login service' and a login prompt straight away, with no Telnet option negotiation (IAC); genuine telnetd and BusyBox telnetd begin by negotiating options. The banner is configurable, hence Medium. Matched: Lyrebird 0.2.0 (05cbe40) (2026-11)."
+  - name: lyrebird-http-default-page
+    id: 826
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /hdprobe-7f3a/nonexistent.php HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\n.*server: uvicorn\r\n.*\r\n\r\n<html><head><title>It works</title></head><body>OK</body></html>$'
+        invert_match: false
+    confidence: High
+    comment: "The HTTP service answers every path that no operator rule covers with 200 OK, 'server: uvicorn' and the same 64-byte 'It works' / 'OK' page (hard-coded default). A genuine uvicorn application returns 404 for unknown paths and Apache's default page reads 'It works! Apache httpd'. Matched: Lyrebird 0.2.0 (05cbe40) (2026-11)."
+  - name: lyrebird-irc-lab-server
+    id: 827
+    port: 6667
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "NICK hdprobe\r\nUSER hdprobe 0 * :hdprobe\r"
+        output_match_type: regex
+        output: '^:lab\.irc\.local 001 hdprobe :Welcome\r\n:lab\.irc\.local 004 hdprobe lab\.irc\.local lab 0 0'
+        invert_match: false
+    confidence: High
+    comment: "The IRC service registers any client as server 'lab.irc.local' (hard-coded) with a bare '001 :Welcome' and a 004 reply giving version 'lab' and no user or channel modes, and sends no 002, 003, 005 or MOTD. Genuine servers (ngIRCd, InspIRCd, UnrealIRCd) send the full registration sequence with their version. Matched: Lyrebird 0.2.0 (05cbe40) (2026-11)."
+  - name: lyrebird-dns-tcp-answers-invalid
+    id: 828
+    port: 53
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "00251337010000010000000000000b686470726f62653766336107696e76616c69640000010001"
+        output_match_type: hex
+        output: "c00c000100010000003c0004"
+        invert_match: false
+    confidence: High
+    comment: "DNS over TCP: an A query for a name under .invalid (reserved by RFC 6761 and never resolvable) gets an A record with a TTL of 60 seconds (the sinkhole address, 10.13.37.1 by default). Genuine resolvers and authoritative servers return NXDOMAIN or refuse. Answering every name is the purpose of a sandbox resolver, so this identifies the emulator rather than a flaw. Matched: Lyrebird 0.2.0 (05cbe40) (2026-11)."
+  - name: malbait-ftp-banner-user
+    id: 830
+    port: 21
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '\A220 FTP-Server\z'
+        invert_match: false
+      - input_type: string
+        input: "USER anonymous"
+        output_match_type: regex
+        output: '\A331 OK enter PASS command\z'
+        invert_match: false
+    confidence: High
+    comment: "Malbait's FTP service greets with exactly '220 FTP-Server' and answers USER with '331 OK enter PASS command' (then '220 Logged in' to PASS and '200 OK' to everything else). Genuine FTP servers name themselves in the greeting and use the RFC 959 texts and codes, for example vsftpd '331 Please specify the password.' and '230 Login successful.' Matched: Malbait 67bef5d (2026-11)."
+  - name: malbait-telnet-username-no-iac
+    id: 831
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '\AUsername:\z'
+        invert_match: false
+      - input_type: string
+        input: "root"
+        output_match_type: regex
+        output: '\APassword:\z'
+        invert_match: false
+    confidence: High
+    comment: "Malbait's Telnet service sends the bare prompt 'Username:' with no line ending and no telnet option negotiation, then 'Password:' for any user name and 'Login successful.\\nComputer:~$ ' for any password. Telnet servers open with IAC option negotiation (inetd telnetd sends WILL/DO for terminal type, speed and environment before any text), and devices that prompt 'Username:' (Cisco IOS) do so after negotiation and a banner. Matched: Malbait 67bef5d (2026-11)."
+  - name: malbait-smtp-ehlo-220
+    id: 832
+    port: 25
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '\A220 SMTP-Server\z'
+        invert_match: false
+      - input_type: string
+        input: "EHLO hd832.example"
+        output_match_type: regex
+        output: '\A220 OK\z'
+        invert_match: false
+    confidence: High
+    comment: "Malbait's SMTP service greets with '220 SMTP-Server' and answers EHLO (and every later line) with '220 OK'. RFC 5321 servers greet with their domain name and answer EHLO with 250 lines; 220 is only the greeting and the reply to STARTTLS. Matched: Malbait 67bef5d (2026-11)."
+  - name: malbait-pop3-banner-user
+    id: 833
+    port: 110
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '\A\+OK POP3-Server\z'
+        invert_match: false
+      - input_type: string
+        input: "USER hd833"
+        output_match_type: regex
+        output: '\A\+OK Password required\z'
+        invert_match: false
+    confidence: High
+    comment: "Malbait's POP3 service greets with '+OK POP3-Server', accepts any user with '+OK Password required' and any password with '+OK Logged in', then answers every command with a bare '+OK' and no line ending. Genuine servers name themselves (Dovecot '+OK Dovecot (Debian) ready.'), usually refuse plain-text logins without TLS and answer unknown commands with -ERR. Matched: Malbait 67bef5d (2026-11)."
+  - name: malbait-imap-pop3-style-greeting
+    id: 834
+    port: 143
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '\A\+OK IMAP4 service ready\z'
+        invert_match: false
+    confidence: High
+    comment: "Malbait's IMAP service greets with the POP3-style '+OK IMAP4 service ready' with no line ending, and answers later commands with untagged '+OK LOGIN completed' and ' OK '. An IMAP greeting is an untagged '* OK' (or '* PREAUTH' / '* BYE') line ending in CRLF (RFC 9051); '+' is IMAP's continuation request. Matched: Malbait 67bef5d (2026-11)."
+  - name: malbait-http-speaks-first
+    id: 835
+    port: web-ports
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '\AHTTP/1\.1 200 OK\nDate: Sat, 07 Oct 2017 18:43:18 GMT\nServer: Apache/2\.4\.18 \(Ubuntu\)\nContent-Length: \d+\nConnection: close\n'
+        invert_match: false
+    confidence: High
+    comment: "Malbait's HTTP service (ports 80, 81 and 8080) sends a complete response as soon as a client connects, before any request, with a Date header fixed at Sat, 07 Oct 2017 18:43:18 GMT, Server: Apache/2.4.18 (Ubuntu) and bare LF line endings. HTTP servers never send anything before the request, use CRLF and send the current date. The headers are the same whether Malbait serves its built-in page or a webpage.html. Matched: Malbait 67bef5d (2026-11)."
+  - name: malbait-http-status-per-line
+    id: 836
+    port: web-ports
+    proto: tcp
+    steps:
+      - input_type: GET
+        input: GET
+        output_match_type: regex
+        output: '\AHTTP/1\.1 200 OK\nDate: Sat, 07 Oct 2017 18:43:18 GMT\n[\s\S]*\nConnection: close\n[\s\S]*HTTP/1\.1 200 OK\nHTTP/1\.1 200 OK\z'
+        invert_match: false
+    confidence: High
+    comment: "After its unsolicited response Malbait keeps the connection open, despite 'Connection: close', and answers every line of the client's request with another bare 'HTTP/1.1 200 OK' status line until the client leaves or 30 seconds pass. An HTTP server sends one response per request and closes after 'Connection: close'. Matched: Malbait 67bef5d (2026-11)."
+  - name: malbait-tr069-speaks-first
+    id: 837
+    port: 7547
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '\AHTTP/1\.1 401 Unauthorized\z'
+        invert_match: false
+    confidence: High
+    comment: "Malbait's TR-069 (CWMP) service on 7547 sends the bare status line 'HTTP/1.1 401 Unauthorized ' as soon as a client connects, with no headers, no line ending and no authentication challenge, and then 'HTTP/1.1 HTTP/1.1 200 OK' and 'HTTP/1.1 404 Not Found' to later lines. The CPE connection-request server on 7547 is an HTTP server: it waits for a request and answers 401 with a WWW-Authenticate Digest challenge (TR-069 section 3.2.2). Matched: Malbait 67bef5d (2026-11)."
+  - name: malbait-bgp-unsolicited-open
+    id: 838
+    port: 179
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: hex
+        output: 'ffffffffffffffffffffffffffffffff001d0104fe0900b4c0a8000100'
+        invert_match: false
+    confidence: High
+    comment: "Malbait's BGP service sends the same OPEN message to every client: version 4, AS 65033, hold time 180, BGP identifier 192.168.0.1 and no optional parameters, followed by a KEEPALIVE after the client's first line. A BGP speaker accepts sessions only from configured neighbours (BIRD 2 with a dynamic neighbour range sent nothing within 8 seconds in the lab), uses its own AS and router ID, and current implementations advertise capabilities (RFC 5492: multiprotocol, four-octet AS, route refresh) in their OPEN. Matched: Malbait 67bef5d (2026-11)."
+  - name: malbait-udp-systat-userlist
+    id: 839
+    port: 11
+    proto: udp
+    steps:
+      - input_type: string
+        input: ""
+        output_match_type: regex
+        output: '\Aroot \nqueeg \nsupercalifragilistic\z'
+        invert_match: false
+    confidence: High
+    comment: "With UDP listeners enabled, Malbait's systat service on udp/11 answers any datagram with the fixed user list 'root', 'queeg' and 'supercalifragilistic' (each followed by a space and LF). systat (RFC 866) returns the list of logged-in users of the real host and is almost never enabled today. Matched: Malbait 67bef5d (2026-11)."
+  - name: oh-my-honeypot-http-nas-login
+    id: 840
+    port: '80'
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\n.*<title>File share system</title>.*<h2>Internal NAS Server</h2>.*action=./index\.php\?page=login&param=wrongauthentication.'
+        invert_match: false
+    confidence: High
+    comment: 'The home page is the built-in ''File share system'' login page: an ''Internal NAS Server'' member login whose form posts to /index.php?page=login&param=wrongauthentication, with a hidden ''lastname'' field as a bot trap. The page is compiled into the Go binary and cannot be changed by configuration. Matched: oh-my-honeypot c8c45b7 (2026-11).'
+  - name: oh-my-honeypot-http-soft-404
+    id: 841
+    port: '80'
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /omh-no-such-page HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\n.*<title>File share system</title>.*<h1>404 Not Found</h1>\s*<p>Page not found</p>\s*<p><a href=./index\.php.>Main page</a></p>'
+        invert_match: false
+    confidence: High
+    comment: 'Any unknown path returns status 200 with an HTML page that says ''404 Not Found'' inside the NAS page template. Apache, which the Server header claims, returns status 404 with its own error page. Matched: oh-my-honeypot c8c45b7 (2026-11).'
+  - name: oh-my-honeypot-http-env-lure
+    id: 842
+    port: '80'
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /.env HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\nContent-Type: text/plain\r\n.*\r\n\r\n# Outdated as of 2016-02-03 \n(?:[A-Z_]+=[^\n]*\n)*?[A-Z_]+=%!s\(int=[0-9]+\)\n'
+        invert_match: false
+    confidence: High
+    comment: '/.env returns the lure file with the fixed first line ''# Outdated as of 2016-02-03 '' and, with the shipped vuln-config, a numeric value printed through Go''s fmt as ''%!s(int=5432)'', a formatting artefact that only Go code produces. Matched: oh-my-honeypot c8c45b7 (2026-11).'
+  - name: oh-my-honeypot-stats-api
+    id: 843
+    port: '1112'
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /stats/port HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\nAccess-Control-Allow-Headers: Content-Type\r\nAccess-Control-Allow-Origin: \*\r\nCache-Control: public, max-age=3600, stale-while-revalidate=86400\r\nContent-Type: application/json\r\n.*\r\n\r\n\{"[^"]*":(?:null|\[\{"port":[0-9]+,"count":[0-9]+\})'
+        invert_match: false
+    confidence: High
+    comment: 'The statistics API on port 1112 answers /stats/port, without authentication and to any origin, with JSON keyed by the honeypot name and listing attacked ports and counts. It listens on all interfaces unless the operator filters it. Matched: oh-my-honeypot c8c45b7 (2026-11).'
+  - name: oh-my-honeypot-ssh-old-banner-modern-kex
+    id: 844
+    port: '22'
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "SSH-2.0-OpenSSH_9.2p1\r"
+        output_match_type: regex
+        output: '(?s)^SSH-2\.0-OpenSSH_5\.8p2\r\n.*curve25519-sha256,curve25519-sha256@libssh\.org,ecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521,diffie-hellman-group14-sha256,diffie-hellman-group14-sha1,kex-strict-s-v00@openssh\.com.*rsa-sha2-256,rsa-sha2-512,ssh-rsa'
+        invert_match: false
+    confidence: Medium
+    comment: 'The default vuln-config banner SSH-2.0-OpenSSH_5.8p2 (2011) is followed by the Go x/crypto/ssh key exchange list, which offers curve25519 (OpenSSH 6.5, 2014) and the strict key exchange extension (OpenSSH 9.6, 2023). OpenSSH 5.8 offers neither. The banner is configurable, hence Medium. Matched: oh-my-honeypot c8c45b7 (2026-11).'
+  - name: oh-my-honeypot-postgres-auth-failed-08p01
+    id: 845
+    port: '5432'
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: '00000029000300007573657200706f73746772657300646174616261736500706f7374677265730000'
+        output_match_type: hex
+        output: '520000000800000003'
+        invert_match: false
+      - input_type: hex
+        input: '700000000d686f6e657964657400'
+        output_match_type: hex
+        output: '534552524f5200433038503031004d41757468656e7469636174696f6e206661696c6564'
+        invert_match: false
+    confidence: High
+    comment: 'The fake PostgreSQL server asks every user for a clear-text password and then answers with severity ERROR, SQLSTATE 08P01 (protocol violation) and the message ''Authentication failed'', with no V, routine, file or line fields. PostgreSQL answers a failed login with FATAL, SQLSTATE 28P01 and ''password authentication failed for user ...'', and by default asks for SCRAM-SHA-256 or MD5 rather than a clear-text password. Matched: oh-my-honeypot c8c45b7 (2026-11).'
+  - name: oh-my-honeypot-ftp-silent-close
+    id: 846
+    port: '21'
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ''
+        output_match_type: no-response
+        output: ''
+        invert_match: false
+    confidence: Medium
+    comment: 'The port accepts the connection and closes it at once without sending anything: Oh-my-honeypot''s generic TCP listener only records the connection. A genuine FTP server sends a 220 greeting. A service behind TCP wrappers or a connection limit can also close at once, hence Medium. Matched: oh-my-honeypot c8c45b7 (2026-11).'
+  - name: oh-my-honeypot-telnet-silent-close
+    id: 847
+    port: '23'
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ''
+        output_match_type: no-response
+        output: ''
+        invert_match: false
+    confidence: Medium
+    comment: 'The port accepts the connection and closes it at once without sending anything: Oh-my-honeypot''s generic TCP listener only records the connection. A genuine Telnet server starts option negotiation (IAC DO/WILL) or sends a login banner. A service behind TCP wrappers can also close at once, hence Medium. Matched: oh-my-honeypot c8c45b7 (2026-11).'
+  - name: oh-my-honeypot-smb-silent-close
+    id: 848
+    port: '445'
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ''
+        output_match_type: no-response
+        output: ''
+        invert_match: false
+    confidence: Medium
+    comment: 'The port accepts the connection and closes it at once without sending anything: Oh-my-honeypot''s generic TCP listener only records the connection. A genuine SMB server (Windows or Samba) keeps the connection open and waits for the client''s Negotiate request. A host that drops SMB from untrusted networks can also close at once, hence Medium. Matched: oh-my-honeypot c8c45b7 (2026-11).'
+  - name: oh-my-honeypot-rdp-silent-close
+    id: 849
+    port: '3389'
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ''
+        output_match_type: no-response
+        output: ''
+        invert_match: false
+    confidence: Medium
+    comment: 'The port accepts the connection and closes it at once without sending anything: Oh-my-honeypot''s generic TCP listener only records the connection. A genuine RDP server (Windows or xrdp) keeps the connection open and waits for the client''s X.224 Connection Request. A gateway that rejects the source can also close at once, hence Medium. Matched: oh-my-honeypot c8c45b7 (2026-11).'
+  - name: troje-ng-clone-hostname
+    id: 850
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "hostname"
+        output_match_type: regex
+        output: '^troje_?[A-Za-z0-9]{8}_?[0-9]{10}$'
+        invert_match: false
+    confidence: High
+    comment: "Authenticated check: the sandbox's host name is the name Troje-NG gives each clone, troje_<8 random characters>_<Unix time of the first connection> (systemd in the clone may drop the underscores). Genuine servers carry an administrator-chosen name. Matched: Troje-NG a60be4f (2026-11)."
+  - name: troje-ng-clone-hostname-8022
+    id: 851
+    port: 8022
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "hostname"
+        output_match_type: regex
+        output: '^troje_?[A-Za-z0-9]{8}_?[0-9]{10}$'
+        invert_match: false
+    confidence: High
+    comment: "As 850 on Troje-NG's default listening port 8022. Matched: Troje-NG a60be4f (2026-11)."
+  - name: troje-ng-overlay-clone-root
+    id: 852
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "cat /proc/self/mountinfo"
+        output_match_type: regex
+        output: '(?m)^\S+ \S+ \S+ / / .* - overlay \S+ \S*upperdir=/var/lib/lxc/troje_[A-Za-z0-9]{8}_[0-9]{10}/overlay/delta'
+        invert_match: false
+    confidence: High
+    comment: "Authenticated check: the root file system is an overlayfs snapshot whose upper directory is /var/lib/lxc/troje_<random>_<time>/overlay/delta, the copy-on-write clone Troje-NG creates for each remote address. Genuine hosts mount a disk, and ordinary containers use their own names or Docker's /var/lib/docker paths. Matched: Troje-NG a60be4f (2026-11)."
+  - name: troje-ng-overlay-clone-root-8022
+    id: 853
+    port: 8022
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "cat /proc/self/mountinfo"
+        output_match_type: regex
+        output: '(?m)^\S+ \S+ \S+ / / .* - overlay \S+ \S*upperdir=/var/lib/lxc/troje_[A-Za-z0-9]{8}_[0-9]{10}/overlay/delta'
+        invert_match: false
+    confidence: High
+    comment: "As 852 on Troje-NG's default listening port 8022. Matched: Troje-NG a60be4f (2026-11)."
+  - name: troje-u1-overlay-clone-root
+    id: 854
+    port: 8022
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "cat /proc/self/mountinfo"
+        output_match_type: regex
+        output: '(?m)^\S+ \S+ \S+ / / .* - overlay \S+ \S*lowerdir=/var/lib/lxc/u1/rootfs,upperdir=/var/lib/lxc/[A-Za-z0-9]{8}/overlay/delta'
+        invert_match: false
+    confidence: High
+    comment: "Authenticated check on the original Troje's fixed port 8022: the root file system is an overlayfs snapshot of a base container named u1 (hard-coded in the original, whatever -b says) with an upper directory named by 8 random characters. Matched: Troje ecd0e9d with the lab's go-lxc compatibility port (2026-11)."
+  - name: twisted-honeypots-ftp-vsftpd-234-banner
+    id: 860
+    port: 21
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^220 vsFTPd 2\.3\.4$'
+        invert_match: false
+    confidence: High
+    comment: "The FTP greeting is '220 vsFTPd 2.3.4' with no parentheses. vsftpd itself always wraps its version in parentheses ('220 (vsFTPd 3.0.3)'), and 2.3.4 is the release withdrawn in 2011 after its source archive was backdoored, so a server announcing it this way is almost certainly a decoy. The banner is set in ftppot.py (welcomeMessage). Matched: twisted-honeypots 0a83d90 (2026-11)."
+  - name: twisted-honeypots-ftp-503-before-login
+    id: 861
+    port: 21
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^220 '
+        invert_match: false
+      - input_type: string
+        input: "SYST\r"
+        output_match_type: regex
+        output: '^503 Login with USER first\.$'
+        invert_match: false
+    confidence: High
+    comment: "Before login every command other than USER, PASS, FEAT and QUIT (SYST, HELP, PWD, unknown verbs) is answered '503 Login with USER first.': the reply table in ftppot.py gives two messages the same code 503, so the second text replaces 'Please login with USER and PASS.'. vsftpd answers '530 Please login with USER and PASS.'. Independent of the banner. Matched: twisted-honeypots 0a83d90 (2026-11)."
+  - name: twisted-honeypots-ftp-second-user-503
+    id: 862
+    port: 21
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^220 '
+        invert_match: false
+      - input_type: string
+        input: "USER anonymous\r"
+        output_match_type: regex
+        output: '^331 Please specify the password\.$'
+        invert_match: false
+      - input_type: string
+        input: "USER ftp\r"
+        output_match_type: regex
+        output: '^503 Login with USER first\.$'
+        invert_match: false
+    confidence: High
+    comment: "A second USER while a password is awaited is refused with '503 Login with USER first.'. vsftpd, whose '331 Please specify the password.' the honeypot copies, simply accepts the new user name with another 331. Independent of the banner. Matched: twisted-honeypots 0a83d90 (2026-11)."
+  - name: twisted-honeypots-telnet-bare-prompt-login-cycle
+    id: 863
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^Username:$'
+        invert_match: false
+      - input_type: string
+        input: "admin\r"
+        output_match_type: regex
+        output: '^Password:$'
+        invert_match: false
+      - input_type: string
+        input: "admin\r"
+        output_match_type: regex
+        output: '^Authentication failed\r\nUsername:$'
+        invert_match: false
+    confidence: High
+    comment: "The Telnet service opens with a bare 'Username: ' and no option negotiation, asks 'Password: ' without turning off the client's echo, and answers every password with 'Authentication failed' and a new 'Username: ' prompt on the same connection. Linux telnetd starts with IAC negotiation (terminal type, speed, environment) and a 'login:' prompt; Cisco-style devices negotiate echo first and print '% Authentication failed'. Matched: twisted-honeypots 0a83d90 (2026-11)."
+  - name: twisted-honeypots-telnet-refuses-every-option
+    id: 864
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^Username:$'
+        invert_match: false
+      - input_type: hex
+        input: "fffb18fffd01fffd03"
+        output_match_type: hex
+        output: "fffe18fffc01fffc03"
+        invert_match: false
+      - input_type: string
+        input: "root\r"
+        output_match_type: regex
+        output: '^Password:$'
+        invert_match: false
+      - input_type: string
+        input: "root\r"
+        output_match_type: regex
+        output: '^Authentication failed\r\nUsername:$'
+        invert_match: false
+    confidence: High
+    comment: "After the bare 'Username: ' prompt, an offer of terminal type (WILL TTYPE) and requests for server echo and suppress-go-ahead (DO ECHO, DO SGA) are all refused (DONT TTYPE, WONT ECHO, WONT SGA): telnetpot.py refuses every option, so passwords are echoed on the client. Genuine telnetd agrees to echo and SGA (WILL ECHO, WILL SGA) to hide the password. The prompt and refusals alone are shared with Honeygrove's Twisted Telnet service, so the signature ends with the honeypot's own login cycle ('Password:', then 'Authentication failed' and a new 'Username:'), which Honeygrove does not answer. Matched: twisted-honeypots 0a83d90 (2026-11)."
+  - name: twisted-honeypots-ssh-aes128-cbc-only
+    id: 865
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^SSH-[12]\.[0-9]+-'
+        invert_match: false
+      - input_type: string
+        input: "SSH-2.0-OpenSSH_9.2p1\r"
+        output_match_type: regex
+        output: '(?s)\x00\x00\x00\x0aaes128-cbc\x00\x00\x00\x0aaes128-cbc\x00\x00\x00.hmac-sha2-512,hmac-sha2-384,hmac-sha2-256,hmac-sha1,hmac-md5\x00'
+        invert_match: false
+    confidence: High
+    comment: "The KEXINIT offers a single cipher, aes128-cbc, in both directions (sshpot.py restricts Twisted Conch to it for old libssh-based bots), followed by Twisted's MAC list. OpenSSH has not offered CBC ciphers by default since 7.2 and never offers only one; dropbear and Cisco IOS offer several ciphers including CTR modes. Independent of the banner. Modern clients refuse to connect unless aes128-cbc is enabled by hand. Matched: twisted-honeypots 0a83d90 on Twisted 26.10.0 (2026-11)."
+  - name: twisted-honeypots-ssh-banner-bad-packet-length
+    id: 866
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^SSH-(?:2\.0-OpenSSH_5\.5p1 Debian-6|2\.0-OpenSSH_6\.4p1-hpn14v2 FreeBSD-openssh-portable-6\.4\.p1,1|2\.0-OpenSSH|2\.0-OpenSSH_6\.7p1 Raspbian-5\+deb8u4|2\.0-OpenSSH_6\.6\.1p1 Ubuntu-2ubuntu2\.10|2\.0-dropbear_0\.52|1\.99-Cisco-1\.25)$'
+        invert_match: false
+      - input_type: string
+        input: "GET / HTTP/1.0\r"
+        output_match_type: regex
+        output: 'bad packet length 1195725856'
+        invert_match: false
+    confidence: High
+    comment: "One of the seven version strings sshpot.py picks from at start, then a non-SSH line ('GET / HTTP/1.0') is parsed as a binary packet and answered with an SSH disconnect 'bad packet length 1195725856' (the bytes 'GET ' read as a length). OpenSSH replies 'Invalid SSH identification string.' in clear text. Matched: twisted-honeypots 0a83d90 on Twisted 26.10.0 (2026-11)."
+  - name: glutton-http-empty-200
+    id: 870
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /honeydet-870-no-such-page HTTP/1.1\r\nHost: x\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 200 OK\r\nContent-Length: 0$'
+        invert_match: false
+      - input_type: string
+        input: "GET /honeydet-870-second-page HTTP/1.1\r\nHost: x\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 200 OK\r\nContent-Length: 0$'
+        invert_match: false
+    confidence: High
+    comment: "Glutton's HTTP handler answers any method and path, including pages that cannot exist, with '200 OK', 'Content-Length: 0' and nothing else (no Server, Date or Content-Type header, no body), and keeps the connection open for the next request. Apache, nginx, IIS and other origin servers send a Date header and a 404 for missing pages. The second request separates it from Honeytrap's Elasticsearch service, which gives the same reply to an unknown path but closes the connection. Matched: glutton 2579767 (2026-11)."
+  - name: glutton-ssh-go-kexinit-claims-openssh
+    id: 871
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "SSH-2.0-OpenSSH_9.2p1 Debian-2+deb12u3\r"
+        output_match_type: regex
+        output: '(?s)^SSH-2\.0-OpenSSH_[^\r\n]*\r\n.*curve25519-sha256,curve25519-sha256@libssh\.org,ecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521,diffie-hellman-group-exchange-sha256,diffie-hellman-group16-sha512,diffie-hellman-group14-sha256,kex-strict-s-v00@openssh\.com\x00'
+        invert_match: false
+    confidence: High
+    comment: "The SSH handler sends an OpenSSH version string (one of five Ubuntu and Debian personas, chosen per source address), but its KEXINIT is that of the Go golang.org/x/crypto/ssh server: nine key exchanges with diffie-hellman-group16-sha512 followed directly by group14-sha256 and kex-strict-s-v00, no sntrup761 or mlkem768 and no diffie-hellman-group18-sha512. Every OpenSSH release since 7.3 offers group18-sha512 by default, and 8.5 and later also sntrup761. The persona changes the banner, not the key exchange. Matched: glutton 2579767 (2026-11)."
+  - name: glutton-telnet-welcome-prompt
+    id: 872
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: hex
+        output: "fffd18fffd20fffd23fffd27557365726e616d653a"
+        invert_match: false
+      - input_type: string
+        input: "root\r"
+        output_match_type: regex
+        output: '^Password:$'
+        invert_match: false
+      - input_type: string
+        input: "honeydet872\r"
+        output_match_type: regex
+        output: '^welcome\r\n>$'
+        invert_match: false
+    confidence: High
+    comment: "Telnet sends its option requests (DO TERMINAL-TYPE, TSPEED, XDISPLOC, NEW-ENVIRON) and 'Username: ' in one go without waiting for the client's answers, accepts any user name and password and greets with 'welcome' and a '> ' prompt. telnetd and BusyBox telnetd negotiate first and then show 'login:', a genuine login fails for an unknown password, and embedded devices print their own banner and prompt. Matched: glutton 2579767 (2026-11)."
+  - name: glutton-ftp-syst-200-ok
+    id: 873
+    port: 21
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^220 Welcome$'
+        invert_match: false
+      - input_type: string
+        input: "SYST\r"
+        output_match_type: regex
+        output: '^200 Ok\.$'
+        invert_match: false
+    confidence: High
+    comment: "The FTP handler greets with a bare '220 Welcome' and answers commands it does not implement, such as SYST, with '200 Ok.'. Every FTP server answers SYST with a 215 system type (or 500/502 when it is not supported), as RFC 959 requires. Matched: glutton 2579767 (2026-11)."
+  - name: glutton-smtp-recheck-command
+    id: 874
+    port: 25
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^220 [^\r\n]+ ESMTP ready$'
+        invert_match: false
+      - input_type: string
+        input: "VRFY root\r"
+        output_match_type: string
+        output: "500 Recheck the command you entered."
+        invert_match: false
+    confidence: High
+    comment: "The SMTP handler greets with '220 <smtp.hostname> ESMTP ready' (default mail.localdomain) and answers VRFY, HELP and other commands it does not implement with '500 Recheck the command you entered.'. Postfix, Exim, Sendmail and Exchange answer VRFY with 252, 550 or 502 and their own wording. Matched: glutton 2579767 (2026-11)."
+  - name: glutton-memcached-fixed-stats
+    id: 875
+    port: 11211
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "stats\r"
+        output_match_type: regex
+        output: '^STAT pid 1\r\nSTAT uptime 12345\r\nSTAT time 1700000000\r\nSTAT version 1\.6\.22\r\n'
+        invert_match: false
+    confidence: High
+    comment: "The memcache handler answers 'stats' with a fixed block of nine values: pid 1, uptime 12345, a time stamp of 14 November 2023 that never advances, version 1.6.22 and zero counters. Genuine memcached reports its process id, the current time and about sixty statistics. Matched: glutton 2579767 (2026-11)."
+  - name: glutton-elasticsearch-session-cookie
+    id: 876
+    port: 9200
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\nSet-Cookie: session=[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\r\nContent-Type: application/json; charset=UTF-8\r\n.*"tagline" : "You Know, for Search"'
+        invert_match: false
+    confidence: High
+    comment: "Port 9200 is served by Glutton's HTTP handler, which returns an Elasticsearch 1.4.2 root document (a random Marvel character as node name) with a 'Set-Cookie: session=<UUID>' header. Elasticsearch never sets cookies, and every version from 1.x to 8.x answers its root URL without one. Matched: glutton 2579767 (2026-11)."
+  - name: glutton-catchall-http-on-mysql-port
+    id: 877
+    port: 3306
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 200 OK\r\nContent-Length: 0$'
+        invert_match: false
+    confidence: High
+    comment: "Glutton listens on every TCP port. A port without its own handler, such as 3306, stays silent until the client speaks and then hands the connection to the catch-all, which answers an HTTP request with '200 OK' and an empty body (other data gets 12 to 511 random bytes). MySQL and MariaDB send their handshake packet first and never answer HTTP. The same probe works on any otherwise unused port. Matched: glutton 2579767 (2026-11)."
+  - name: glutton-mongodb-minimal-ismaster
+    id: 878
+    port: 27017
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "3a0000000100000000000000d40700000000000061646d696e2e24636d64000000000001000000130000001069734d6173746572000100000000"
+        output_match_type: hex
+        output: "0869736d617374657200010869735772697461626c655072696d6172790001106d61785769726556657273696f6e00"
+        invert_match: false
+    confidence: High
+    comment: "A legacy OP_QUERY isMaster gets a five-field reply (ismaster, isWritablePrimary, maxWireVersion 17, minWireVersion, ok). mongod answers isMaster with ismaster followed by topologyVersion or maxBsonObjectSize, maxMessageSizeBytes, localTime, connectionId and more, and returns isWritablePrimary only to the newer 'hello' command. Matched: glutton 2579767 (2026-11)."
+  - name: glutton-rdp-confirm-zero-reference
+    id: 879
+    port: 3389
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "030000130ee000000000000100080003000000"
+        output_match_type: hex
+        output: "030000130ed000000000000200080001000000"
+        invert_match: false
+    confidence: Medium
+    comment: "An X.224 Connection Request offering TLS and CredSSP gets a Connection Confirm with source reference 0x0000, no flags and TLS (not CredSSP) selected. Windows answers with source reference 0x1234 and, from Windows Server 2012, with the extended client data and graphics flags set, and selects CredSSP when Network Level Authentication is on (the default); xrdp also uses 0x1234. Medium because other RDP server implementations may also use a zero reference. Matched: glutton 2579767 (2026-11)."
