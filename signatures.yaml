@@ -7613,3 +7613,111 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: "An X.224 Connection Request offering TLS and CredSSP gets a Connection Confirm with source reference 0x0000, no flags and TLS (not CredSSP) selected. Windows answers with source reference 0x1234 and, from Windows Server 2012, with the extended client data and graphics flags set, and selects CredSSP when Network Level Authentication is on (the default); xrdp also uses 0x1234. Medium because other RDP server implementations may also use a zero reference. Matched: glutton 2579767 (2026-11)."
+  - name: nepenthes-ftp-freeftpd-warftpd-banner
+    id: 880
+    port: 21
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^220 ---freeFTPd 1\.0---warFTPd 1\.65---'
+        invert_match: false
+    confidence: High
+    comment: "The FTP module (vuln-ftpd) greets with the fixed banner '220 ---freeFTPd 1.0---warFTPd 1.65---', naming two different Windows FTP servers at once. Genuine servers name one product (vsftpd: '220 (vsFTPd 3.0.3)'); Amun and Dionaea use other banners. Matched: Nepenthes 0.2.2 (git 03e96e6 as nepenthes-nx c2ad278) (2026-11)."
+  - name: nepenthes-ftp-quit-not-logged-in
+    id: 881
+    port: 21
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "QUIT\r"
+        output_match_type: regex
+        output: '^220 [^\r\n]*\r\n530 You are not logged in$'
+        invert_match: false
+    confidence: High
+    comment: "Any command other than USER in the initial state, including QUIT, is answered with '530 You are not logged in'. RFC 959 servers answer QUIT with 221 and close; Amun closes without a reply. Independent of the banner text. Matched: Nepenthes 0.2.2 (git 03e96e6 as nepenthes-nx c2ad278) (2026-11)."
+  - name: nepenthes-smb-fixed-negotiate-guid-time
+    id: 882
+    port: 445
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "0000002fff534d4272000000001853c80000000000000000000000000000fffe00000100000c00024e54204c4d20302e313200"
+        output_match_type: hex
+        output: "fde3000067d92646ad3dc901c4ff001000cf939887521d7c429aed0f2473db5c46"
+        invert_match: false
+    confidence: High
+    comment: "SMB1 negotiate (NT LM 0.12): the reply comes from a fixed template (vuln-ms08067) with capabilities 0xe3fd, a server time frozen at 2008-11-03 12:11:17 UTC, no challenge and the hard-coded server GUID cf939887-521d-7c42-9aed-0f2473db5c46 on every connection. A genuine server reports the current time and its own GUID; Samba 4.17 refuses an NT LM 0.12-only negotiate; Amun and Dionaea use other GUIDs. Matched: Nepenthes 0.2.2 (git 03e96e6 as nepenthes-nx c2ad278) (2026-11)."
+  - name: nepenthes-netbios-64-byte-session-reply
+    id: 883
+    port: 139
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "05000b03100000004800000001000000b810b8100000000001000000000001000883afe11f5dc91191a408002b14a0fa03000000045d888aeb1cc9119fe808002b10486002000000"
+        output_match_type: hex
+        output: "82000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+        invert_match: false
+    confidence: High
+    comment: "Port 139 (vuln-netdde) answers any first packet, here a DCE/RPC bind that is not valid NetBIOS, with a 64-byte reply: a positive session response (0x82) padded with 63 zero bytes. A genuine NetBIOS session service answers only a valid session request, with the 4-byte 82 00 00 00, and ignores other data (Samba 4.17); Amun does not answer the bind on 139, and its MSMQ module, which sends the same 64 bytes to other data, answers a bind with a bind acknowledgement instead. Matched: Nepenthes 0.2.2 (git 03e96e6 as nepenthes-nx c2ad278) (2026-11)."
+  - name: nepenthes-dameware-64-byte-banner
+    id: 884
+    port: 6129
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: hex
+        output: "00000000000000000500000001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+        invert_match: false
+    confidence: High
+    comment: "Port 6129 (vuln-dameware, DameWare Mini Remote Control) sends an unsolicited 64-byte block that is all zero apart from 0x05 at offset 8 and 0x01 at offset 12 (the source comments 'pretend to be winxp'). Amun's DameWare module stays silent until the client speaks. Matched: Nepenthes 0.2.2 (git 03e96e6 as nepenthes-nx c2ad278) (2026-11)."
+  - name: nepenthes-kuang2-banner
+    id: 885
+    port: 17300
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: hex
+        output: "594f4b3200000000666f6f"
+        invert_match: false
+    confidence: High
+    comment: "Port 17300 (vuln-kuang2, the Kuang2 backdoor) greets with 'YOK2', four zero bytes and the placeholder 'foo' (the start of the string 'foo & bar' copied into the reply). Neither Amun nor Dionaea listens on 17300. Matched: Nepenthes 0.2.2 (git 03e96e6 as nepenthes-nx c2ad278) (2026-11)."
+  - name: nepenthes-sub7-pwd-you-connected
+    id: 886
+    port: 27347
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "PWD\r"
+        output_match_type: regex
+        output: '^PWDYou connected\.$'
+        invert_match: false
+    confidence: High
+    comment: "Port 27347 (vuln-sub7, the SubSeven backdoor) sends 'PWD' with no line ending and answers a reply that starts with PWD with 'You connected.', again with no line ending. Amun's SubSeven module, derived from it, ends both lines with CRLF and does not match. Matched: Nepenthes 0.2.2 (git 03e96e6 as nepenthes-nx c2ad278) (2026-11)."
+  - name: nepenthes-optix-yohoo-reply
+    id: 887
+    port: 3140
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "303232ac0d0a"
+        output_match_type: hex
+        output: "303031ac20594f686f6f20796f7572206d756d"
+        invert_match: false
+    confidence: High
+    comment: "Port 3140 (vuln-optix, the Optix Pro backdoor) answers the login string '022' + 0xAC with the placeholder '001' + 0xAC + ' YOhoo your mum' (the source notes that the authors did not know what Optix replies). Neither Amun nor Dionaea listens on 3140. Matched: Nepenthes 0.2.2 (git 03e96e6 as nepenthes-nx c2ad278) (2026-11)."
+  - name: nepenthes-bagle-auth-12345678
+    id: 888
+    port: 2745
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "43ffffff303030010a1f2b282ba13201"
+        output_match_type: regex
+        output: '^12345678$'
+        invert_match: false
+    confidence: High
+    comment: "Port 2745 (vuln-bagle) answers the Bagle backdoor authentication string with the literal '12345678' and nothing else. Amun's Bagle port answers the same bytes with a bare CRLF and closes. Matched: Nepenthes 0.2.2 (git 03e96e6 as nepenthes-nx c2ad278) (2026-11)."
