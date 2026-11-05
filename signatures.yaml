@@ -45,8 +45,7 @@ signatures:
         output: 501 Must provide username
         invert_match: false
     confidence: High
-    comment: "Uncommon error message matches node-ftp-honeypot:
-      https://github.com/christophe77/node-ftp-honeypot"
+    comment: "Uncommon error message matches node-ftp-honeypot: https://github.com/christophe77/node-ftp-honeypot. Not matched by node-ftp-honeypot 2.0.0 (3e22809) or 1.0.1 (a2b2fd1); 921 covers both (2026-11)."
   - name: FTPHoney
     id: 4
     port: 2121
@@ -5815,7 +5814,7 @@ signatures:
         output: ""
         invert_match: false
     confidence: Medium
-    comment: "DSHP configured with an FTP greeting as its reply sends the 220 banner and closes the connection, so USER gets no answer at all. A genuine FTP server answers USER (331 or 530) on the same connection. Medium: it detects DSHP only when it is configured with an FTP banner on port 21. Matched: dshp 238aad4 (Docker Hub image) and dshp-ng 42cf488 (2026-11)."
+    comment: "DSHP configured with an FTP greeting as its reply sends the 220 banner and closes the connection, so USER gets no answer at all. A genuine FTP server answers USER (331 or 530) on the same connection. Medium: it detects DSHP only when it is configured with an FTP banner on port 21. Matched: dshp 238aad4 (Docker Hub image) and dshp-ng 42cf488 (2026-11). Also matches node-ftp-honeypot 2.0.0 (3e22809) (2026-11)."
   - name: dshp-smtp-banner-then-close
     id: 743
     port: 25
@@ -7965,3 +7964,93 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: "Greeting and replies end with a bare LF instead of the CRLF required by RFC 959 (read here as the greeting and the USER reply arriving together). Every genuine FTP server tested ends lines with CRLF. Medium: relies on the greeting and the reply being read in one response. Matched: FTPHoney de5539f (June 2021, last commit) and FTPHoney-nx d25f90f (2026-11)."
+  - name: node-ftp-honeypot-voftp-greeting-help
+    id: 920
+    port: 21
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^220-Welcome to VOFTP a very open FTP Server\.\r?\n220 Ready'
+        invert_match: false
+      - input_type: hex
+        input: "48454c500d0a"
+        output_match_type: regex
+        output: '^502 Command not whitelisted: HELP'
+        invert_match: false
+    confidence: High
+    comment: "Default greeting 'Welcome to VOFTP a very open FTP Server.' (multi-line, followed by ftp-srv's '220 Ready'), read without sending, and HELP refused with ftp-srv's '502 Command not whitelisted: HELP'. The greeting can be changed with FTP_GREETING in 2.0.0; the HELP reply cannot. Genuine servers answer HELP with a 214 list or 530 before login. Matched: node-ftp-honeypot 2.0.0 (3e22809, October 2026) and 1.0.1 (a2b2fd1, October 2023)."
+  - name: node-ftp-honeypot-voftp-greeting-help-2121
+    id: 921
+    port: 2121
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^220-Welcome to VOFTP a very open FTP Server\.\r?\n220 Ready'
+        invert_match: false
+      - input_type: hex
+        input: "48454c500d0a"
+        output_match_type: regex
+        output: '^502 Command not whitelisted: HELP'
+        invert_match: false
+    confidence: High
+    comment: "Same check as 920 on port 2121, the default port of node-ftp-honeypot 2.0.0 and its Docker image. Matched: node-ftp-honeypot 2.0.0 (3e22809, October 2026) and 1.0.1 (a2b2fd1, October 2023)."
+  - name: node-ftp-honeypot-help-not-whitelisted
+    id: 922
+    port: 21
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "48454c500d0a"
+        output_match_type: regex
+        output: '502 Command not whitelisted: HELP'
+        invert_match: false
+    confidence: High
+    comment: "HELP before login answered '502 Command not whitelisted: HELP': ftp-srv run with a command whitelist that leaves out HELP, as node-ftp-honeypot does whatever its greeting. Plain ftp-srv answers 211 with its command list; vsftpd, ProFTPD, Pure-FTPd and Twisted answer 214 or 530. Matched: node-ftp-honeypot 2.0.0 (3e22809, October 2026) and 1.0.1 (a2b2fd1, October 2023)."
+  - name: node-ftp-honeypot-any-login-port-refused
+    id: 923
+    port: 21
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "555345522068306e33796433740d0a"
+        output_match_type: regex
+        output: '331 Username okay, awaiting password'
+        invert_match: false
+      - input_type: hex
+        input: "50415353207a71382d4b783276374c700d0a"
+        output_match_type: regex
+        output: '^230 User logged in, proceed'
+        invert_match: false
+      - input_type: hex
+        input: "504f5254203139322c302c322c312c3230302c310d0a"
+        output_match_type: regex
+        output: '^502 Command not whitelisted: PORT'
+        invert_match: false
+    confidence: High
+    comment: "A random user name and password are accepted ('230 User logged in, proceed'), then active mode (PORT) is refused with '502 Command not whitelisted: PORT'. Genuine servers reject unknown accounts with 530; a real ftp-srv application that accepted the login would answer PORT with 200 or a 425/500-series error, not the whitelist reply. Matched: node-ftp-honeypot 2.0.0 (3e22809, October 2026) and 1.0.1 (a2b2fd1, October 2023)."
+  - name: node-ftp-honeypot-bait-dir-path
+    id: 924
+    port: 21
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "555345522068306e33796433740d0a"
+        output_match_type: regex
+        output: '331 Username okay, awaiting password'
+        invert_match: false
+      - input_type: hex
+        input: "50415353207a71382d4b783276374c700d0a"
+        output_match_type: regex
+        output: '^230 User logged in, proceed'
+        invert_match: false
+      - input_type: hex
+        input: "4357442068306e33796433740d0a"
+        output_match_type: regex
+        output: '^550 ENOENT: no such file or directory, stat [^ ]*/black-box/ftp/h0n3yd3t'
+        invert_match: false
+    confidence: Medium
+    comment: "After any login, changing to a directory that does not exist returns Node.js's stat error, which discloses the server path of the bait directory, ending in black-box/ftp. Genuine servers answer 550 with a short message and never show the server path. Medium: the bait directory can be moved with BAIT_DIR, and 1.0.1 refuses CWD altogether. Matched: node-ftp-honeypot 2.0.0 (3e22809, October 2026)."
