@@ -89,8 +89,7 @@ signatures:
         output: Input line is too long; login aborted.
         invert_match: false
     confidence: Medium
-    comment: Response to long line is uncommon - May be
-      https://github.com/kolya5544/BearFTP
+    comment: "Response to long line is uncommon - May be https://github.com/kolya5544/BearFTP. Matched: none found; not matched by BearFTP 0.4.1 (c849c7d) or the final commit ab780c8, and its expected reply is not in the project's history (2026-11)."
   - name: smtp-honey
     id: 7
     port: 1993
@@ -5858,7 +5857,7 @@ signatures:
         output: ""
         invert_match: false
     confidence: Medium
-    comment: "DSHP with its default empty reply on the FTP port accepts and closes without a greeting. FTP servers always send a 220 greeting (or 421 when busy) first. TCP wrappers or a forwarder with no backend give the same silent close, hence Medium. Matched: dshp 238aad4 (Docker Hub image) and dshp-ng 42cf488 (2026-11)."
+    comment: "DSHP with its default empty reply on the FTP port accepts and closes without a greeting. FTP servers always send a 220 greeting (or 421 when busy) first. TCP wrappers or a forwarder with no backend give the same silent close, hence Medium. Matched: dshp 238aad4 (Docker Hub image) and dshp-ng 42cf488 (2026-11). Also matches BearFTP 0.4.1 once BearFTP has banned the scanning address (2026-11)."
   - name: dshp-smtp-port-silent-close
     id: 746
     port: 25
@@ -7237,7 +7236,7 @@ signatures:
         output: ''
         invert_match: false
     confidence: Medium
-    comment: 'The port accepts the connection and closes it at once without sending anything: Oh-my-honeypot''s generic TCP listener only records the connection. A genuine FTP server sends a 220 greeting. A service behind TCP wrappers or a connection limit can also close at once, hence Medium. Matched: oh-my-honeypot c8c45b7 (2026-11).'
+    comment: "The port accepts the connection and closes it at once without sending anything: Oh-my-honeypot's generic TCP listener only records the connection. A genuine FTP server sends a 220 greeting. A service behind TCP wrappers or a connection limit can also close at once, hence Medium. Matched: oh-my-honeypot c8c45b7 (2026-11). Also matches BearFTP 0.4.1 once BearFTP has banned the scanning address (2026-11)."
   - name: oh-my-honeypot-telnet-silent-close
     id: 847
     port: '23'
@@ -7721,3 +7720,88 @@ signatures:
         invert_match: false
     confidence: High
     comment: "Port 2745 (vuln-bagle) answers the Bagle backdoor authentication string with the literal '12345678' and nothing else. Amun's Bagle port answers the same bytes with a bare CRLF and closes. Matched: Nepenthes 0.2.2 (git 03e96e6 as nepenthes-nx c2ad278) (2026-11)."
+  - name: bearftp-ftp-head-proxy-tor-refusal
+    id: 890
+    port: 21
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^220 [^\r\n]*\r\n220 No connection from proxy/Tor client allowed\.$'
+        invert_match: false
+    confidence: High
+    comment: "The repository's last commit (October 2021) sends a second greeting line, '220 No connection from proxy/Tor client allowed.', after the configured banner and then closes every connection. Matched: BearFTP head commit ab780c8 (2026-11); not the 0.4.1 release."
+  - name: bearftp-ftp-default-banners
+    id: 891
+    port: 21
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^220 (ProFTPd 1\.3\.5 Server \[[0-9.]+\]|My very own FTP server located at )'
+        invert_match: false
+    confidence: Medium
+    comment: "The two banners the project ships: 'ProFTPd 1.3.5 Server [%host%]' in example_config/config.json (lower-case 'd', the configured address in brackets; genuine ProFTPD writes 'ProFTPD' and names the server in parentheses, e.g. '220 ProFTPD 1.3.5 Server (ProFTPD Default Installation) [192.0.2.1]') and 'My very own FTP server located at %host%' in the config BearFTP writes on first start and its README. The banner is configurable. Matched: BearFTP 0.4.1 (c849c7d, .NET 10 build) with either config, and head ab780c8 (2026-11)."
+  - name: bearftp-ftp-opts-and-auth-replies
+    id: 892
+    port: 21
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^220 '
+        invert_match: false
+      - input_type: string
+        input: "OPTS UTF8 ON\r"
+        output_match_type: regex
+        output: '^200 Encoding successfully changed!$'
+        invert_match: false
+      - input_type: string
+        input: "AUTH TLS\r"
+        output_match_type: regex
+        output: '^502 Please use plain FTP\.$'
+        invert_match: false
+    confidence: High
+    comment: "Before login, OPTS is answered '200 Encoding successfully changed!' and AUTH (TLS or SSL) '502 Please use plain FTP.', texts of BearFTP's own. Genuine servers answer differently (lab: vsftpd 3.0.3 '200 Always in UTF8 mode.' and '530 Please login with USER and PASS.'; ProFTPD 1.3.8b '500 OPTS UTF8 not understood' and '500 AUTH not understood'; Pure-FTPd 1.0.51 \"530 You aren't logged in\" and '500 This security scheme is not implemented'; Twisted '530 Please login with USER and PASS.' to both). Independent of the banner. Matched: BearFTP 0.4.1 (c849c7d, .NET 10 build) (2026-11)."
+  - name: bearftp-ftp-user-protected-with-password
+    id: 893
+    port: 21
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^220 '
+        invert_match: false
+      - input_type: string
+        input: "USER admin\r"
+        output_match_type: regex
+        output: '^331 This user is protected with password$'
+        invert_match: false
+    confidence: High
+    comment: "Every user name of 2 to 31 letters and digits (except 'anonymous') is answered '331 This user is protected with password', a text no common FTP server uses (lab: vsftpd '331 Please specify the password.', ProFTPD '331 Password required for admin', Pure-FTPd '331 User admin OK. Password required', Twisted '331 Password required for admin.'). Matched: BearFTP 0.4.1 (c849c7d, .NET 10 build) (2026-11)."
+  - name: bearftp-ftp-pass-without-user-logs-in
+    id: 894
+    port: 21
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^220 '
+        invert_match: false
+      - input_type: string
+        input: "PASS guest2026\r"
+        output_match_type: regex
+        output: '^230 Successful login\.$'
+        invert_match: false
+      - input_type: string
+        input: "PWD\r"
+        output_match_type: regex
+        output: '^257 "/" is the current working directory$'
+        invert_match: false
+    confidence: High
+    comment: "PASS with any password of 2 to 31 characters logs in even when no USER was sent ('230 Successful login.'), and PWD then answers '257 \"/\" is the current working directory'. Genuine servers refuse PASS without USER (lab: vsftpd '503 Login with USER first.', ProFTPD '503 Login with USER first', Pure-FTPd '530 Please tell me who you are', Twisted '503 Incorrect sequence of commands: USER required before PASS'). Matched: BearFTP 0.4.1 (c849c7d, .NET 10 build) (2026-11)."
