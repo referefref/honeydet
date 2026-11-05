@@ -8629,3 +8629,76 @@ signatures:
         invert_match: false
     confidence: High
     comment: 'The optional REST API (-a, port 8082, no authentication) answers /health-check with ''X-Powered-By: SentryPeer'', an X-SentryPeer-Version header and ''Hello from SentryPeer!''. It names the product outright, and /ip-addresses and /numbers list what the sensor has collected. Matched: SentryPeer 5.0.0 (2026-11).'
+  - name: honeysmb-smb2-fixed-ntlm-challenge
+    id: 990
+    port: 445
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "0000006cfe534d42400000000000000000001f000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002400040001000000000000001111111111111111111111111111111100000000000000000202100200030203"
+        output_match_type: hex
+        output: "fe534d4240"
+        invert_match: false
+      - input_type: hex
+        input: "000000a2fe534d42400000000000000001001f0000000000000000000100000000000000000000000000000000000000000000000000000000000000000000000000000019000001000000000000000058004a000000000000000000604806062b0601050502a03e303ca00e300c060a2b06010401823702020aa22a04284e544c4d5353500001000000978208e2000000000000000000000000000000000a00614a0000000f"
+        output_match_type: regex
+        output: '(?s)NTLMSSP\x00\x02\x00\x00\x00.{12}AAAAAAAA\x00{8}'
+        invert_match: false
+    confidence: High
+    comment: "SMB2 NEGOTIATE then SESSION_SETUP with an NTLMSSP NEGOTIATE token: the NTLM CHALLENGE message carries the server challenge 4141414141414141 ('AAAAAAAA', the default of the Impacket SMBSERVER class that HoneySMB runs without a challenge setting) on every connection. Windows and Samba generate a random 8-byte challenge for each authentication; Impacket's smbserver.py example and SimpleSMBServer use AAAAAAAAAAAAAAAA as hex (aaaaaaaaaaaaaaaa). Matched: HoneySMB e259c2d (Python 2) and HoneySMB-nx 81ca255 with Impacket 0.13.1 (2026-11)."
+  - name: honeysmb-default-identity-workgroup-micr0
+    id: 991
+    port: 445
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "0000006cfe534d42400000000000000000001f000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002400040001000000000000001111111111111111111111111111111100000000000000000202100200030203"
+        output_match_type: hex
+        output: "fe534d4240"
+        invert_match: false
+      - input_type: hex
+        input: "000000a2fe534d42400000000000000001001f0000000000000000000100000000000000000000000000000000000000000000000000000000000000000000000000000019000001000000000000000058004a000000000000000000604806062b0601050502a03e303ca00e300c060a2b06010401823702020aa22a04284e544c4d5353500001000000978208e2000000000000000000000000000000000a00614a0000000f"
+        output_match_type: regex
+        output: '(?s)NTLMSSP\x00\x02\x00\x00\x00\x12\x00\x12\x00.{40}w\x00o\x00r\x00k\x00g\x00r\x00o\x00u\x00p\x00.*\x01\x00\x0a\x00(?i:m\x00i\x00c\x00r\x000\x00)'
+        invert_match: false
+    confidence: Medium
+    comment: "SMB2 SESSION_SETUP with an NTLMSSP NEGOTIATE token: the NTLM CHALLENGE names the target domain in lower case, 'workgroup', and the computer 'micr0' (HoneySMB's smb.conf defaults server_domain = workgroup and server_name = micr0). Windows and Samba report the NetBIOS domain in upper case and their own host name. Configurable, hence Medium. Matched: HoneySMB e259c2d (Python 2) and HoneySMB-nx 81ca255 with Impacket 0.13.1 (2026-11)."
+  - name: honeysmb-smb1-fixed-ntlm-challenge
+    id: 992
+    port: 445
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "0000002fff534d4272000000001853c80000000000000000000000000000fffe00000100000c00024e54204c4d20302e313200"
+        output_match_type: hex
+        output: "ff534d4272000000"
+        invert_match: false
+      - input_type: hex
+        input: "00000089ff534d4273000000001807c80000000000000000000000000000fffe000002000cff00000004110a000000000000004a0000000000d40000804e00604806062b0601050502a03e303ca00e300c060a2b06010401823702020aa22a04284e544c4d5353500001000000978208e2000000000000000000000000000000000a00614a0000000f00000000"
+        output_match_type: regex
+        output: '(?s)NTLMSSP\x00\x02\x00\x00\x00.{12}AAAAAAAA\x00{8}'
+        invert_match: false
+    confidence: High
+    comment: "SMB1 NEGOTIATE (NT LM 0.12 only) is accepted with extended security, and the following SMB1 SESSION_SETUP_ANDX with an NTLMSSP NEGOTIATE token returns the fixed NTLM challenge 4141414141414141 ('AAAAAAAA'). Current Samba refuses an NT LM 0.12-only negotiate, Windows has SMB1 disabled by default, and any genuine server uses a random challenge. Matched: HoneySMB e259c2d (Python 2) and HoneySMB-nx 81ca255 with Impacket 0.13.1 (2026-11)."
+  - name: honeysmb-guest-logon-any-credentials
+    id: 993
+    port: 445
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "0000006cfe534d42400000000000000000001f000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002400040001000000000000001111111111111111111111111111111100000000000000000202100200030203"
+        output_match_type: hex
+        output: "fe534d4240"
+        invert_match: false
+      - input_type: hex
+        input: "000000a2fe534d42400000000000000001001f0000000000000000000100000000000000000000000000000000000000000000000000000000000000000000000000000019000001000000000000000058004a000000000000000000604806062b0601050502a03e303ca00e300c060a2b06010401823702020aa22a04284e544c4d5353500001000000978208e2000000000000000000000000000000000a00614a0000000f"
+        output_match_type: regex
+        output: '(?s)NTLMSSP\x00\x02\x00\x00\x00.{12}AAAAAAAA\x00{8}'
+        invert_match: false
+      - input_type: hex
+        input: "00000104fe534d42400000000000000001001f000000000000000000020000000000000000000000000000000000000000000000000000000000000000000000000000001900000100000000000000005800ac000000000000000000a181a93081a6a281a30481a04e544c4d535350000300000018001800400000001800180058000000120012007000000010001000820000000e000e009200000000000000a0000000158208e20102030405060708090a0b0c0d0e0f1011121314151617181f202122232425262728292a2b2c2d2e2f3031323334353657004f0052004b00470052004f005500500068006f006e00650079006400650074005300430041004e004e0045005200"
+        output_match_type: hex
+        output: "fe534d4240000000000000000100"
+        invert_match: false
+    confidence: High
+    comment: "After the fixed challenge 'AAAAAAAA', an NTLM AUTHENTICATE for an invented user (honeydet) with meaningless 24-byte LM and NT responses and session id 0 completes with STATUS_SUCCESS as a guest session: HoneySMB accepts any user name and password. Samba rejects the message (STATUS_INVALID_PARAMETER), and a Windows server with the guest account disabled (the default) refuses a logon it cannot verify. Matched: HoneySMB e259c2d (Python 2) and HoneySMB-nx 81ca255 with Impacket 0.13.1 (2026-11)."
