@@ -8702,3 +8702,65 @@ signatures:
         invert_match: false
     confidence: High
     comment: "After the fixed challenge 'AAAAAAAA', an NTLM AUTHENTICATE for an invented user (honeydet) with meaningless 24-byte LM and NT responses and session id 0 completes with STATUS_SUCCESS as a guest session: HoneySMB accepts any user name and password. Samba rejects the message (STATUS_INVALID_PARAMETER), and a Windows server with the guest account disabled (the default) refuses a logon it cannot verify. Matched: HoneySMB e259c2d (Python 2) and HoneySMB-nx 81ca255 with Impacket 0.13.1 (2026-11)."
+  - name: smb-honeypot-negotiate-closed-unanswered
+    id: 1000
+    port: 445
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "00000045ff534d4272000000001853c80000000000000000000000000000fffe00000100002200024e54204c4d20302e31320002534d4220322e3030320002534d4220322e3f3f3f00"
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+      - input_type: hex
+        input: ""
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+      - input_type: hex
+        input: ""
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+      - input_type: hex
+        input: ""
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+      - input_type: hex
+        input: ""
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+      - input_type: hex
+        input: ""
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+      - input_type: hex
+        input: ""
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+      - input_type: hex
+        input: ""
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+      - input_type: hex
+        input: ""
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+      - input_type: hex
+        input: ""
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+      - input_type: hex
+        input: ""
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+    confidence: Medium
+    comment: "A multi-protocol SMB1 NEGOTIATE offering NT LM 0.12, SMB 2.002 and SMB 2.??? (the first request of Windows clients and nmap) is read and the connection is closed with no reply. Windows and Samba answer it, with an SMB2 NEGOTIATE response when SMB1 is disabled. The ten following steps send nothing and only confirm that the connection ended cleanly, with no reset. That separates SMB-Honeypot, which waits for the client's first packet (as a genuine server does) and closes after reading it, from listeners that close every connection as soon as it is accepted (Oh-my-honeypot's port 445 listener, honeydet 848, or a host refusing the client): the probe's data reaches an already closed socket and is answered with a reset. A filtering device that drops SMB clients after their first packet would look the same, hence Medium. With the honeypot's iptables ban on (its default), only the first connection from an address gets through for 30 minutes. Matched: SMB-Honeypot 70d55be (2026-11)."
