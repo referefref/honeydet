@@ -8054,3 +8054,123 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: "After any login, changing to a directory that does not exist returns Node.js's stat error, which discloses the server path of the bait directory, ending in black-box/ftp. Genuine servers answer 550 with a short message and never show the server path. Medium: the bait directory can be moved with BAIT_DIR, and 1.0.1 refuses CWD altogether. Matched: node-ftp-honeypot 2.0.0 (3e22809, October 2026)."
+  - name: helix-k8s-version-sorted-keys
+    id: 930
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /version HTTP/1.1\r\nHost: x\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\n.*\r\n\r\n\{"buildDate":"[^"]+","compiler":"gc","gitCommit":"[0-9a-f]{40}","gitTreeState":"clean","gitVersion":"v1\.[0-9]+\.0","goVersion":"go1\.24\.4","major":"1","minor":"[0-9]+","platform":"linux/amd64"\}'
+        invert_match: false
+    confidence: High
+    comment: "Helix's Kubernetes API answers GET /version with the version fields in alphabetical order (buildDate first, as a Go map serialises them), goVersion go1.24.4 for every simulated release, a gitVersion ending in .0 and no emulationMajor/minCompatibility fields. A genuine kube-apiserver writes the version.Info struct in field order (major, minor, emulationMajor, ... gitVersion, gitCommit, buildDate, goVersion), adds Audit-Id and X-Kubernetes-Pf-* headers, and v1.37.0 was built with go1.26.6 (go1.26.7 for k3s). The buildDate is also the honeypot's start time rather than the release build date. Probed on Helix's default plain-HTTP port 8080; since Kubernetes 1.20 a genuine API server serves plain HTTP only through kubectl proxy. Matched: helix-honeypot 6c2773c (develop, 2026-10-02), Go 1.27.3 build (2026-11)."
+  - name: helix-k8s-unknown-path-status
+    id: 931
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /honeydet-probe-nonexistent HTTP/1.1\r\nHost: x\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 404 Not Found\r\n.*\r\n\r\n\{"apiVersion":"v1","code":404,"kind":"Status","message":"the requested API path \\"/honeydet-probe-nonexistent\\" was not found","reason":"NotFound","status":"Failure"\}'
+        invert_match: false
+    confidence: High
+    comment: "A path outside the API is answered with a JSON Status object whose keys are sorted alphabetically and whose message reads 'the requested API path ... was not found'. A genuine kube-apiserver answers an authorised request for an unknown non-API path with the Go mux text '404 page not found' (text/plain; k3s v1.37.0+k3s1 through kubectl proxy) and an anonymous one with 403 Forbidden (vanilla v1.37.0); its Status objects are written in struct order (kind, apiVersion, metadata ...), and unknown API paths get the message 'the server could not find the requested resource'. Matched: helix-honeypot 6c2773c (develop, 2026-10-02), Go 1.27.3 build (2026-11)."
+  - name: helix-k8s-tls-self-signed-kube-apiserver
+    id: 932
+    port: 6443
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "16030100720100006e03030000000000000000000000000000000000000000000000000000000000000000000014c02bc02fc02cc030cca9cca8009c009d002f003501000031000a00080006001d00170018000b00020100000d001200100403080404010503080505010806060100170000ff01000100"
+        output_match_type: regex
+        output: '(?s)^\x16\x03\x03.*[\x0c\x13]\x0ekube-apiserver0\x1e\x17\x0d[0-9]{12}Z\x17\x0d[0-9]{12}Z0\x191\x170\x15\x06\x03U\x04\x03[\x0c\x13]\x0ekube-apiserver.*kubernetes\.default\.svc\.cluster\.local'
+        invert_match: false
+    confidence: Medium
+    comment: "A TLS 1.2 ClientHello (no SNI) returns Helix's generated serving certificate in clear: a self-signed CA certificate whose issuer and subject are both CN=kube-apiserver, valid from one hour before start for 365 days, with the kubernetes.default.svc names and 127.0.0.1/::1 but not the host's own address. kubeadm clusters present CN=kube-apiserver issued by the cluster CA CN=kubernetes; k3s presents O=k3s, CN=k3s issued by k3s-server-ca@<timestamp>; a vanilla kube-apiserver without certificate files generates a <host>@<timestamp> certificate signed by <host>-ca@<timestamp>. Helix's TLS listener also offers no HTTP/2 (ALPN), which genuine API servers do. Medium: the operator can supply certificate files (tls_cert_file, tls_key_file). Matched: helix-honeypot 6c2773c (develop, 2026-10-02), Go 1.27.3 build (2026-11)."
+  - name: helix-kubelet-tls-self-signed-node-cert
+    id: 933
+    port: 10250
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "16030100720100006e03030000000000000000000000000000000000000000000000000000000000000000000014c02bc02fc02cc030cca9cca8009c009d002f003501000031000a00080006001d00170018000b00020100000d001200100403080404010503080505010806060100170000ff01000100"
+        output_match_type: regex
+        output: '(?s)^\x16\x03\x03.*[\x0c\x13].system:node:[a-z0-9.-]+0\x1e\x17\x0d[0-9]{12}Z\x17\x0d[0-9]{12}Z0.1.0.\x06\x03U\x04\x03[\x0c\x13].system:node:[a-z0-9.-]+.*kubernetes\.default\.svc\.cluster\.local'
+        invert_match: false
+    confidence: Medium
+    comment: "Helix's kubelet mode serves a self-signed CA certificate whose issuer and subject are both CN=system:node:<node_name> (worker-01 by default) and which carries the API server's service names (kubernetes.default.svc.cluster.local). A genuine kubelet serves either its own self-signed <hostname>@<timestamp> certificate signed by <hostname>-ca@<timestamp>, or a certificate issued by the cluster CA (k3s: CN=<node>, issuer k3s-server-ca@<timestamp>), and never the kubernetes service names. Medium: the operator can supply certificate files. Matched: helix-honeypot 6c2773c (develop, 2026-10-02), Go 1.27.3 build (2026-11)."
+  - name: helix-docker-api-version-error
+    id: 934
+    port: 2375
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /v1.99/version HTTP/1.1\r\nHost: x\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 400 Bad Request\r\n.*Server: Docker/[^\r\n]+\r\n.*\r\n\r\n\{"message":"unsupported client API version"\}'
+        invert_match: false
+    confidence: High
+    comment: "A request for a non-existent API version (1.99) is refused with the fixed message 'unsupported client API version'. Docker Engine 26.1.4 (the version Helix imitates) answers 'client version 1.99 is too new. Maximum supported API version is 1.45' and, for versions below 1.24, 'client version ... is too old. Minimum supported API version is 1.24, please upgrade your client to a newer version'. Matched: helix-honeypot 6c2773c (develop, 2026-10-02), Go 1.27.3 build (2026-11)."
+  - name: helix-docker-unknown-endpoint
+    id: 935
+    port: 2375
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /honeydet-probe-nonexistent HTTP/1.1\r\nHost: x\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 404 Not Found\r\nApi-Version: [^\r\n]+\r\n.*Server: Docker/[^\r\n]+\r\n.*\r\n\r\n\{"message":"endpoint unavailable"\}'
+        invert_match: false
+    confidence: High
+    comment: "An unknown path returns 404 with the full set of Docker headers (Api-Version, Docker-Experimental, Ostype, Server: Docker/26.1.4 (linux)) and the body {\"message\":\"endpoint unavailable\"}. The genuine daemon's router answers unknown paths with {\"message\":\"page not found\"} and none of the Docker headers. Helix gives the same 404 for /system/df, /events and image pulls, which a genuine Engine serves. Matched: helix-honeypot 6c2773c (develop, 2026-10-02), Go 1.27.3 build (2026-11)."
+  - name: helix-ai-ollama-root-headers
+    id: 936
+    port: 11434
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\nCache-Control: no-store\r\nContent-Type: text/plain\r\nX-Content-Type-Options: nosniff\r\n.*\r\n\r\nOllama is running$'
+        invert_match: false
+    confidence: High
+    comment: "The Ollama facade's banner 'Ollama is running' comes with Cache-Control: no-store, X-Content-Type-Options: nosniff and Content-Type: text/plain without a charset. Genuine Ollama (0.5.7, the version Helix reports, and 0.40.14) sends the same text with Content-Type: text/plain; charset=utf-8, Content-Length 17 and neither of the other headers. Matched: helix-honeypot 6c2773c (develop, 2026-10-02), Go 1.27.3 build (2026-11)."
+  - name: helix-ai-unknown-endpoint
+    id: 937
+    port: 11434
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /honeydet-probe-nonexistent HTTP/1.1\r\nHost: x\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 404 Not Found\r\nCache-Control: no-store\r\nContent-Type: application/json\r\n.*\r\n\r\n\{"error":"endpoint unavailable"\}$'
+        invert_match: false
+    confidence: High
+    comment: "An unknown path on the AI listener returns 404 with the JSON body {\"error\":\"endpoint unavailable\"} (and an OpenAI-style error object under /v1/). Genuine Ollama 0.5.7 and 0.40.14 answer every unknown path with the Gin text '404 page not found' (text/plain). Matched: helix-honeypot 6c2773c (develop, 2026-10-02), Go 1.27.3 build (2026-11)."
+  - name: helix-http-any-method-ok
+    id: 938
+    port: 8081
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "HONEYDET /honeydet-probe HTTP/1.1\r\nHost: x\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 200 OK\r\nContent-Type: text/plain; charset=UTF-8\r\nDate: [^\r\n]+\r\nContent-Length: 2\r\n\r\nOK$'
+        invert_match: false
+    confidence: Medium
+    comment: "Helix's generic HTTP mode answers every path and every method, including an invented one, with 200, Content-Type: text/plain; charset=UTF-8 (the Echo framework's spelling), no Server header and the two-byte body OK. Web servers refuse unknown methods (nginx 405, Apache httpd 501); applications with a catch-all handler may accept them (traefik/whoami answers 200 with its own body and charset=utf-8). Medium: a small Echo application with a catch-all route returning OK behaves the same way. Matched: helix-honeypot 6c2773c (develop, 2026-10-02), Go 1.27.3 build (2026-11)."
+  - name: helix-docker-version-sorted-keys
+    id: 939
+    port: 2375
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /version HTTP/1.1\r\nHost: x\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\n.*Server: Docker/[^\r\n]+\r\n.*\r\n\r\n\{"ApiVersion":"1\.45","Arch":"amd64","BuildTime":"2024-06-05T11:29:20Z","Components":\[\{"Details":\{"ApiVersion":"1\.45","Arch":"amd64","MinAPIVersion":"1\.24","Os":"linux"\},"Name":"Engine","Version":"26\.1\.4"\}\]'
+        invert_match: false
+    confidence: High
+    comment: "GET /version returns a short Docker 26.1.4 document with its keys in alphabetical order (ApiVersion, Arch, BuildTime ...), a BuildTime without fractional seconds and no Platform, containerd, runc or docker-init components. Docker Engine 26.1.4 writes the struct in field order starting {\"Platform\":{\"Name\":\"Docker Engine - Community\"},\"Components\":[...] with BuildTime 2024-06-05T11:29:25.000000000+00:00 and GoVersion go1.21.11 (Helix reports go1.21.9). Matched: helix-honeypot 6c2773c (develop, 2026-10-02), Go 1.27.3 build (2026-11)."
