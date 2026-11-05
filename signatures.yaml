@@ -8290,3 +8290,111 @@ signatures:
         invert_match: false
     confidence: High
     comment: "A Connection Request offering only TLS is confirmed with CredSSP selected (a protocol the client did not offer), flags 0x00 and source reference 0x1234. When the backend enforces Network Level Authentication, PyRDP switches to NetNTLMv2 capture and always answers CredSSP; a server that requires NLA sends RDP_NEG_FAILURE HYBRID_REQUIRED_BY_SERVER (FreeRDP NLA-only server and Windows do). OpenCanary (flags 0x09) and Beelzebub (flags 0x01, reply to a request for standard security) differ. Matched: PyRDP 2.1.1.dev0 b610809 (2026-11)."
+  - name: galah-traversal-path-200-generated
+    id: 360
+    port: web-ports
+    proto: tcp
+    steps:
+    - input_type: string
+      input: "GET /cgi-bin/../../../../etc/passwd HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nAccept: */*\r\nConnection: close\r\n\r"
+      output_match_type: regex
+      output: "(?s)^HTTP/1\\.1 200 OK\\r\\n(?:(?:[A-Za-z0-9-]+: [^\\r\\n]*\\r\\n)+Date: [A-Z][a-z]{2}, \\d{2} [A-Z][a-z]{2} \\d{4} \\d{2}:\\d{2}:\\d{2} GMT\\r\\nContent-Length: \\d+\\r\\nContent-Type: [^\\r\\n]+(?:\\r\\nConnection: close)?(?:\\r\\n\\r\\n|$)|(?:[A-Za-z0-9-]+: [^\\r\\n]*\\r\\n)*Content-Encoding: [^\\r\\n]+\\r\\n(?:[A-Za-z0-9-]+: [^\\r\\n]*\\r\\n)*Date: [A-Z][a-z]{2}, \\d{2} [A-Z][a-z]{2} \\d{4} \\d{2}:\\d{2}:\\d{2} GMT\\r\\nContent-Length: \\d+(?:\\r\\nConnection: close)?(?:\\r\\n\\r\\n[\\t\\n\\r -~]|$)|(?:[A-Za-z0-9-]+: [^\\r\\n]*\\r\\n)+Date: [A-Z][a-z]{2}, \\d{2} [A-Z][a-z]{2} \\d{4} \\d{2}:\\d{2}:\\d{2} GMT\\r\\nContent-Type: [^\\r\\n]+\\r\\n(?:Connection: close\\r\\n)?Transfer-Encoding: chunked\\r\\n\\r\\n)"
+      invert_match: false
+    confidence: High
+    comment: 'A path-traversal request (/cgi-bin/../../../../etc/passwd, sent unnormalised) is passed straight to the model and answered with 200 OK in Galah''s response shape. Galah never sets a status code (every generated response is 200 OK) and discards the model''s Content-Type, Content-Length and Date, so Go''s net/http writes the model''s headers first (sorted) and then Date, Content-Length and a sniffed Content-Type (or no Content-Type when the model set Content-Encoding). nginx and Apache reject the path with 400, Go''s ServeMux redirects it, and h0neytr4p''s 200 carries no headers before Date. Does not depend on the model''s wording (only on it returning at least one header, which every model tested did). Matched: Galah v1.1.1 (8f77b85) with qwen2.5:3b, qwen2.5:1.5b and llama3.2:3b via Ollama (2026-10); Matched: Galah v1.1.1 (8f77b85; galah-nx for the Anthropic provider) with claude-haiku-5-5 (2026-11).'
+  - name: galah-unknown-method-200-generated
+    id: 361
+    port: web-ports
+    proto: tcp
+    steps:
+    - input_type: string
+      input: "FOO /index.html HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nAccept: */*\r\nConnection: close\r\n\r"
+      output_match_type: regex
+      output: "(?s)^HTTP/1\\.1 200 OK\\r\\n(?:(?:[A-Za-z0-9-]+: [^\\r\\n]*\\r\\n)+Date: [A-Z][a-z]{2}, \\d{2} [A-Z][a-z]{2} \\d{4} \\d{2}:\\d{2}:\\d{2} GMT\\r\\nContent-Length: \\d+\\r\\nContent-Type: [^\\r\\n]+(?:\\r\\nConnection: close)?(?:\\r\\n\\r\\n|$)|(?:[A-Za-z0-9-]+: [^\\r\\n]*\\r\\n)*Content-Encoding: [^\\r\\n]+\\r\\n(?:[A-Za-z0-9-]+: [^\\r\\n]*\\r\\n)*Date: [A-Z][a-z]{2}, \\d{2} [A-Z][a-z]{2} \\d{4} \\d{2}:\\d{2}:\\d{2} GMT\\r\\nContent-Length: \\d+(?:\\r\\nConnection: close)?(?:\\r\\n\\r\\n[\\t\\n\\r -~]|$)|(?:[A-Za-z0-9-]+: [^\\r\\n]*\\r\\n)+Date: [A-Z][a-z]{2}, \\d{2} [A-Z][a-z]{2} \\d{4} \\d{2}:\\d{2}:\\d{2} GMT\\r\\nContent-Type: [^\\r\\n]+\\r\\n(?:Connection: close\\r\\n)?Transfer-Encoding: chunked\\r\\n\\r\\n)"
+      invert_match: false
+    confidence: High
+    comment: 'A request with an invented method (FOO /index.html) is answered with 200 OK in Galah''s response shape; Galah''s cache key is the port and URL only, so the method is ignored. Galah never sets a status code (every generated response is 200 OK) and discards the model''s Content-Type, Content-Length and Date, so Go''s net/http writes the model''s headers first (sorted) and then Date, Content-Length and a sniffed Content-Type (or no Content-Type when the model set Content-Encoding). nginx answers 405, Apache 501, Caddy and Gitea 405. Does not depend on the model''s wording (only on it returning at least one header, which every model tested did). Matched: Galah v1.1.1 (8f77b85) with qwen2.5:3b, qwen2.5:1.5b and llama3.2:3b via Ollama (2026-10); Matched: Galah v1.1.1 (8f77b85; galah-nx for the Anthropic provider) with claude-haiku-5-5 (2026-11).'
+  - name: galah-nonexistent-path-200-generated
+    id: 362
+    port: web-ports
+    proto: tcp
+    steps:
+    - input_type: string
+      input: "GET /hd-nonexistent-7c1e9a.html HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nAccept: */*\r\nConnection: close\r\n\r"
+      output_match_type: regex
+      output: "(?s)^HTTP/1\\.1 200 OK\\r\\n(?:(?:[A-Za-z0-9-]+: [^\\r\\n]*\\r\\n)+Date: [A-Z][a-z]{2}, \\d{2} [A-Z][a-z]{2} \\d{4} \\d{2}:\\d{2}:\\d{2} GMT\\r\\nContent-Length: \\d+\\r\\nContent-Type: [^\\r\\n]+(?:\\r\\nConnection: close)?(?:\\r\\n\\r\\n|$)|(?:[A-Za-z0-9-]+: [^\\r\\n]*\\r\\n)*Content-Encoding: [^\\r\\n]+\\r\\n(?:[A-Za-z0-9-]+: [^\\r\\n]*\\r\\n)*Date: [A-Z][a-z]{2}, \\d{2} [A-Z][a-z]{2} \\d{4} \\d{2}:\\d{2}:\\d{2} GMT\\r\\nContent-Length: \\d+(?:\\r\\nConnection: close)?(?:\\r\\n\\r\\n[\\t\\n\\r -~]|$)|(?:[A-Za-z0-9-]+: [^\\r\\n]*\\r\\n)+Date: [A-Z][a-z]{2}, \\d{2} [A-Z][a-z]{2} \\d{4} \\d{2}:\\d{2}:\\d{2} GMT\\r\\nContent-Type: [^\\r\\n]+\\r\\n(?:Connection: close\\r\\n)?Transfer-Encoding: chunked\\r\\n\\r\\n)"
+      invert_match: false
+    confidence: High
+    comment: 'A random non-existent page is answered with 200 OK in Galah''s response shape, often with a body that itself says the page was not found. Galah never sets a status code (every generated response is 200 OK) and discards the model''s Content-Type, Content-Length and Date, so Go''s net/http writes the model''s headers first (sorted) and then Date, Content-Length and a sniffed Content-Type (or no Content-Type when the model set Content-Encoding). Genuine servers answer 404. Does not depend on the model''s wording (only on it returning at least one header, which every model tested did). Matched: Galah v1.1.1 (8f77b85) with qwen2.5:3b, qwen2.5:1.5b and llama3.2:3b via Ollama (2026-10); Matched: Galah v1.1.1 (8f77b85; galah-nx for the Anthropic provider) with claude-haiku-5-5 (2026-11).'
+  - name: galah-apache-server-header-before-date
+    id: 363
+    port: web-ports
+    proto: tcp
+    steps:
+    - input_type: string
+      input: "GET / HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nAccept: */*\r\nConnection: close\r\n\r"
+      output_match_type: regex
+      output: "(?s)^HTTP/1\\.1 200 OK\\r\\n(?:[A-Za-z0-9-]+: [^\\r\\n]*\\r\\n)*Server: Apache[^\\r\\n]*\\r\\n(?:[A-Za-z0-9-]+: [^\\r\\n]*\\r\\n)*Date: [A-Z][a-z]{2}, \\d{2} [A-Z][a-z]{2} \\d{4} \\d{2}:\\d{2}:\\d{2} GMT\\r\\nContent-Length: \\d+\\r\\n"
+      invert_match: false
+    confidence: Medium
+    comment: 'The home page claims Server: Apache (the example in Galah''s default prompt is Apache/2.4.38) but the Server header comes before Date, followed by Go''s Content-Length. Apache always sends Date first and then Server. Depends on the model choosing Apache for the home page (the header order does not). Matched: Galah v1.1.1 (8f77b85) with qwen2.5:3b via Ollama (2026-10); Matched: Galah v1.1.1 (8f77b85; galah-nx for the Anthropic provider) with claude-haiku-5-5 (2026-11).'
+  - name: galah-gzip-header-plain-body
+    id: 364
+    port: web-ports
+    proto: tcp
+    steps:
+    - input_type: string
+      input: "GET / HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nAccept: */*\r\nConnection: close\r\n\r"
+      output_match_type: regex
+      output: "(?s)^HTTP/1\\.1 200 OK\\r\\n(?:[A-Za-z0-9-]+: [^\\r\\n]*\\r\\n)*Content-Encoding: gzip\\r\\n(?:[A-Za-z0-9-]+: [^\\r\\n]*\\r\\n)*Date: [A-Z][a-z]{2}, \\d{2} [A-Z][a-z]{2} \\d{4} \\d{2}:\\d{2}:\\d{2} GMT\\r\\nContent-Length: \\d+(?:\\r\\nConnection: close)?(?:\\r\\n\\r\\n[\\t\\n\\r -~]|$)"
+      invert_match: false
+    confidence: Medium
+    comment: 'The response says Content-Encoding: gzip (copied from the example in Galah''s default prompt) but the body is plain text (or only white space), which no genuine server sends and browsers cannot display. Depends on the model: a small-model habit. Matched: Galah v1.1.1 (8f77b85) with qwen2.5:3b via Ollama (2026-10). Not matched with claude-haiku-5-5 (2026-11), which did not copy the header.'
+  - name: galah-request-headers-echoed
+    id: 365
+    port: web-ports
+    proto: tcp
+    steps:
+    - input_type: string
+      input: "GET / HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nAccept: */*\r\nConnection: close\r\n\r"
+      output_match_type: regex
+      output: "(?s)^HTTP/1\\.1 200 OK\\r\\n(?:[A-Za-z0-9-]+: [^\\r\\n]*\\r\\n)*(?:User-Agent|Host|Accept): [^\\r\\n]*\\r\\n(?:[A-Za-z0-9-]+: [^\\r\\n]*\\r\\n)*Date: [A-Z][a-z]{2}, \\d{2} [A-Z][a-z]{2} \\d{4} \\d{2}:\\d{2}:\\d{2} GMT\\r\\nContent-Length: \\d+\\r\\n"
+      invert_match: false
+    confidence: Medium
+    comment: 'The response carries request headers (User-Agent, Host or Accept) as response headers, because the model copied them from the request it was shown; no genuine server sends them. Cached responses repeat the first visitor''s values to everyone. Depends on the model: a small-model habit (qwen2.5:1.5b and llama3.2:3b). Matched: Galah v1.1.1 (8f77b85) with qwen2.5:1.5b and llama3.2:3b via Ollama (2026-10). Not matched with claude-haiku-5-5 (2026-11).'
+  - name: galah-json-body-without-json-type
+    id: 366
+    port: web-ports
+    proto: tcp
+    steps:
+    - input_type: string
+      input: "GET /api/v1/users HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nAccept: */*\r\nConnection: close\r\n\r"
+      output_match_type: regex
+      output: "(?s)^HTTP/1\\.1 200 OK\\r\\n(?:(?:[A-Za-z0-9-]+: [^\\r\\n]*\\r\\n)+Date: [A-Z][a-z]{2}, \\d{2} [A-Z][a-z]{2} \\d{4} \\d{2}:\\d{2}:\\d{2} GMT\\r\\nContent-Length: \\d+\\r\\nContent-Type: text/plain; charset=utf-8\\r\\n(?:Connection: close\\r\\n)?\\r\\n|(?:[A-Za-z0-9-]+: [^\\r\\n]*\\r\\n)*Content-Encoding: [^\\r\\n]+\\r\\n(?:[A-Za-z0-9-]+: [^\\r\\n]*\\r\\n)*Date: [A-Z][a-z]{2}, \\d{2} [A-Z][a-z]{2} \\d{4} \\d{2}:\\d{2}:\\d{2} GMT\\r\\nContent-Length: \\d+\\r\\n(?:Connection: close\\r\\n)?\\r\\n)\\s*[\\{\\[]"
+      invert_match: false
+    confidence: Medium
+    comment: 'An API path returns a JSON body as text/plain; charset=utf-8 (Go''s content sniffing, because Galah discards the model''s application/json) or with no Content-Type at all. Genuine APIs send application/json. Depends on the model answering with JSON (the Content-Type does not). Matched: Galah v1.1.1 (8f77b85) with qwen2.5:3b, qwen2.5:1.5b and llama3.2:3b via Ollama (2026-10); Matched: Galah v1.1.1 (8f77b85; galah-nx for the Anthropic provider) with claude-haiku-5-5 (2026-11).'
+  - name: galah-200-status-error-page-body
+    id: 367
+    port: web-ports
+    proto: tcp
+    steps:
+    - input_type: string
+      input: "GET /hd-nonexistent-7c1e9a.html HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nAccept: */*\r\nConnection: close\r\n\r"
+      output_match_type: regex
+      output: "(?si)^HTTP/1\\.1 200 OK\\r\\n(?:[A-Za-z0-9-]+: [^\\r\\n]*\\r\\n)+Date: [A-Z][a-z]{2}, \\d{2} [A-Z][a-z]{2} \\d{4} \\d{2}:\\d{2}:\\d{2} GMT\\r\\n(?:[A-Za-z0-9-]+: [^\\r\\n]*\\r\\n)*\\r\\n.{0,400}<title>\\s*(?:404 Not Found|Not Found|404|Error 404[^<]*|Page Not Found[^<]*|403 Forbidden)\\s*</title>"
+      invert_match: false
+    confidence: Medium
+    comment: 'A missing page is answered 200 OK with the model''s own error page as the body (for example Apache''s ''<title>404 Not Found</title>'' page, complete with the honeypot''s address and port), with the model''s headers before Go''s Date. Galah cannot send a status other than 200, so the model''s choice to write a 404 page produces a contradiction no genuine server shows (they send 404 with that page). Depends on the model writing an error page (the 200 does not). Matched: Galah v1.1.1 (8f77b85; galah-nx for the Anthropic provider) with claude-haiku-5-5 (2026-11).'
+  - name: galah-nginx-server-header-not-first
+    id: 368
+    port: web-ports
+    proto: tcp
+    steps:
+    - input_type: string
+      input: "GET / HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nAccept: */*\r\nConnection: close\r\n\r"
+      output_match_type: regex
+      output: "(?s)^HTTP/1\\.1 200 OK\\r\\n(?:[A-Za-z0-9-]+: [^\\r\\n]*\\r\\n)+Server: nginx[^\\r\\n]*\\r\\n(?:[A-Za-z0-9-]+: [^\\r\\n]*\\r\\n)*Date: [A-Z][a-z]{2}, \\d{2} [A-Z][a-z]{2} \\d{4} \\d{2}:\\d{2}:\\d{2} GMT\\r\\nContent-Length: \\d+\\r\\n"
+      invert_match: false
+    confidence: Medium
+    comment: 'The home page claims Server: nginx, but other headers come before Server (Go sorts the model''s headers, so Cache-Control and Connection come first) and Go''s Content-Length follows Date directly. nginx always sends Server as its first header and Content-Type before Content-Length. Companion to 363: claude-haiku-5-5 chose nginx for four of the six home pages it generated in the lab and Apache for two. Depends on the model choosing nginx (the header order does not). Matched: Galah v1.1.1 (8f77b85; galah-nx for the Anthropic provider) with claude-haiku-5-5 (2026-11).'
