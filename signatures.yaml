@@ -8461,3 +8461,87 @@ signatures:
         invert_match: false
     confidence: High
     comment: "A legacy X.224 Connection Request (standard RDP security) followed by an MCS Connect Initial recorded from xfreerdp 2.11 gets an MCS Connect Response whose GCC server data starts with a 16-byte core block (version 0x00080004, clientRequestedProtocols 0, earlyCapabilityFlags 0) followed directly by a 236-byte security block (RDPy's proprietary certificate with a 512-bit key). Windows sends the core block, then the network block, then the security block (MS-RDPBCGR 4.1.4), as does xrdp; PyRDP's core block is 12 bytes, and Glutton's identical core block is followed by a 12-byte security block without a certificate. The security block that follows carries a new 512-bit RSA key on every connection. Matched: rdpy 1.3.2 (cef16a9) as rdpy-nx 1b7ca3d, standard RDP security and TLS modes (2026-11)."
+  - name: doloshoneypot-apache-error-page-claiming-jetty
+    id: 970
+    port: 8181
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 403 Forbidden\r\n.*Server: Jetty\([^\r\n]*\r\n.*<h1>Forbidden</h1>.*<address>Jetty\([^<]*\) Server at [^<]* Port 8181</address>'
+        invert_match: false
+    confidence: High
+    comment: "GET / on the DLUX port returns Apache's own 403 page (<h1>Forbidden</h1> and an <address> line 'Jetty(8.1.15.v20140411) Server at <host> Port 8181') because ModSecurity's SecServerSignature rewrites Apache's server string to Jetty. Genuine OpenDaylight (Jetty 8.1.15) answers with Jetty's 'HTTP ERROR 403 ... Powered by Jetty://' page; Jetty never writes Apache's address line. Matched: DolosHoneypot 510e854 (2026-11)."
+  - name: doloshoneypot-apache-error-page-claiming-jetty-8080
+    id: 971
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 403 Forbidden\r\n.*Server: Jetty\([^\r\n]*\r\n.*<h1>Forbidden</h1>.*<address>Jetty\([^<]*\) Server at [^<]* Port 8080</address>'
+        invert_match: false
+    confidence: High
+    comment: "Same Apache 403 page with a Jetty server string on the second DLUX port, 8080. Genuine OpenDaylight answers with Jetty's own 'HTTP ERROR 403' page. Matched: DolosHoneypot 510e854 (2026-11)."
+  - name: doloshoneypot-restconf-modules-no-auth
+    id: 972
+    port: 8181
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /restconf/modules HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*Server: Jetty\(.*Content-Length: 0\r\n.*Content-Type: text/html; charset=UTF-8\s*$'
+        invert_match: false
+    confidence: High
+    comment: "/restconf/modules is rewritten to the honeypot's PHP credential logger (src/checkUser.php), which answers an anonymous request with '200 OK', an empty body and PHP's 'text/html; charset=UTF-8'. Genuine OpenDaylight protects RESTCONF with '401 Unauthorized' and 'WWW-Authenticate: BASIC realm=\"application\"' (and returns XML or JSON once authenticated). Matched: DolosHoneypot 510e854 (2026-11)."
+  - name: doloshoneypot-http-on-rmi-port
+    id: 973
+    port: 1099
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 403 Forbidden\r\n.*Server: Jetty\(.*<address>Jetty\([^<]*\) Server at [^<]* Port 1099</address>'
+        invert_match: false
+    confidence: High
+    comment: "Port 1099 is the Java RMI registry of OpenDaylight's Karaf container (JMX), which speaks JRMP and gives no HTTP answer. DolosHoneypot serves its web site on 1099 as well, so an HTTP request gets the Apache 403 page with the Jetty server string. Matched: DolosHoneypot 510e854 (2026-11)."
+  - name: doloshoneypot-jrmi-handshake-gets-http
+    id: 974
+    port: 1099
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "4a524d4900024b0d0a0d0a"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 400 Bad Request\r\n.*Server: Jetty\(.*<h1>Bad Request</h1>.*<address>Jetty\([^<]*\) Server at [^<]* Port 1099</address>'
+        invert_match: false
+    confidence: High
+    comment: "A Java RMI (JRMP) stream header 'JRMI', version 2, StreamProtocol, sent to port 1099. A genuine RMI registry (OpenDaylight Karaf) answers with a ProtocolAck byte 0x4E followed by the client's address; DolosHoneypot's Apache answers with its own '400 Bad Request' page ('Your browser sent a request that this server could not understand') and the Jetty server string in the <address> line. (Jetty itself answers such bytes with a bare 'Error: 400'.) Matched: DolosHoneypot 510e854 (2026-11)."
+  - name: doloshoneypot-apache-autoindex-assets
+    id: 975
+    port: 8181
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /assets/ HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*Server: Jetty\(.*<title>Index of /assets</title>.*opendaylight'
+        invert_match: false
+    confidence: High
+    comment: "The honeypot's Apache configuration enables directory listings for /assets/, /src/, /vendor/ and /restconf/, so /assets/ returns Apache's mod_autoindex 'Index of /assets' page (listing the copied DLUX images, among them opendaylight logos) under a Jetty server string. Genuine OpenDaylight returns Jetty's 'HTTP ERROR 403' for the directory. Matched: DolosHoneypot 510e854 (2026-11)."
+  - name: doloshoneypot-dlux-duplicate-frame-options
+    id: 976
+    port: 8181
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /index.html HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*Server: Jetty\(.*X-Frame-Options: SAMEORIGIN\r\n.*X-Frame-Options: sameorigin\r\n.*X-XSS-Protection: 1; mode=block\r\n.*<title>OpenDaylight Dlux</title>'
+        invert_match: false
+    confidence: Medium
+    comment: "The DLUX login page arrives with two X-Frame-Options headers (from security.conf and .htaccess), X-XSS-Protection and X-Content-Type-Options, plus Apache's ETag, Accept-Ranges and Vary. Genuine OpenDaylight's Jetty serves /index.html with only Content-Type, Connection and Server. Medium because the headers come from configuration files an operator can edit. Matched: DolosHoneypot 510e854 (2026-11)."
