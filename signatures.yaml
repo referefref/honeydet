@@ -52,14 +52,18 @@ signatures:
     port: 2121
     proto: tcp
     steps:
-      - input_type: string
-        input: .
-        output_match_type: string
-        output: 220 (vsFTPd 3.0.3)
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^220 \(vsFTPd 3\.0\.3\)$'
+        invert_match: false
+      - input_type: hex
+        input: "535953540d0a"
+        output_match_type: regex
+        output: '^500 Command not found$'
         invert_match: false
     confidence: High
-    comment: Mishandled character matches Golang FTP honeypot, likely FTPHoney
-      https://github.com/farinap5/FTPHoney
+    comment: "vsftpd 3.0.3 greeting copied by the Go FTP honeypot FTPHoney (https://github.com/farinap5/FTPHoney), but SYST before login gets '500 Command not found' where genuine vsftpd says '530 Please login with USER and PASS.' Matched: FTPHoney de5539f (June 2021, last commit) and FTPHoney-nx d25f90f (2026-11)."
   - name: twisted-ftp
     id: 5
     port: 2121
@@ -7915,3 +7919,49 @@ signatures:
         invert_match: false
     confidence: High
     comment: "Only when logins are enabled (--allow-login, HPFTP_LOGIN=true) with the project's passwd: STOR with no PORT or PASV beforehand is answered at once with '125 Data connection already open, starting transfer' and '226 Transfer Complete.', although no data connection exists and nothing is stored. Genuine servers refuse (lab: Twisted 22.10 '503 Incorrect sequence of commands: PORT or PASV required before STOR', ProFTPD 1.3.8b '425 Unable to build data connection: Connection refused', Pure-FTPd 1.0.51 '425 No data connection'). Matched: honeypot-ftp-python3 6f6efb5 with --allow-login (2026-11); the original never accepts a login."
+  - name: ftphoney-vsftpd-banner-command-not-found
+    id: 910
+    port: 21
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^220 \(vsFTPd 3\.0\.3\)$'
+        invert_match: false
+      - input_type: hex
+        input: "535953540d0a"
+        output_match_type: regex
+        output: '^500 Command not found$'
+        invert_match: false
+    confidence: High
+    comment: "Greets as vsftpd 3.0.3 but answers SYST (any first command other than USER) with '500 Command not found'. Genuine vsftpd answers commands before login with '530 Please login with USER and PASS.' and SYST is a standard command on every FTP server. Matched: FTPHoney de5539f (June 2021, last commit) and FTPHoney-nx d25f90f (2026-11)."
+  - name: ftphoney-login-replies
+    id: 912
+    port: 21
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "5553455220616e6f6e796d6f75730d0a"
+        output_match_type: regex
+        output: '331 User name ok, password required\.$'
+        invert_match: false
+      - input_type: hex
+        input: "50415353206775657374406578616d706c652e636f6d0d0a"
+        output_match_type: regex
+        output: '^(530 Incorrect password, not logged in|230 Password ok, continue)$'
+        invert_match: false
+    confidence: High
+    comment: "FTPHoney's fixed login replies: '331 User name ok, password required.' then '530 Incorrect password, not logged in' (or '230 Password ok, continue' with -a, after which the connection is closed). vsftpd says '331 Please specify the password.' and '530 Login incorrect.'; ProFTPD, Pure-FTPd and Twisted use their own wording. Matched: FTPHoney de5539f (June 2021, last commit) and FTPHoney-nx d25f90f (2026-11)."
+  - name: ftphoney-bare-lf-line-endings
+    id: 913
+    port: 21
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "5553455220616e6f6e796d6f75730d0a"
+        output_match_type: regex
+        output: '^220 [^\r\n]*\n331 [^\r\n]*$'
+        invert_match: false
+    confidence: Medium
+    comment: "Greeting and replies end with a bare LF instead of the CRLF required by RFC 959 (read here as the greeting and the USER reply arriving together). Every genuine FTP server tested ends lines with CRLF. Medium: relies on the greeting and the reply being read in one response. Matched: FTPHoney de5539f (June 2021, last commit) and FTPHoney-nx d25f90f (2026-11)."
