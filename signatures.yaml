@@ -8545,3 +8545,87 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: "The DLUX login page arrives with two X-Frame-Options headers (from security.conf and .htaccess), X-XSS-Protection and X-Content-Type-Options, plus Apache's ETag, Accept-Ranges and Vary. Genuine OpenDaylight's Jetty serves /index.html with only Content-Type, Connection and Server. Medium because the headers come from configuration files an operator can edit. Matched: DolosHoneypot 510e854 (2026-11)."
+  - name: sentrypeer-static-200-ok-udp
+    id: 980
+    port: 5060
+    proto: udp
+    steps:
+      - input_type: hex
+        input: 4f5054494f4e53207369703a6864403139322e302e322e3130205349502f322e300d0a5669613a205349502f322e302f554450203139322e302e322e313a353036303b6272616e63683d7a39684734624b2d68643938786f7074696f6e730d0a4d61782d466f7277617264733a2037300d0a46726f6d3a203c7369703a6864403139322e302e322e313e3b7461673d68643938780d0a546f3a203c7369703a6864403139322e302e322e31303e0d0a43616c6c2d49443a2068643938782d6f7074696f6e73403139322e302e322e310d0a435365713a2037204f5054494f4e530d0a436f6e746163743a203c7369703a6864403139322e302e322e313e0d0a436f6e74656e742d4c656e6774683a20300d0a0d0a
+        output_match_type: regex
+        output: '(?s)\ASIP/2\.0 200 OK\r\nVia: SIP/2\.0/UDP 127\.0\.0\.1:5061\r\nCall-ID: 1179563087@127\.0\.0\.1\r\nFrom: <sip:sipsak@127\.0\.0\.1>;tag=464eb44f\r\nTo: <sip:asterisk@127\.0\.0\.1>;tag=z9hG4bK\.1c882828\r\nCSeq: 1 OPTIONS\r\n.*\r\nServer: FPBX-16\.0\.33\(18\.13\.0\)\r\n'
+        invert_match: false
+    confidence: High
+    comment: 'An OPTIONS request over UDP is answered with SentryPeer''s fixed reply: ''200 OK'' carrying Call-ID 1179563087@127.0.0.1, From sipsak, To asterisk, Via 127.0.0.1:5061, ''CSeq: 1 OPTIONS'' and Server FPBX-16.0.33(18.13.0), none of it taken from the request. A SIP server copies Via, From, To, Call-ID and CSeq from the request into its response (RFC 3261 section 8.2.6); Kamailio and Asterisk do. Needs honeydet -proto udp. Matched: SentryPeer 5.0.0 (2026-11).'
+  - name: sentrypeer-static-200-ok-tcp
+    id: 981
+    port: 5060
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: 4f5054494f4e53207369703a6864403139322e302e322e3130205349502f322e300d0a5669613a205349502f322e302f544350203139322e302e322e313a353036303b6272616e63683d7a39684734624b2d68643938786f7074696f6e730d0a4d61782d466f7277617264733a2037300d0a46726f6d3a203c7369703a6864403139322e302e322e313e3b7461673d68643938780d0a546f3a203c7369703a6864403139322e302e322e31303e0d0a43616c6c2d49443a2068643938782d6f7074696f6e73403139322e302e322e310d0a435365713a2037204f5054494f4e530d0a436f6e746163743a203c7369703a6864403139322e302e322e313e0d0a436f6e74656e742d4c656e6774683a20300d0a0d0a
+        output_match_type: regex
+        output: '(?s)\ASIP/2\.0 200 OK\r\nVia: SIP/2\.0/UDP 127\.0\.0\.1:5061\r\nCall-ID: 1179563087@127\.0\.0\.1\r\nFrom: <sip:sipsak@127\.0\.0\.1>;tag=464eb44f\r\nTo: <sip:asterisk@127\.0\.0\.1>;tag=z9hG4bK\.1c882828\r\nCSeq: 1 OPTIONS\r\n.*\r\nServer: FPBX-16\.0\.33\(18\.13\.0\)\r\nContent-Length:  0\z'
+        invert_match: false
+    confidence: High
+    comment: 'Over TCP the same fixed ''200 OK'' arrives (still with a UDP Via header and Call-ID 1179563087@127.0.0.1), after which SentryPeer closes the connection; the reply ends after Content-Length without the blank line that terminates a SIP header block. Kamailio and Asterisk answer with the request''s Via, Call-ID and CSeq and keep the TCP connection open. Matched: SentryPeer 5.0.0 (2026-11).'
+  - name: sentrypeer-non-sip-datagram-200-ok
+    id: 982
+    port: 5060
+    proto: udp
+    steps:
+      - input_type: hex
+        input: 686470726f62650d0a0d0a
+        output_match_type: regex
+        output: '(?s)\ASIP/2\.0 200 OK\r\n.*Call-ID: 1179563087@127\.0\.0\.1\r\n.*CSeq: 1 OPTIONS\r\n'
+        invert_match: false
+    confidence: High
+    comment: 'A datagram that is not SIP at all (''hdprobe'' and a blank line) is answered ''200 OK'' with the fixed SentryPeer reply. SIP servers discard unparseable datagrams silently (Kamailio and Asterisk do), since there is no Via header to answer to. Needs honeydet -proto udp. Matched: SentryPeer 5.0.0 (2026-11).'
+  - name: sentrypeer-invite-answered-200-cseq-options
+    id: 983
+    port: 5060
+    proto: udp
+    steps:
+      - input_type: hex
+        input: 494e56495445207369703a30303436383132313138353332403139322e302e322e3130205349502f322e300d0a5669613a205349502f322e302f554450203139322e302e322e313a353036303b6272616e63683d7a39684734624b2d6864393878696e766974650d0a4d61782d466f7277617264733a2037300d0a46726f6d3a203c7369703a6864403139322e302e322e313e3b7461673d68643938780d0a546f3a203c7369703a6864403139322e302e322e31303e0d0a43616c6c2d49443a2068643938782d696e76697465403139322e302e322e310d0a435365713a203720494e564954450d0a436f6e746163743a203c7369703a6864403139322e302e322e313e0d0a436f6e74656e742d4c656e6774683a20300d0a0d0a
+        output_match_type: regex
+        output: '(?s)\ASIP/2\.0 200 OK\r\n.*CSeq: 1 OPTIONS\r\n.*Content-Length:  0'
+        invert_match: false
+    confidence: High
+    comment: 'An unauthenticated INVITE to an international number is answered ''200 OK'' whose CSeq names OPTIONS (sequence 1) instead of the request''s ''7 INVITE'', and which carries no SDP body. A PBX or proxy challenges (401/407), refuses (403/404) or sends 100 Trying first, and a 200 OK to an INVITE must echo the INVITE CSeq and carry an SDP answer. Needs honeydet -proto udp. Matched: SentryPeer 5.0.0 (2026-11).'
+  - name: sentrypeer-http-on-sip-port-200-ok
+    id: 984
+    port: 5060
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: 474554202f20485454502f312e300d0a0d0a
+        output_match_type: regex
+        output: '(?s)\ASIP/2\.0 200 OK\r\n.*Call-ID: 1179563087@127\.0\.0\.1\r\n'
+        invert_match: false
+    confidence: High
+    comment: 'An HTTP request sent to the SIP TCP port receives SIP ''200 OK'' (the fixed SentryPeer reply). Kamailio closes the connection without a reply and Asterisk stays silent; neither answers a request that is not SIP. Matched: SentryPeer 5.0.0 (2026-11).'
+  - name: sentrypeer-tls-rcgen-default-certificate
+    id: 985
+    port: 5061
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: 160301006e0100006a0303000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f000014c02bc02cc02fc030cca9cca8009c009d002f00350100002d000a00080006001d00170018000b00020100000d000e000c040305030804080504010501ff0100010000170000
+        output_match_type: hex
+        output: '726367656e2073656c66207369676e65642063657274'
+        invert_match: false
+    confidence: Medium
+    comment: 'A TLS 1.2 ClientHello to the SIP over TLS port returns a certificate whose subject and issuer are ''CN=rcgen self signed cert'' (SAN DNS:localhost, valid 1975 to 4096): the certificate SentryPeer generates with the Rust rcgen library at first start when none is configured. Medium: an operator who installs a real certificate removes it. Matched: SentryPeer 5.0.0 (2026-11).'
+  - name: sentrypeer-rest-api-health-check
+    id: 986
+    port: 8082
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /health-check HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)\AHTTP/1\.1 200 OK\r\n.*X-Powered-By: SentryPeer\r\n.*X-SentryPeer-Version: [0-9.]+\r\n.*Hello from SentryPeer!'
+        invert_match: false
+    confidence: High
+    comment: 'The optional REST API (-a, port 8082, no authentication) answers /health-check with ''X-Powered-By: SentryPeer'', an X-SentryPeer-Version header and ''Hello from SentryPeer!''. It names the product outright, and /ip-addresses and /numbers list what the sensor has collected. Matched: SentryPeer 5.0.0 (2026-11).'
