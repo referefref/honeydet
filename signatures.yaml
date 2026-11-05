@@ -8227,3 +8227,66 @@ signatures:
         invert_match: false
     confidence: High
     comment: "Port 2222 form of signature 751 for Beelzebub's LLM SSH example (ssh-2222), which listens there: the identification string claims OpenSSH but the key exchange is Go's golang.org/x/crypto/ssh (a single RSA host key offered as rsa-sha2-256,rsa-sha2-512,ssh-rsa, AES-GCM before ChaCha20-Poly1305). Protocol behaviour, independent of the model; no model call is made before login. Matched: Beelzebub v3.10.0 with claude-haiku-5-5 via an OpenAI-compatible endpoint (2026-11)."
+  - name: pyrdp-mcs-maxpdusize-short-integer
+    id: 940
+    port: 3389
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "0300000b06e00000000000"
+        output_match_type: regex
+        output: '^\x03\x00\x00'
+        invert_match: false
+      - input_type: hex
+        input: "030001c302f0807f658201b70401010401010101ff301a020122020102020100020101020100020101020300ffff0201023019020101020101020101020101020100020101020204200201023020020300ffff020300fc17020300ffff020101020100020101020300ffff02010204820151000500147c00018148000800100001c00044756361813a01c0ea000c0008000004000301ca03aa09040000bb47000057004f0052004b00530054004100540049004f004e000000000000000000000004000000000000000c0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001ca01000000000018000f00e3050000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000007000000000000000000000000000000000000000000000004c00c000d0000000000000002c00c001b0000000000000003c03800040000007264706472000000000080c0726470736e640000000000c0636c6970726472000000a0c0647264796e766300000080c0"
+        output_match_type: hex
+        output: "0201010202fff8020102"
+        invert_match: false
+    confidence: High
+    comment: "A legacy X.224 Connection Request (standard RDP security) followed by an MCS Connect Initial recorded from xfreerdp 2.11 gets an MCS Connect Response whose domain parameters encode maxMCSPDUsize 65528 as the two-byte BER INTEGER 02 02 ff f8. PyRDP re-encodes the backend's Connect Response with its own BER writer; Windows (MS-RDPBCGR 4.1.4), xrdp and FreeRDP encode it as 02 03 00 ff f8. Seen in front of xrdp and FreeRDP backends alike. Needs a backend that accepts standard RDP security. Matched: PyRDP 2.1.1.dev0 b610809 (2026-11)."
+  - name: pyrdp-gcc-connectpdu-real-length
+    id: 941
+    port: 3389
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "0300000b06e00000000000"
+        output_match_type: regex
+        output: '^\x03\x00\x00'
+        invert_match: false
+      - input_type: hex
+        input: "030001c302f0807f658201b70401010401010101ff301a020122020102020100020101020100020101020300ffff0201023019020101020101020101020101020100020101020204200201023020020300ffff020300fc17020300ffff020101020100020101020300ffff02010204820151000500147c00018148000800100001c00044756361813a01c0ea000c0008000004000301ca03aa09040000bb47000057004f0052004b00530054004100540049004f004e000000000000000000000004000000000000000c0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001ca01000000000018000f00e3050000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000007000000000000000000000000000000000000000000000004c00c000d0000000000000002c00c001b0000000000000003c03800040000007264706472000000000080c0726470736e640000000000c0636c6970726472000000a0c0647264796e766300000080c0"
+        output_match_type: hex
+        output: "000500147c000181"
+        invert_match: false
+    confidence: Medium
+    comment: "In the same MCS Connect Response the PER-encoded GCC ConnectData carries the real length of the Conference Create Response as a two-byte length (0x81 ..), because PyRDP rebuilds the GCC layer around the modified server data. Windows sends the fixed value 0x2a in this field (MS-RDPBCGR 4.1.4: the length is ignored by the client), as do xrdp and FreeRDP; Glutton sends 0x3a. Medium because the field is ignored by clients and other implementations may write the real length; with a backend that sends no server certificate the length fits in one byte and this signature does not match. Needs a backend that accepts standard RDP security. Matched: PyRDP 2.1.1.dev0 b610809 (2026-11)."
+  - name: pyrdp-tls-confirm-without-flags
+    id: 942
+    port: 3389
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "030000130ee000000000000100080003000000"
+        output_match_type: hex
+        output: "030000130ed000001234000200080001000000"
+        invert_match: false
+      - input_type: hex
+        input: "1603010076010000720303000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f000018c030c02fc028c027c014c013009d009c003d003c0035002f01000031000a00080006001d00170018000b00020100000d001600140401050106010201040305030603080408050806ff01000100"
+        output_match_type: hex
+        output: "c03000000dff01000100000b000403000102"
+        invert_match: false
+    confidence: Medium
+    comment: "A Connection Request offering TLS and CredSSP gets a Connection Confirm with source reference 0x1234, RDP_NEG_RSP flags 0x00 and TLS selected, then, for a fixed TLS 1.2 ClientHello, a ServerHello choosing ECDHE-RSA-AES256-GCM-SHA384 with only the renegotiation_info and ec_point_formats extensions (OpenSSL through pyOpenSSL). PyRDP writes its own Connection Confirm with the flags cleared and strips CredSSP from the request it relays, whatever the backend sends; Windows Server 2012 and later set EXTENDED_CLIENT_DATA_SUPPORTED and further flags (and select CredSSP when NLA is on), xrdp sets flags 0x01 and FreeRDP 0x03 (source reference 0); the honeypots library (qeeqbox) sends the same confirm but chooses AES256-GCM-SHA384 without ECDHE. Medium because older Windows versions also clear the flags. Needs a backend that offers TLS without enforcing NLA. Matched: PyRDP 2.1.1.dev0 b610809 (2026-11)."
+  - name: pyrdp-ntlm-capture-selects-credssp
+    id: 943
+    port: 3389
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "030000130ee000000000000100080001000000"
+        output_match_type: hex
+        output: "030000130ed000001234000200080002000000"
+        invert_match: false
+    confidence: High
+    comment: "A Connection Request offering only TLS is confirmed with CredSSP selected (a protocol the client did not offer), flags 0x00 and source reference 0x1234. When the backend enforces Network Level Authentication, PyRDP switches to NetNTLMv2 capture and always answers CredSSP; a server that requires NLA sends RDP_NEG_FAILURE HYBRID_REQUIRED_BY_SERVER (FreeRDP NLA-only server and Windows do). OpenCanary (flags 0x09) and Beelzebub (flags 0x01, reply to a request for standard security) differ. Matched: PyRDP 2.1.1.dev0 b610809 (2026-11)."
