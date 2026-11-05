@@ -8243,7 +8243,7 @@ signatures:
         output: "0201010202fff8020102"
         invert_match: false
     confidence: High
-    comment: "A legacy X.224 Connection Request (standard RDP security) followed by an MCS Connect Initial recorded from xfreerdp 2.11 gets an MCS Connect Response whose domain parameters encode maxMCSPDUsize 65528 as the two-byte BER INTEGER 02 02 ff f8. PyRDP re-encodes the backend's Connect Response with its own BER writer; Windows (MS-RDPBCGR 4.1.4), xrdp and FreeRDP encode it as 02 03 00 ff f8. Seen in front of xrdp and FreeRDP backends alike. Needs a backend that accepts standard RDP security. Matched: PyRDP 2.1.1.dev0 b610809 (2026-11)."
+    comment: "A legacy X.224 Connection Request (standard RDP security) followed by an MCS Connect Initial recorded from xfreerdp 2.11 gets an MCS Connect Response whose domain parameters encode maxMCSPDUsize 65528 as the two-byte BER INTEGER 02 02 ff f8. PyRDP re-encodes the backend's Connect Response with its own BER writer; Windows (MS-RDPBCGR 4.1.4), xrdp and FreeRDP encode it as 02 03 00 ff f8. Seen in front of xrdp and FreeRDP backends alike. Needs a backend that accepts standard RDP security. Matched: PyRDP 2.1.1.dev0 b610809 (2026-11). Also matches RDPy 1.3.2 (as rdpy-nx 1b7ca3d), whose protocol code PyRDP derives from (2026-11)."
   - name: pyrdp-gcc-connectpdu-real-length
     id: 941
     port: 3389
@@ -8260,7 +8260,7 @@ signatures:
         output: "000500147c000181"
         invert_match: false
     confidence: Medium
-    comment: "In the same MCS Connect Response the PER-encoded GCC ConnectData carries the real length of the Conference Create Response as a two-byte length (0x81 ..), because PyRDP rebuilds the GCC layer around the modified server data. Windows sends the fixed value 0x2a in this field (MS-RDPBCGR 4.1.4: the length is ignored by the client), as do xrdp and FreeRDP; Glutton sends 0x3a. Medium because the field is ignored by clients and other implementations may write the real length; with a backend that sends no server certificate the length fits in one byte and this signature does not match. Needs a backend that accepts standard RDP security. Matched: PyRDP 2.1.1.dev0 b610809 (2026-11)."
+    comment: "In the same MCS Connect Response the PER-encoded GCC ConnectData carries the real length of the Conference Create Response as a two-byte length (0x81 ..), because PyRDP rebuilds the GCC layer around the modified server data. Windows sends the fixed value 0x2a in this field (MS-RDPBCGR 4.1.4: the length is ignored by the client), as do xrdp and FreeRDP; Glutton sends 0x3a. Medium because the field is ignored by clients and other implementations may write the real length; with a backend that sends no server certificate the length fits in one byte and this signature does not match. Needs a backend that accepts standard RDP security. Matched: PyRDP 2.1.1.dev0 b610809 (2026-11). Also matches RDPy 1.3.2 (as rdpy-nx 1b7ca3d), whose protocol code PyRDP derives from (2026-11)."
   - name: pyrdp-tls-confirm-without-flags
     id: 942
     port: 3389
@@ -8420,3 +8420,44 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: "A legacy X.224 Connection Request and an MCS Connect Initial (recorded from xfreerdp 2.11) get a Connection Confirm and an MCS Connect Response (relayed from the pool virtual machine); if the client then sends nothing, the connection is closed after 30 seconds without further data, because Rdppot ends a session after 30 seconds without traffic (TIMEOUT) and closes every connection in it. A genuine server waits longer for the client's next message at this point: xrdp 0.9.21 kept the connection open for more than 40 seconds. Low-interaction RDP honeypots that close the connection after the Connection Confirm do not answer the Connect Initial. Needs honeydet -T 35 or more (with the default 5-second timeout it cannot match) and a pool machine that accepts standard RDP security. Medium because an RDP server or gateway with a short idle timeout during the connection sequence could behave alike. Matched: rdppot 7cc0907 (as rdppot-nx 1990d97 and b5d9b8e), xrdp 0.9.21 pool (2026-11)."
+  - name: rdpy-legacy-request-negotiation-response
+    id: 960
+    port: 3389
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "0300000b06e00000000000"
+        output_match_type: hex
+        output: "030000130ed000000000000200080000000000"
+        invert_match: false
+    confidence: High
+    comment: "A legacy X.224 Connection Request without an RDP Negotiation Request gets a 19-byte Connection Confirm that carries an RDP Negotiation Response (flags 0, PROTOCOL_RDP) with source reference 0. MS-RDPBCGR 2.2.1.2 sends the negotiation structure only when the client sent one: Windows and xrdp answer a legacy request with the 11-byte confirm 0300000b06d00000123400 (Glutton likewise, with reference 0); FreeRDP sends a negotiation response with flags 0x03. RDPy builds its confirm the same way for every request, in standard RDP security and in TLS mode. Matched: rdpy 1.3.2 (cef16a9) as rdpy-nx 1b7ca3d (2026-11)."
+  - name: rdpy-credssp-request-gets-standard-security
+    id: 961
+    port: 3389
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "030000130ee000000000000100080002000000"
+        output_match_type: hex
+        output: "030000130ed000000000000200080000000000"
+        invert_match: false
+    confidence: Medium
+    comment: "A Connection Request that offers only CredSSP (requestedProtocols 0x2) gets a Connection Confirm selecting standard RDP security with source reference 0 and response flags 0. RDPy has no CredSSP server and keeps only the TLS bit of the request, in its default mode and with -k/-c. xrdp answers with reference 0x1234 and flags 0x01, FreeRDP with flags 0x03; Glutton selects CredSSP. Medium because a minimal RDP stack that ignores CredSSP could build the same confirm. Matched: rdpy 1.3.2 (cef16a9) as rdpy-nx 1b7ca3d, standard RDP security and TLS modes (2026-11)."
+  - name: rdpy-gcc-core-block-then-security-block
+    id: 962
+    port: 3389
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "0300000b06e00000000000"
+        output_match_type: regex
+        output: '^\x03\x00\x00'
+        invert_match: false
+      - input_type: hex
+        input: "030001c302f0807f658201b70401010401010101ff301a020122020102020100020101020100020101020300ffff0201023019020101020101020101020101020100020101020204200201023020020300ffff020300fc17020300ffff020101020100020101020300ffff02010204820151000500147c00018148000800100001c00044756361813a01c0ea000c0008000004000301ca03aa09040000bb47000057004f0052004b00530054004100540049004f004e000000000000000000000004000000000000000c0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001ca01000000000018000f00e3050000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000007000000000000000000000000000000000000000000000004c00c000d0000000000000002c00c001b0000000000000003c03800040000007264706472000000000080c0726470736e640000000000c0636c6970726472000000a0c0647264796e766300000080c0"
+        output_match_type: hex
+        output: "010c1000040008000000000000000000020cec00"
+        invert_match: false
+    confidence: High
+    comment: "A legacy X.224 Connection Request (standard RDP security) followed by an MCS Connect Initial recorded from xfreerdp 2.11 gets an MCS Connect Response whose GCC server data starts with a 16-byte core block (version 0x00080004, clientRequestedProtocols 0, earlyCapabilityFlags 0) followed directly by a 236-byte security block (RDPy's proprietary certificate with a 512-bit key). Windows sends the core block, then the network block, then the security block (MS-RDPBCGR 4.1.4), as does xrdp; PyRDP's core block is 12 bytes, and Glutton's identical core block is followed by a 12-byte security block without a certificate. The security block that follows carries a new 512-bit RSA key on every connection. Matched: rdpy 1.3.2 (cef16a9) as rdpy-nx 1b7ca3d, standard RDP security and TLS modes (2026-11)."
