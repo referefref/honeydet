@@ -8174,3 +8174,56 @@ signatures:
         invert_match: false
     confidence: High
     comment: "GET /version returns a short Docker 26.1.4 document with its keys in alphabetical order (ApiVersion, Arch, BuildTime ...), a BuildTime without fractional seconds and no Platform, containerd, runc or docker-init components. Docker Engine 26.1.4 writes the struct in field order starting {\"Platform\":{\"Name\":\"Docker Engine - Community\"},\"Components\":[...] with BuildTime 2024-06-05T11:29:25.000000000+00:00 and GoVersion go1.21.11 (Helix reports go1.21.9). Matched: helix-honeypot 6c2773c (develop, 2026-10-02), Go 1.27.3 build (2026-11)."
+  - name: beelzebub-llm-http-status-line-in-body
+    id: 1450
+    port: 8090
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /backup-7f3a9c.tar.gz HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\n(?:[^\r\n]+\r\n)*\r\nHTTP/1\.[01] [1-5][0-9][0-9] '
+        invert_match: false
+    confidence: Medium
+    comment: "An HTTP decoy answered by Beelzebub's LLMHoneypot plugin: the model writes a whole HTTP response (status line, headers, body) as instructed by the built-in prompt, and Beelzebub sends it as the body of a real '200 OK' from Go net/http, so the body starts with a second status line (often '404 Not Found' inside a 200). The outer 200 and the absence of a Server header do not depend on the model; whether the model writes a status line does (it did for most requests in the lab: 7 of 8 runs across the lab container, a fresh LXC deployment and the Docker version), hence Medium. Matched: Beelzebub v3.10.0 with claude-haiku-5-5 via an OpenAI-compatible endpoint (2026-11)."
+  - name: beelzebub-llm-http-prompt-example-echo
+    id: 1451
+    port: 8090
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /index.html HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\n(?:[^\r\n]+\r\n)*\r\n<html><body>Hello, World!</body></html>$'
+        invert_match: false
+    confidence: Low
+    comment: "Beelzebub's default HTTP prompt includes one example exchange, 'GET /index.html' answered with '<html><body>Hello, World!</body></html>'. Asked for /index.html, the model repeats the example word for word, served by Go net/http with no Server header. Depends on the built-in prompt (an operator's own prompt removes it) and on the model following its example: in the lab it matched in 5 of 8 runs across the lab container, a fresh LXC deployment and the Docker version (the other runs returned a generated page), hence Low, and a miss proves nothing. Matched: Beelzebub v3.10.0 with claude-haiku-5-5 via an OpenAI-compatible endpoint (2026-11)."
+  - name: beelzebub-llm-postgres-text-reply-to-startup
+    id: 1452
+    port: 5432
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "00000029000300007573657200706f73746772657300646174616261736500706f7374677265730000"
+        output_match_type: regex
+        output: '(?i)(?:\\x[0-9a-f]{2}|\*\(|connection (?:already )?closed|awaiting|role-?play|simulat|won.t|not going to)'
+        invert_match: false
+    confidence: Medium
+    comment: "A PostgreSQL protocol 3.0 StartupMessage (user postgres, database postgres). PostgreSQL answers with a binary authentication request ('R', a 4-byte length, the method) or a binary error ('E'). Beelzebub's LLM PostgreSQL example hands the bytes to the model, which describes the reply in text: binary fields written out as escape sequences (R\\x00\\x00\\x00\\x0c...), often followed by a narrative in Markdown such as '*(AuthenticationMD5Password request ... Awaiting PasswordMessage from client.)*' or '*(connection closed by server)*'. After several identical startup packets from one address the model may drop the role altogether ('I'm going to stop role-playing a PostgreSQL server here...', 'I won't keep simulating these authentication responses', 'I'm not going to respond to these startup packets as a server') and, because history is kept per address, keeps refusing; the last alternatives catch the refusals seen in the lab, but their wording varies. A text reply is protocol behaviour; the words and escapes matched are the model's, hence Medium. The final pattern matches every text reply logged in the lab (14) and 3 of 3 live runs (fresh LXC deployment and Docker version); an earlier, narrower form matched 4 of 5 before the model began to refuse. The SSLRequest that psql sends first is less reliable as a probe: the model sometimes answers it correctly with a single 'N'. Matched: Beelzebub v3.10.0 with claude-haiku-5-5 via an OpenAI-compatible endpoint (2026-11)."
+  - name: beelzebub-llm-ssh-2222-go-kexinit-claiming-openssh
+    id: 1453
+    port: 2222
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^SSH-2\.0-OpenSSH'
+        invert_match: false
+      - input_type: string
+        input: "SSH-2.0-OpenSSH_9.2p1\r"
+        output_match_type: regex
+        output: '(?s)rsa-sha2-256,rsa-sha2-512,ssh-rsa.{4}aes128-gcm@openssh\.com,aes256-gcm@openssh\.com,chacha20-poly1305@openssh\.com,aes128-ctr,aes192-ctr,aes256-ctr.{4}aes128-gcm@openssh\.com'
+        invert_match: false
+    confidence: High
+    comment: "Port 2222 form of signature 751 for Beelzebub's LLM SSH example (ssh-2222), which listens there: the identification string claims OpenSSH but the key exchange is Go's golang.org/x/crypto/ssh (a single RSA host key offered as rsa-sha2-256,rsa-sha2-512,ssh-rsa, AES-GCM before ChaCha20-Poly1305). Protocol behaviour, independent of the model; no model call is made before login. Matched: Beelzebub v3.10.0 with claude-haiku-5-5 via an OpenAI-compatible endpoint (2026-11)."
