@@ -5474,7 +5474,7 @@ signatures:
         output: '^(?:[^S]|S[^S]|SS[^H]|SSH[^-])[\x20-\x7e\t\r\n]*$'
         invert_match: false
     confidence: Medium
-    comment: "Port 22 answers an SSH client identification with plain text that is not an SSH identification string: the PenTBox honeypot's configured false message (for example 'Access denied'). Covers operator-chosen messages that do not imitate an SSH banner. Matched: honeypot-ddos f288125 (2026-11)."
+    comment: "Port 22 answers an SSH client identification with plain text that is not an SSH identification string: the PenTBox honeypot's configured false message (for example 'Access denied'). Covers operator-chosen messages that do not imitate an SSH banner. Matched: honeypot-ddos f288125 (2026-11). With a honeydet timeout over 10 seconds it also matches the endlessh tarpit on port 22 (commit dfe44eb, 2026-11)."
   - name: honeypot-ddos-pentbox-telnet-no-negotiation
     id: 714
     port: 23
@@ -9211,3 +9211,71 @@ signatures:
         invert_match: false
     confidence: High
     comment: "The Wetland repository ships its SSH host keys (data/id_rsa and data/id_dsa, committed in April 2018), and the installer util/initwetland.py keeps them when they exist, so an installation that follows the README presents the same RSA host key as every other: 2048 bits, SHA256:74ZjXJHxlF29lJNImUIeRwK1NRoRA4vI/UJ595tlTyo. The probe sends a client identification, a key exchange offer limited to ecdh-sha2-nistp256 and ssh-rsa and a fixed ECDH public value, and matches the start of the shipped key's modulus in the server's reply, without logging in. Does not match deployments with their own keys (the author's Docker Hub image and the companion scripts generate keys). Matched: Wetland 0e7b1d1 with the shipped keys on Python 3.11 (2026-11)."
+  - name: endlessh-ssh-tarpit-two-random-lines-default-port
+    id: 1050
+    port: "2222"
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "SSH-2.0-OpenSSH_9.2p1\r\nSSH-2.0-OpenSSH_9.2p1\r"
+        output_match_type: regex
+        output: '^(?:[ -RT-~][ -~]{0,29}|S|S[ -RT-~][ -~]{0,28}|SS|SS[ -GI-~][ -~]{0,27}|SSH|SSH[ -,.-~][ -~]{0,26})$'
+        invert_match: false
+      - input_type: string
+        input: "SSH-2.0-OpenSSH_9.2p1\r\nSSH-2.0-OpenSSH_9.2p1\r"
+        output_match_type: regex
+        output: '^(?:[ -RT-~][ -~]{0,29}|S|S[ -RT-~][ -~]{0,28}|SS|SS[ -GI-~][ -~]{0,27}|SSH|SSH[ -,.-~][ -~]{0,26})$'
+        invert_match: false
+    confidence: High
+    comment: "endlessh SSH tarpit on its default port 2222. It never sends an SSH version line: from Delay milliseconds after the connection is accepted (default 10000) it sends one random line of printable ASCII every Delay (1 to 30 characters plus CRLF at the default MaxLineLength 32, never starting with SSH-), ignores everything the client sends and keeps the connection open. Two client idents get back one short printable line that is not a version line, and two more idents get a second such line on the still-open connection. Genuine SSH servers (OpenSSH, Dropbear, tinysshd) answer at once with SSH-2.0- and a binary key exchange; line-based services answer each input line or close. Needs honeydet -timeout 11 or more at the default Delay (about 20 s per probe). Matched: endlessh 1.1 (source dfe44eb and Debian 1.1-5+b1) (2026-11)."
+  - name: endlessh-ssh-tarpit-two-random-lines-port-22
+    id: 1051
+    port: "22"
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "SSH-2.0-OpenSSH_9.2p1\r\nSSH-2.0-OpenSSH_9.2p1\r"
+        output_match_type: regex
+        output: '^(?:[ -RT-~][ -~]{0,29}|S|S[ -RT-~][ -~]{0,28}|SS|SS[ -GI-~][ -~]{0,27}|SSH|SSH[ -,.-~][ -~]{0,26})$'
+        invert_match: false
+      - input_type: string
+        input: "SSH-2.0-OpenSSH_9.2p1\r\nSSH-2.0-OpenSSH_9.2p1\r"
+        output_match_type: regex
+        output: '^(?:[ -RT-~][ -~]{0,29}|S|S[ -RT-~][ -~]{0,28}|SS|SS[ -GI-~][ -~]{0,27}|SSH|SSH[ -,.-~][ -~]{0,26})$'
+        invert_match: false
+    confidence: High
+    comment: "endlessh SSH tarpit on port 22 (the usual deployment, with the real SSH server moved to another port). It never sends an SSH version line: from Delay milliseconds after the connection is accepted (default 10000) it sends one random line of printable ASCII every Delay (1 to 30 characters plus CRLF at the default MaxLineLength 32, never starting with SSH-), ignores everything the client sends and keeps the connection open. Two client idents get back one short printable line that is not a version line, and two more idents get a second such line on the still-open connection. Genuine SSH servers (OpenSSH, Dropbear, tinysshd) answer at once with SSH-2.0- and a binary key exchange; line-based services answer each input line or close. Needs honeydet -timeout 11 or more at the default Delay (about 20 s per probe). Matched: endlessh 1.1 (source dfe44eb and Debian 1.1-5+b1) (2026-11)."
+  - name: endlessh-ssh-tarpit-two-random-lines-any-length-default-port
+    id: 1052
+    port: "2222"
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "SSH-2.0-OpenSSH_9.2p1\r\nSSH-2.0-OpenSSH_9.2p1\r"
+        output_match_type: regex
+        output: '^(?:[ -RT-~][ -~]{0,252}|S|S[ -RT-~][ -~]{0,251}|SS|SS[ -GI-~][ -~]{0,250}|SSH|SSH[ -,.-~][ -~]{0,249})$'
+        invert_match: false
+      - input_type: string
+        input: "SSH-2.0-OpenSSH_9.2p1\r\nSSH-2.0-OpenSSH_9.2p1\r"
+        output_match_type: regex
+        output: '^(?:[ -RT-~][ -~]{0,252}|S|S[ -RT-~][ -~]{0,251}|SS|SS[ -GI-~][ -~]{0,250}|SSH|SSH[ -,.-~][ -~]{0,249})$'
+        invert_match: false
+    confidence: Medium
+    comment: "endlessh SSH tarpit on its default port 2222 with any MaxLineLength (3 to 255): two client idents get back a single random printable line (up to 253 characters, not a version line, no binary key exchange), and two more idents a second line on the still-open connection, each arriving only after the configured Delay. Survives a changed MaxLineLength; Medium because a line-based service that answers each pair of input lines with exactly one long printable line and stays open would also match. Needs honeydet -timeout greater than the Delay (11 or more at the default 10 s). Matched: endlessh 1.1 (source dfe44eb and Debian 1.1-5+b1), MaxLineLength 32, 100 and 255 (2026-11)."
+  - name: endlessh-ssh-tarpit-two-random-lines-any-length-port-22
+    id: 1053
+    port: "22"
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "SSH-2.0-OpenSSH_9.2p1\r\nSSH-2.0-OpenSSH_9.2p1\r"
+        output_match_type: regex
+        output: '^(?:[ -RT-~][ -~]{0,252}|S|S[ -RT-~][ -~]{0,251}|SS|SS[ -GI-~][ -~]{0,250}|SSH|SSH[ -,.-~][ -~]{0,249})$'
+        invert_match: false
+      - input_type: string
+        input: "SSH-2.0-OpenSSH_9.2p1\r\nSSH-2.0-OpenSSH_9.2p1\r"
+        output_match_type: regex
+        output: '^(?:[ -RT-~][ -~]{0,252}|S|S[ -RT-~][ -~]{0,251}|SS|SS[ -GI-~][ -~]{0,250}|SSH|SSH[ -,.-~][ -~]{0,249})$'
+        invert_match: false
+    confidence: Medium
+    comment: "endlessh SSH tarpit on port 22 with any MaxLineLength (3 to 255): two client idents get back a single random printable line (up to 253 characters, not a version line, no binary key exchange), and two more idents a second line on the still-open connection, each arriving only after the configured Delay. Survives a changed MaxLineLength; Medium because a line-based service that answers each pair of input lines with exactly one long printable line and stays open would also match. Needs honeydet -timeout greater than the Delay (11 or more at the default 10 s). Matched: endlessh 1.1 (source dfe44eb and Debian 1.1-5+b1), MaxLineLength 32, 100 and 255 (2026-11)."
