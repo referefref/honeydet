@@ -270,21 +270,15 @@ Some honeypots generate content on demand and cache it, so a new request is slow
 ```yaml
     steps:
       - input_type: string
-        input: "GET /hd-{{rand}}.html HTTP/1.1
-Host: x
-Connection: close
-"
+        input: "GET /hd-{{rand}}.html HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
         output_match_type: regex
         output: "(?s).*"
         min_response_ms: 1000
       - input_type: string
-        input: "GET /hd-{{rand}}.html HTTP/1.1
-Host: x
-Connection: close
-"
+        input: "GET /hd-{{rand}}.html HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
         reconnect: true
         output_match_type: regex
-        output: "^HTTP/1\.1 200 OK"
+        output: '^HTTP/1\.1 200 OK'
         faster_than_step: 1
         speedup_factor: 10
 ```
