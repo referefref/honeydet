@@ -9373,3 +9373,24 @@ signatures:
         invert_match: false
     confidence: High
     comment: "Sends a client identification and KEXINIT, then looks for MockSSH's fixed algorithm lists in the server's KEXINIT: host key algorithms exactly 'ssh-ed25519,ecdsa-sha2-nistp256,rsa-sha2-256,rsa-sha2-512' (RSA signature names advertised although MockSSH only generates Ed25519 and ECDSA keys, and rsa-sha2-256 before rsa-sha2-512), ciphers 'aes256-ctr,aes192-ctr,aes128-ctr,aes256-cbc,aes192-cbc,aes128-cbc' (no ChaCha20 or GCM) and MACs 'hmac-sha2-512,hmac-sha2-256,hmac-sha1' (no encrypt-then-MAC), hard-coded in MockSSH.py. OpenSSH, Dropbear, libssh and stock Twisted Conch offer other lists. The key exchange list is left out because it depends on /etc/ssh/moduli. No login. Matched: MockSSH 2.0.0 (4cb930c, Twisted 25.5.0, Python 3.12) example server examples/mock_cisco.py (2026-11)."
+  - name: galah-generate-then-cache-timing
+    id: 369
+    port: web-ports
+    proto: tcp
+    steps:
+    - input_type: string
+      input: "GET /hd-{{rand}}.html HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nAccept: */*\r\nConnection: close\r\n\r"
+      output_match_type: regex
+      output: "(?s).*"
+      invert_match: false
+      min_response_ms: 1000
+    - input_type: string
+      input: "GET /hd-{{rand}}.html HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nAccept: */*\r\nConnection: close\r\n\r"
+      reconnect: true
+      output_match_type: regex
+      output: '^HTTP/1\.1 200 OK\r\n'
+      invert_match: false
+      faster_than_step: 1
+      speedup_factor: 10
+    confidence: High
+    comment: 'Galah asks a language model to write the response for every URL it has not seen and caches the result by port and URL, so a new random path (/hd-<random token>.html, new on every run) is slow and the identical request repeated on a new connection is answered from the cache almost at once. Step 1 must take at least 1000 ms (a hosted model took 1.2 to 7 s, a small local model on the CPU 20 s or more; with a slow local model Galah''s 10 s write timeout closes the first connection without a reply, which still counts) and step 2 must return 200 OK at least ten times faster (the cache answers in about 1 ms, so the factor leaves ample room for network jitter). Genuine web servers answer a missing page in milliseconds both times, and slow dynamic applications are slow both times. A caching proxy in front of a slow application that also answers unknown paths with 200 OK would behave the same way. Matched: Galah v1.1.1 (galah-anthropic 827a6ce) with qwen2.5:3b via Ollama (2026-11).'
