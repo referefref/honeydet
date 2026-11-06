@@ -5901,7 +5901,7 @@ signatures:
         output: '(?s)rsa-sha2-256,rsa-sha2-512,ssh-rsa.{4}aes128-gcm@openssh\.com,aes256-gcm@openssh\.com,chacha20-poly1305@openssh\.com,aes128-ctr,aes192-ctr,aes256-ctr.{4}aes128-gcm@openssh\.com'
         invert_match: false
     confidence: High
-    comment: "A server that announces itself as OpenSSH but whose KEXINIT is that of Go's golang.org/x/crypto/ssh (via gliderlabs/ssh): a single RSA host key offered as rsa-sha2-256,rsa-sha2-512,ssh-rsa and Go's cipher order beginning aes128-gcm@openssh.com,aes256-gcm@openssh.com,chacha20-poly1305@openssh.com. OpenSSH puts chacha20-poly1305 first, offers ed25519 and ECDSA host keys and zlib@openssh.com. Holds whatever serverVersion is set to, as long as it claims OpenSSH. Matched: Beelzebub v3.10.0 (2026-11)."
+    comment: "A server that announces itself as OpenSSH but whose KEXINIT is that of Go's golang.org/x/crypto/ssh (via gliderlabs/ssh): a single RSA host key offered as rsa-sha2-256,rsa-sha2-512,ssh-rsa and Go's cipher order beginning aes128-gcm@openssh.com,aes256-gcm@openssh.com,chacha20-poly1305@openssh.com. OpenSSH puts chacha20-poly1305 first, offers ed25519 and ECDSA host keys and zlib@openssh.com. Holds whatever serverVersion is set to, as long as it claims OpenSSH. Matched: Beelzebub v3.10.0 (2026-11). Also matches ssh-auth-logger f53dddc (2026-11)."
   - name: beelzebub-telnet-login-without-negotiation
     id: 752
     port: 23
@@ -8226,7 +8226,7 @@ signatures:
         output: '(?s)rsa-sha2-256,rsa-sha2-512,ssh-rsa.{4}aes128-gcm@openssh\.com,aes256-gcm@openssh\.com,chacha20-poly1305@openssh\.com,aes128-ctr,aes192-ctr,aes256-ctr.{4}aes128-gcm@openssh\.com'
         invert_match: false
     confidence: High
-    comment: "Port 2222 form of signature 751 for Beelzebub's LLM SSH example (ssh-2222), which listens there: the identification string claims OpenSSH but the key exchange is Go's golang.org/x/crypto/ssh (a single RSA host key offered as rsa-sha2-256,rsa-sha2-512,ssh-rsa, AES-GCM before ChaCha20-Poly1305). Protocol behaviour, independent of the model; no model call is made before login. Matched: Beelzebub v3.10.0 with claude-haiku-5-5 via an OpenAI-compatible endpoint (2026-11)."
+    comment: "Port 2222 form of signature 751 for Beelzebub's LLM SSH example (ssh-2222), which listens there: the identification string claims OpenSSH but the key exchange is Go's golang.org/x/crypto/ssh (a single RSA host key offered as rsa-sha2-256,rsa-sha2-512,ssh-rsa, AES-GCM before ChaCha20-Poly1305). Protocol behaviour, independent of the model; no model call is made before login. Matched: Beelzebub v3.10.0 with claude-haiku-5-5 via an OpenAI-compatible endpoint (2026-11). Also matches ssh-auth-logger f53dddc (2026-11)."
   - name: pyrdp-mcs-maxpdusize-short-integer
     id: 940
     port: 3389
@@ -9776,3 +9776,153 @@ signatures:
         invert_match: false
     confidence: High
     comment: "Hornet's SSH server is paramiko, which announces itself as SSH-2.0-paramiko_<version> (Hornet has no banner setting), and on the first connection Hornet creates its host key as a 1024-bit RSA key (hornet/common/helpers.py, RSAKey.generate(1024), file test_server.key). The probe sends a client identification, a key exchange offer limited to ecdh-sha2-nistp256 with rsa-sha2-256 or ssh-rsa host keys and a fixed ECDH public value, and matches the server's host key in KEX_ECDH_REPLY: an ssh-rsa key blob of 0x97 bytes with exponent 65537 and a 129-byte (1024-bit) modulus, without logging in. Genuine OpenSSH announces its own name, and its ssh-keygen creates 3072-bit RSA host keys (the default since OpenSSH 8.0) and created 2048-bit ones before that. Does not match when the operator places a larger RSA key in the key file before the first connection. Matched: Hornet b16ed6b as hornet-nx 10f9c81 with paramiko 5.1.0 on Python 3.11 (2026-11)."
+  - name: ssh-auth-logger-openssh-profile-go-kex
+    id: 1170
+    port: 22
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^SSH-2\.0-(?:OpenSSH_7\.4|OpenSSH_7\.9p1 Debian-10|OpenSSH_8\.2p1 Ubuntu-4ubuntu0\.5|OpenSSH_9\.6p1 Ubuntu-3ubuntu13\.14|OpenSSH_8\.4|dropbear_2019\.78)$'
+      invert_match: false
+    - input_type: hex
+      input: 5353482d322e302d4f70656e5353485f392e3270312044656269616e2d322b646562313275330d0a000000a40814111111111111111111111111111111110000001b6469666669652d68656c6c6d616e2d67726f757031342d73686131000000147273612d736861322d3235362c7373682d7273610000000a6165733132382d6374720000000a6165733132382d63747200000009686d61632d7368613100000009686d61632d73686131000000046e6f6e65000000046e6f6e65000000000000000000000000000000000000000000
+      output_match_type: regex
+      output: '(?s)\x00\x00\x00.(?:mlkem768x25519-sha256,)?curve25519-sha256,curve25519-sha256@libssh\.org,(?:ecdh\-sha2\-nistp256,ecdh\-sha2\-nistp384,ecdh\-sha2\-nistp521,diffie\-hellman\-group14\-sha256|(?:e(?:c(?:d(?:h(?:\-(?:s(?:h(?:a(?:2(?:\-(?:n(?:i(?:s(?:t(?:p(?:2(?:5(?:6(?:,(?:e(?:c(?:d(?:h(?:\-(?:s(?:h(?:a(?:2(?:\-(?:n(?:i(?:s(?:t(?:p(?:3(?:8(?:4(?:,(?:e(?:c(?:d(?:h(?:\-(?:s(?:h(?:a(?:2(?:\-(?:n(?:i(?:s(?:t(?:p(?:5(?:2(?:1(?:,(?:d(?:i(?:f(?:f(?:i(?:e(?:\-(?:h(?:e(?:l(?:l(?:m(?:a(?:n(?:\-(?:g(?:r(?:o(?:u(?:p(?:1(?:4(?:\-(?:s(?:h(?:a(?:2(?:5)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?\z)'
+      invert_match: false
+    confidence: High
+    comment: 'ssh-auth-logger (2025-12 onwards) picks one of six fixed server profiles per listening address (or per client address) and announces its version string: OpenSSH_7.4, OpenSSH_7.9p1 Debian-10, OpenSSH_8.2p1 Ubuntu-4ubuntu0.5, OpenSSH_9.6p1 Ubuntu-3ubuntu13.14 (since 2026-03), OpenSSH_8.4 or dropbear_2019.78. The key exchange underneath is golang.org/x/crypto/ssh, whose KEXINIT lists (mlkem768x25519-sha256,) curve25519-sha256, curve25519-sha256@libssh.org, the three ECDH curves and then diffie-hellman-group14-sha256. OpenSSH 7.4 to 8.4 follow the ECDH curves with diffie-hellman-group-exchange-sha256, OpenSSH 8.5 and later start with sntrup761x25519 or mlkem768x25519 followed by sntrup, and Dropbear has its own list, so a genuine server with one of these version strings never sends this list. Steps: the version string; a client identification and KEXINIT (no authentication), answered by the Go key exchange list (the honeypot''s bandwidth throttle can cut its first write inside the list, so the data may also end part-way through that order). A Go SSH program configured with one of the same six strings would also match. Matched: ssh-auth-logger commit f53dddc (2026-05-29; golang.org/x/crypto v0.51.0, Go 1.27.3), commit 6f127c0 (2026-01-08, the code of the Docker Hub image of 2026-01-04; x/crypto v0.1.0) (2026-11).'
+  - name: ssh-auth-logger-openssh-profile-go-kex-alt-port
+    id: 1171
+    port: 2222
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^SSH-2\.0-(?:OpenSSH_7\.4|OpenSSH_7\.9p1 Debian-10|OpenSSH_8\.2p1 Ubuntu-4ubuntu0\.5|OpenSSH_9\.6p1 Ubuntu-3ubuntu13\.14|OpenSSH_8\.4|dropbear_2019\.78)$'
+      invert_match: false
+    - input_type: hex
+      input: 5353482d322e302d4f70656e5353485f392e3270312044656269616e2d322b646562313275330d0a000000a40814111111111111111111111111111111110000001b6469666669652d68656c6c6d616e2d67726f757031342d73686131000000147273612d736861322d3235362c7373682d7273610000000a6165733132382d6374720000000a6165733132382d63747200000009686d61632d7368613100000009686d61632d73686131000000046e6f6e65000000046e6f6e65000000000000000000000000000000000000000000
+      output_match_type: regex
+      output: '(?s)\x00\x00\x00.(?:mlkem768x25519-sha256,)?curve25519-sha256,curve25519-sha256@libssh\.org,(?:ecdh\-sha2\-nistp256,ecdh\-sha2\-nistp384,ecdh\-sha2\-nistp521,diffie\-hellman\-group14\-sha256|(?:e(?:c(?:d(?:h(?:\-(?:s(?:h(?:a(?:2(?:\-(?:n(?:i(?:s(?:t(?:p(?:2(?:5(?:6(?:,(?:e(?:c(?:d(?:h(?:\-(?:s(?:h(?:a(?:2(?:\-(?:n(?:i(?:s(?:t(?:p(?:3(?:8(?:4(?:,(?:e(?:c(?:d(?:h(?:\-(?:s(?:h(?:a(?:2(?:\-(?:n(?:i(?:s(?:t(?:p(?:5(?:2(?:1(?:,(?:d(?:i(?:f(?:f(?:i(?:e(?:\-(?:h(?:e(?:l(?:l(?:m(?:a(?:n(?:\-(?:g(?:r(?:o(?:u(?:p(?:1(?:4(?:\-(?:s(?:h(?:a(?:2(?:5)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?\z)'
+      invert_match: false
+    confidence: High
+    comment: 'Port 2222 form: the project''s Dockerfile and compose example listen on 2222. ssh-auth-logger (2025-12 onwards) picks one of six fixed server profiles per listening address (or per client address) and announces its version string: OpenSSH_7.4, OpenSSH_7.9p1 Debian-10, OpenSSH_8.2p1 Ubuntu-4ubuntu0.5, OpenSSH_9.6p1 Ubuntu-3ubuntu13.14 (since 2026-03), OpenSSH_8.4 or dropbear_2019.78. The key exchange underneath is golang.org/x/crypto/ssh, whose KEXINIT lists (mlkem768x25519-sha256,) curve25519-sha256, curve25519-sha256@libssh.org, the three ECDH curves and then diffie-hellman-group14-sha256. OpenSSH 7.4 to 8.4 follow the ECDH curves with diffie-hellman-group-exchange-sha256, OpenSSH 8.5 and later start with sntrup761x25519 or mlkem768x25519 followed by sntrup, and Dropbear has its own list, so a genuine server with one of these version strings never sends this list. Steps: the version string; a client identification and KEXINIT (no authentication), answered by the Go key exchange list (the honeypot''s bandwidth throttle can cut its first write inside the list, so the data may also end part-way through that order). A Go SSH program configured with one of the same six strings would also match. Matched: ssh-auth-logger commit f53dddc (2026-05-29; golang.org/x/crypto v0.51.0, Go 1.27.3), commit 6f127c0 (2026-01-08, the code of the Docker Hub image of 2026-01-04; x/crypto v0.1.0) (2026-11).'
+  - name: ssh-auth-logger-throttled-kexinit
+    id: 1172
+    port: 22
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^SSH-2\.0-(?:OpenSSH_7\.4|OpenSSH_7\.9p1 Debian-10|OpenSSH_8\.2p1 Ubuntu-4ubuntu0\.5|OpenSSH_9\.6p1 Ubuntu-3ubuntu13\.14|OpenSSH_8\.4|dropbear_2019\.78|libssh-0\.6\.1)$'
+      invert_match: false
+    - input_type: hex
+      input: 5353482d322e302d4f70656e5353485f392e3270312044656269616e2d322b646562313275330d0a000000a40814111111111111111111111111111111110000001b6469666669652d68656c6c6d616e2d67726f757031342d73686131000000147273612d736861322d3235362c7373682d7273610000000a6165733132382d6374720000000a6165733132382d63747200000009686d61632d7368613100000009686d61632d73686131000000046e6f6e65000000046e6f6e65000000000000000000000000000000000000000000
+      output_match_type: regex
+      output: '(?s)\x00\x00\x00.(?:mlkem768x25519-sha256,)?curve25519-sha256,curve25519-sha256@libssh\.org,(?:ecdh\-sha2\-nistp256,ecdh\-sha2\-nistp384,ecdh\-sha2\-nistp521,diffie\-hellman\-group14\-sha256|(?:e(?:c(?:d(?:h(?:\-(?:s(?:h(?:a(?:2(?:\-(?:n(?:i(?:s(?:t(?:p(?:2(?:5(?:6(?:,(?:e(?:c(?:d(?:h(?:\-(?:s(?:h(?:a(?:2(?:\-(?:n(?:i(?:s(?:t(?:p(?:3(?:8(?:4(?:,(?:e(?:c(?:d(?:h(?:\-(?:s(?:h(?:a(?:2(?:\-(?:n(?:i(?:s(?:t(?:p(?:5(?:2(?:1(?:,(?:d(?:i(?:f(?:f(?:i(?:e(?:\-(?:h(?:e(?:l(?:l(?:m(?:a(?:n(?:\-(?:g(?:r(?:o(?:u(?:p(?:1(?:4(?:\-(?:s(?:h(?:a(?:2(?:5)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?\z)'
+      invert_match: false
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '(?s).+'
+      invert_match: false
+      min_response_ms: 700
+    confidence: Medium
+    comment: 'ssh-auth-logger throttles every connection to SSHD_RATE bytes per second (default 320 since 2026-03, 120 before; the README calls it bits) to imitate a slow link, so its KEXINIT of about 600 to 800 bytes arrives in pieces 1 to 2 seconds apart. Steps: one of its version strings (the six profiles, or libssh-0.6.1 of the 2025-10 release), a client identification and KEXINIT answered by the start of a Go KEXINIT (the key exchange list as in signature 1170), then silence from the client, during which the rest of the server KEXINIT arrives at least 700 ms later. A genuine server sends its whole KEXINIT at once and then waits for the client. Depends on the default rate (a much higher SSHD_RATE removes the gap). Matched: ssh-auth-logger commit f53dddc (2026-05-29; golang.org/x/crypto v0.51.0, Go 1.27.3), commit 6f127c0 (2026-01-08, the code of the Docker Hub image of 2026-01-04; x/crypto v0.1.0), commit a114b25 (2025-10-08; x/crypto v0.1.0) (2026-11).'
+  - name: ssh-auth-logger-throttled-kexinit-alt-port
+    id: 1173
+    port: 2222
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^SSH-2\.0-(?:OpenSSH_7\.4|OpenSSH_7\.9p1 Debian-10|OpenSSH_8\.2p1 Ubuntu-4ubuntu0\.5|OpenSSH_9\.6p1 Ubuntu-3ubuntu13\.14|OpenSSH_8\.4|dropbear_2019\.78|libssh-0\.6\.1)$'
+      invert_match: false
+    - input_type: hex
+      input: 5353482d322e302d4f70656e5353485f392e3270312044656269616e2d322b646562313275330d0a000000a40814111111111111111111111111111111110000001b6469666669652d68656c6c6d616e2d67726f757031342d73686131000000147273612d736861322d3235362c7373682d7273610000000a6165733132382d6374720000000a6165733132382d63747200000009686d61632d7368613100000009686d61632d73686131000000046e6f6e65000000046e6f6e65000000000000000000000000000000000000000000
+      output_match_type: regex
+      output: '(?s)\x00\x00\x00.(?:mlkem768x25519-sha256,)?curve25519-sha256,curve25519-sha256@libssh\.org,(?:ecdh\-sha2\-nistp256,ecdh\-sha2\-nistp384,ecdh\-sha2\-nistp521,diffie\-hellman\-group14\-sha256|(?:e(?:c(?:d(?:h(?:\-(?:s(?:h(?:a(?:2(?:\-(?:n(?:i(?:s(?:t(?:p(?:2(?:5(?:6(?:,(?:e(?:c(?:d(?:h(?:\-(?:s(?:h(?:a(?:2(?:\-(?:n(?:i(?:s(?:t(?:p(?:3(?:8(?:4(?:,(?:e(?:c(?:d(?:h(?:\-(?:s(?:h(?:a(?:2(?:\-(?:n(?:i(?:s(?:t(?:p(?:5(?:2(?:1(?:,(?:d(?:i(?:f(?:f(?:i(?:e(?:\-(?:h(?:e(?:l(?:l(?:m(?:a(?:n(?:\-(?:g(?:r(?:o(?:u(?:p(?:1(?:4(?:\-(?:s(?:h(?:a(?:2(?:5)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?\z)'
+      invert_match: false
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '(?s).+'
+      invert_match: false
+      min_response_ms: 700
+    confidence: Medium
+    comment: 'Port 2222 form: the project''s Dockerfile and compose example listen on 2222. ssh-auth-logger throttles every connection to SSHD_RATE bytes per second (default 320 since 2026-03, 120 before; the README calls it bits) to imitate a slow link, so its KEXINIT of about 600 to 800 bytes arrives in pieces 1 to 2 seconds apart. Steps: one of its version strings (the six profiles, or libssh-0.6.1 of the 2025-10 release), a client identification and KEXINIT answered by the start of a Go KEXINIT (the key exchange list as in signature 1170), then silence from the client, during which the rest of the server KEXINIT arrives at least 700 ms later. A genuine server sends its whole KEXINIT at once and then waits for the client. Depends on the default rate (a much higher SSHD_RATE removes the gap). Matched: ssh-auth-logger commit f53dddc (2026-05-29; golang.org/x/crypto v0.51.0, Go 1.27.3), commit 6f127c0 (2026-01-08, the code of the Docker Hub image of 2026-01-04; x/crypto v0.1.0), commit a114b25 (2025-10-08; x/crypto v0.1.0) (2026-11).'
+  - name: ssh-auth-logger-telnet-throttled-banner
+    id: 1174
+    port: 23
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^(?:CentOS Linux 7 \(Core|Debian GNU/Linux 1[01]|Ubuntu 2[04]\.04\.6 LTS|Welcome to Dropbear)'
+      invert_match: false
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '(?s).+'
+      invert_match: false
+      min_response_ms: 600
+    confidence: Medium
+    comment: 'ssh-auth-logger (since 2026-03) also runs a telnet listener (TELNET_BIND, default :23; :2323 in its Docker image) that cannot be switched off. It sends the login banner of the chosen profile (CentOS Linux 7, Debian 10 or 11, Ubuntu 20.04.6 or 24.04.6, or ''Welcome to Dropbear Telnet Server'', made by replacing SSH with Telnet) with no telnet option negotiation, throttled to TELNET_RATE bytes per second (default 20), so the first 20 bytes arrive at once and the rest in 20-byte pieces one second apart. Steps: read the greeting (nothing sent), which must start with one of the six banners and no IAC negotiation; then silence, during which more of the banner arrives at least 600 ms later. Genuine telnet servers start with option negotiation and send their banner at once. Matched: ssh-auth-logger commit f53dddc (2026-05-29; golang.org/x/crypto v0.51.0, Go 1.27.3) (2026-11).'
+  - name: ssh-auth-logger-telnet-throttled-banner-alt-port
+    id: 1175
+    port: 2323
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^(?:CentOS Linux 7 \(Core|Debian GNU/Linux 1[01]|Ubuntu 2[04]\.04\.6 LTS|Welcome to Dropbear)'
+      invert_match: false
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '(?s).+'
+      invert_match: false
+      min_response_ms: 600
+    confidence: Medium
+    comment: 'Port 2323 form: the project''s Dockerfile and compose example run the telnet listener on 2323. ssh-auth-logger (since 2026-03) also runs a telnet listener (TELNET_BIND, default :23; :2323 in its Docker image) that cannot be switched off. It sends the login banner of the chosen profile (CentOS Linux 7, Debian 10 or 11, Ubuntu 20.04.6 or 24.04.6, or ''Welcome to Dropbear Telnet Server'', made by replacing SSH with Telnet) with no telnet option negotiation, throttled to TELNET_RATE bytes per second (default 20), so the first 20 bytes arrive at once and the rest in 20-byte pieces one second apart. Steps: read the greeting (nothing sent), which must start with one of the six banners and no IAC negotiation; then silence, during which more of the banner arrives at least 600 ms later. Genuine telnet servers start with option negotiation and send their banner at once. Matched: ssh-auth-logger commit f53dddc (2026-05-29; golang.org/x/crypto v0.51.0, Go 1.27.3) (2026-11).'
+  - name: ssh-auth-logger-libssh-banner-go-kex
+    id: 1178
+    port: 22
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^SSH-2\.0-libssh-0\.6\.1$'
+      invert_match: false
+    - input_type: hex
+      input: 5353482d322e302d4f70656e5353485f392e3270312044656269616e2d322b646562313275330d0a000000a40814111111111111111111111111111111110000001b6469666669652d68656c6c6d616e2d67726f757031342d73686131000000147273612d736861322d3235362c7373682d7273610000000a6165733132382d6374720000000a6165733132382d63747200000009686d61632d7368613100000009686d61632d73686131000000046e6f6e65000000046e6f6e65000000000000000000000000000000000000000000
+      output_match_type: regex
+      output: '(?s)\x00\x00\x00.curve25519-sha256,curve25519-sha256@libssh\.org,ecdh-sha2-nistp256'
+      invert_match: false
+    confidence: High
+    comment: 'ssh-auth-logger from 2017 until 2025-10 announces ''SSH-2.0-libssh-0.6.1'' on every address (the only entry in its version list) but runs golang.org/x/crypto/ssh, with a 1024-bit RSA host key. libssh 0.6.1 offers curve25519-sha256@libssh.org first and never curve25519-sha256, while the Go library lists curve25519-sha256, curve25519-sha256@libssh.org and then the ECDH curves. Steps: the version string; a client identification and KEXINIT (no authentication), answered by the Go key exchange list. A Go SSH program configured with the same version string would also match. Matched: ssh-auth-logger commit 31e9582 (2024-08-06, unchanged in behaviour since 2017; x/crypto v0.1.0), commit a114b25 (2025-10-08; x/crypto v0.1.0) (2026-11).'
+  - name: ssh-auth-logger-libssh-banner-go-kex-alt-port
+    id: 1179
+    port: 2222
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^SSH-2\.0-libssh-0\.6\.1$'
+      invert_match: false
+    - input_type: hex
+      input: 5353482d322e302d4f70656e5353485f392e3270312044656269616e2d322b646562313275330d0a000000a40814111111111111111111111111111111110000001b6469666669652d68656c6c6d616e2d67726f757031342d73686131000000147273612d736861322d3235362c7373682d7273610000000a6165733132382d6374720000000a6165733132382d63747200000009686d61632d7368613100000009686d61632d73686131000000046e6f6e65000000046e6f6e65000000000000000000000000000000000000000000
+      output_match_type: regex
+      output: '(?s)\x00\x00\x00.curve25519-sha256,curve25519-sha256@libssh\.org,ecdh-sha2-nistp256'
+      invert_match: false
+    confidence: High
+    comment: 'Port 2222 form: the project''s Dockerfile and compose example listen on 2222. ssh-auth-logger from 2017 until 2025-10 announces ''SSH-2.0-libssh-0.6.1'' on every address (the only entry in its version list) but runs golang.org/x/crypto/ssh, with a 1024-bit RSA host key. libssh 0.6.1 offers curve25519-sha256@libssh.org first and never curve25519-sha256, while the Go library lists curve25519-sha256, curve25519-sha256@libssh.org and then the ECDH curves. Steps: the version string; a client identification and KEXINIT (no authentication), answered by the Go key exchange list. A Go SSH program configured with the same version string would also match. Matched: ssh-auth-logger commit 31e9582 (2024-08-06, unchanged in behaviour since 2017; x/crypto v0.1.0), commit a114b25 (2025-10-08; x/crypto v0.1.0) (2026-11).'
