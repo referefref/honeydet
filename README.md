@@ -16,6 +16,9 @@ Signatures support multi-step, hex, string and regex detection on TCP and UDP.
 Features a SQL backend for persistent scans which can be managed through the web interface.
 Shodan API integration for non-private IPs, automatically adds shodan host information when the flag is set (currently CLI only)
 
+### What's new in 1.6.1
+- Each signature's connection is closed as soon as the signature finishes, so servers that handle one connection at a time answer every signature instead of only the first.
+
 ### What's new in 1.6.0
 - Response-timing matching in signature steps: `min_response_ms`, `max_response_ms`, `faster_than_step` with `speedup_factor`, `reconnect` for a new connection, and a `{{rand}}` token shared by a signature's steps (see Signature format).
 - Galah cache-timing signature (id 369): a new random path is slow while the model writes it, and the repeat is served from the cache.
