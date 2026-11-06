@@ -9126,3 +9126,37 @@ signatures:
       invert_match: false
     confidence: Medium
     comment: 'The greeting is go-smtp''s ''220 <banner> ESMTP Service Ready'' with the upstream default banner ''localhost'' (option --banner / HGG_BANNER). maddy uses the same wording with its host name; Postfix, Exim, OpenSMTPD, aiosmtpd, Mailpit and MailHog use other texts. Matched: honeygogo-smtp 7252001 (2026-11).'
+  - name: blacknet-ssh-default-banner-paramiko-kexinit
+    id: 1030
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^SSH-2\.0-OpenSSH_8\.4p1 Debian-5\+deb11u1$'
+        invert_match: false
+      - input_type: string
+        input: "SSH-2.0-OpenSSH_9.2p1\r"
+        output_match_type: regex
+        output: '(?s)\x00\x00[\x00\x01].curve25519-sha256@libssh\.org,ecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521,diffie-hellman-group16-sha512,(?:diffie-hellman-group-exchange-sha256,)?diffie-hellman-group14-sha256,(?:diffie-hellman-group-exchange-sha1,)?diffie-hellman-group14-sha1,diffie-hellman-group1-sha1(?:,kex-strict-s-v00@openssh\.com)?\x00\x00\x00.rsa-sha2-512,rsa-sha2-256,ssh-rsa\x00\x00\x00.aes128-ctr,aes192-ctr,aes256-ctr,aes128-cbc,aes192-cbc,aes256-cbc,3des-cbc'
+        invert_match: false
+    confidence: High
+    comment: "Blacknet's sensor is a paramiko server that announces its default banner SSH-2.0-OpenSSH_8.4p1 Debian-5+deb11u1 (Debian 11) but sends paramiko's key exchange offer: curve25519-sha256@libssh.org first with no curve25519-sha256 or sntrup761, diffie-hellman-group1-sha1, an RSA host key only (rsa-sha2-512,rsa-sha2-256,ssh-rsa) and the CBC ciphers including 3des-cbc, but no chacha20-poly1305. Genuine OpenSSH 8.4p1 on Debian 11 offers curve25519-sha256, chacha20-poly1305@openssh.com, umac MACs, zlib@openssh.com and ECDSA and Ed25519 host keys. Group exchange appears only when a moduli file is present. Matched: Blacknet 2.1.0 (cbb806d) with paramiko 3.5.1 (2026-11)."
+  - name: blacknet-ssh-paramiko-kexinit-behind-openssh-banner
+    id: 1031
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^SSH-2\.0-OpenSSH_[^\r\n]*$'
+        invert_match: false
+      - input_type: string
+        input: "SSH-2.0-OpenSSH_9.2p1\r"
+        output_match_type: regex
+        output: '(?s)\x00\x00[\x00\x01].curve25519-sha256@libssh\.org,ecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521,diffie-hellman-group16-sha512,(?:diffie-hellman-group-exchange-sha256,)?diffie-hellman-group14-sha256,(?:diffie-hellman-group-exchange-sha1,)?diffie-hellman-group14-sha1,diffie-hellman-group1-sha1(?:,kex-strict-s-v00@openssh\.com)?\x00\x00\x00.rsa-sha2-512,rsa-sha2-256,ssh-rsa\x00\x00\x00.aes128-ctr,aes192-ctr,aes256-ctr,aes128-cbc,aes192-cbc,aes256-cbc,3des-cbc'
+        invert_match: false
+    confidence: Medium
+    comment: "Any OpenSSH banner (Blacknet's ssh_banner setting changes it) followed by the key exchange offer of paramiko 3: curve25519-sha256@libssh.org first, diffie-hellman-group1-sha1, an RSA-only host key list and the CBC ciphers including 3des-cbc, which OpenSSH has not offered by default since 7.4. No OpenSSH release sends this list. Medium: other paramiko-based SSH services that claim to be OpenSSH send the same list. Matched: Blacknet 2.1.0 (cbb806d) with paramiko 3.5.1, default and custom banners (2026-11)."
