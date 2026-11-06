@@ -9622,3 +9622,55 @@ signatures:
       max_response_ms: 5500
     confidence: High
     comment: 'Port 2222 form: hived''s own test listens on 0.0.0.0:2222, and 2222 is the usual choice for an unprivileged SSH honeypot. hived sets an absolute 5-second deadline on every TCP connection as soon as it is accepted (SetDeadline(now + 5 s)) and never clears it, so every connection, authenticated or not, is closed 5 seconds after it was accepted. Steps: the ''SSH-2.0-Go'' identification, then a client identification and KEXINIT answered by a server KEXINIT that offers RSA host keys only, then silence until the server closes the connection 3.5 to 5.5 seconds later. OpenSSH waits for LoginGraceTime (120 seconds by default), and the genuine Go servers and other Go honeypots in the lab kept the connection open for longer than the read timeout. Run with the default -timeout 5 or higher, on its own, because hived serves one connection at a time. Matched: hived a044d22 (2017-08-27; library unchanged, run by the companion runner) built with Go 1.27.3 and golang.org/x/crypto v0.58.0, and with the x/crypto pinned in its Gopkg.lock (81e9090, 2017-08) (2026-11).'
+  - name: go-honeypot-ssh-port-silent-close-after-data
+    id: 1140
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "5353482d322e302d4f70656e5353485f392e3270310d0a"
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+        max_response_ms: 2000
+    confidence: Medium
+    comment: "The SSH port sends no identification string, and when the client sends its own (SSH-2.0-OpenSSH_9.2p1) the server closes the connection at once without a byte: go-HoneyPot's TCP listener waits for the first data, records it and closes. A genuine SSH server (OpenSSH, Dropbear, Go x/crypto servers) sends its SSH-2.0 identification first. Any listener that closes a connection without replying (a port forwarder with no backend, TCP wrappers, a server shedding load) gives the same result, hence Medium. Matched: go-HoneyPot d98cff6 (2026-11)."
+  - name: go-honeypot-ssh-alt-port-silent-close-after-data
+    id: 1141
+    port: 2222
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "5353482d322e302d4f70656e5353485f392e3270310d0a"
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+        max_response_ms: 2000
+    confidence: Medium
+    comment: "As 1140 on the alternative SSH port 2222: no SSH identification, and the connection is closed without a reply as soon as the client sends its own. Genuine SSH servers on 2222 (and Cowrie, which listens there by default) send an SSH-2.0 identification first. Matched: go-HoneyPot d98cff6 (2026-11)."
+  - name: go-honeypot-readme-port-1220-silent-close
+    id: 1142
+    port: 1220
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "0d0a"
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+        max_response_ms: 2000
+    confidence: Low
+    comment: "Port 1220, one of the two example ports in go-HoneyPot's README configuration, accepts the connection, waits, and closes without a reply as soon as two bytes (CR LF) arrive. No common service listens on 1220, and any service that closes silently on unexpected input matches too, hence Low. Matched: go-HoneyPot d98cff6 (2026-11)."
+  - name: go-honeypot-readme-port-5777-silent-close
+    id: 1143
+    port: 5777
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "0d0a"
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+        max_response_ms: 2000
+    confidence: Low
+    comment: "As 1142 on port 5777, the README configuration's second example port. Matched: go-HoneyPot d98cff6 (2026-11)."
