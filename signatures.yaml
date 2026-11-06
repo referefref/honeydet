@@ -9160,3 +9160,54 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: "Any OpenSSH banner (Blacknet's ssh_banner setting changes it) followed by the key exchange offer of paramiko 3: curve25519-sha256@libssh.org first, diffie-hellman-group1-sha1, an RSA-only host key list and the CBC ciphers including 3des-cbc, which OpenSSH has not offered by default since 7.4. No OpenSSH release sends this list. Medium: other paramiko-based SSH services that claim to be OpenSSH send the same list. Matched: Blacknet 2.1.0 (cbb806d) with paramiko 3.5.1, default and custom banners (2026-11)."
+  - name: wetland-ssh-default-banner-paramiko-2-2-kexinit
+    id: 1040
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^SSH-2\.0-OpenSSH_7\.2p2 Ubuntu-4ubuntu2\.2$'
+        invert_match: false
+      - input_type: string
+        input: "SSH-2.0-OpenSSH_9.2p1\r"
+        output_match_type: regex
+        output: '(?s)\x00\x00\x00.ecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521,(?:diffie-hellman-group-exchange-sha256,diffie-hellman-group-exchange-sha1,)?diffie-hellman-group14-sha1,diffie-hellman-group1-sha1\x00\x00\x00\x0fssh-rsa,ssh-dss\x00\x00\x00.aes128-ctr,aes192-ctr,aes256-ctr,aes128-cbc,aes192-cbc,aes256-cbc,blowfish-cbc,3des-cbc\x00'
+        invert_match: false
+    confidence: High
+    comment: "Wetland's default banner (wetland.cfg.default) is SSH-2.0-OpenSSH_7.2p2 Ubuntu-4ubuntu2.2 (Ubuntu 16.04), but the key exchange offer comes from the paramiko 2.2.1 copy bundled with Wetland: the three NIST ECDH curves first with no curve25519, group14-sha1 and group1-sha1, the host key list ssh-rsa,ssh-dss (Wetland loads an RSA and a DSA key) and the CBC, blowfish-cbc and 3des-cbc ciphers. Genuine OpenSSH 7.2p2 offers curve25519-sha256@libssh.org first, ECDSA and Ed25519 host keys and chacha20-poly1305, and had removed blowfish-cbc and group1-sha1 from its defaults in 6.7 and 7.0. Matched: Wetland 0e7b1d1 (bundled paramiko 2.2.1) on Python 3.11 and the original ohmyadd/wetland Python 2.7 image (2026-11)."
+  - name: wetland-ssh-paramiko-2-2-kexinit-rsa-dss-behind-openssh-banner
+    id: 1041
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^SSH-2\.0-OpenSSH_[^\r\n]*$'
+        invert_match: false
+      - input_type: string
+        input: "SSH-2.0-OpenSSH_9.2p1\r"
+        output_match_type: regex
+        output: '(?s)\x00\x00\x00.ecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521,(?:diffie-hellman-group-exchange-sha256,diffie-hellman-group-exchange-sha1,)?diffie-hellman-group14-sha1,diffie-hellman-group1-sha1\x00\x00\x00\x0fssh-rsa,ssh-dss\x00\x00\x00.aes128-ctr,aes192-ctr,aes256-ctr,aes128-cbc,aes192-cbc,aes256-cbc,blowfish-cbc,3des-cbc\x00'
+        invert_match: false
+    confidence: Medium
+    comment: "Any OpenSSH banner (Wetland's banner setting changes it, and the README asks operators to copy the banner of their sshd container) followed by the key exchange offer of paramiko 2.2 with an RSA and a DSA host key: ecdh-sha2-nistp256 first, no curve25519, group14-sha1 and group1-sha1, host keys ssh-rsa,ssh-dss and the blowfish-cbc and 3des-cbc ciphers. No OpenSSH release sends this list. Medium: other servers built on paramiko 2.0 to 2.6 with RSA and DSA keys that claim to be OpenSSH would match. Matched: Wetland 0e7b1d1 (bundled paramiko 2.2.1) on Python 3.11 with default and custom banners and the original ohmyadd/wetland Python 2.7 image (2026-11)."
+  - name: wetland-ssh-shipped-rsa-host-key
+    id: 1042
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^SSH-2\.0-'
+        invert_match: false
+      - input_type: hex
+        input: "5353482d322e302d4f70656e5353485f392e3270310d0a000000940614000102030405060708090a0b0c0d0e0f00000012656364682d736861322d6e69737470323536000000077373682d7273610000000a6165733132382d6374720000000a6165733132382d6374720000000d686d61632d736861322d3235360000000d686d61632d736861322d323536000000046e6f6e65000000046e6f6e65000000000000000000000000000000000000000000004c051e0000004104f727019145268d2b0742a41711b0ce23d5cde0f19a0ba59acf1a486a2766f9ddd0ec21bf75dab30b23008ab413193bc92e3acf90bf2c21a20a57dd46e60f95cc0000000000"
+        output_match_type: hex
+        output: '000000077373682d727361000000030100010000010100d2cecad0910087a46012ba9e977faf3cedf58d25c8ac4dcf2b870138888411d279'
+        invert_match: false
+    confidence: High
+    comment: "The Wetland repository ships its SSH host keys (data/id_rsa and data/id_dsa, committed in April 2018), and the installer util/initwetland.py keeps them when they exist, so an installation that follows the README presents the same RSA host key as every other: 2048 bits, SHA256:74ZjXJHxlF29lJNImUIeRwK1NRoRA4vI/UJ595tlTyo. The probe sends a client identification, a key exchange offer limited to ecdh-sha2-nistp256 and ssh-rsa and a fixed ECDH public value, and matches the start of the shipped key's modulus in the server's reply, without logging in. Does not match deployments with their own keys (the author's Docker Hub image and the companion scripts generate keys). Matched: Wetland 0e7b1d1 with the shipped keys on Python 3.11 (2026-11)."
