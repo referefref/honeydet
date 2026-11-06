@@ -121,7 +121,7 @@ signatures:
         output: bad version 1111
         invert_match: false
     confidence: High
-    comment: "Twisted Conch rejects the malformed version with 'bad version'. Matches OpenCanary 0.9.10 and Cowrie before 3.x; Cowrie 3.1.3 replies 'Invalid SSH identification string.' like OpenSSH (see ids 43-49). Also matches twisted-honeypots 0a83d90 SSH (2026-11). Also matches HonSSH 821ce87 and honssh-nx 0b1761c (2026-11). Also matches Kojoney2 a1b653a and kojoney2-nx 5aac7a7 (2026-11)."
+    comment: "Twisted Conch rejects the malformed version with 'bad version'. Matches OpenCanary 0.9.10 and Cowrie before 3.x; Cowrie 3.1.3 replies 'Invalid SSH identification string.' like OpenSSH (see ids 43-49). Also matches twisted-honeypots 0a83d90 SSH (2026-11). Also matches HonSSH 821ce87 and honssh-nx 0b1761c (2026-11). Also matches Kojoney2 a1b653a and kojoney2-nx 5aac7a7 (2026-11). Also matches MockSSH 2.0.0 (4cb930c, 2026-11)."
   # WOWHoneypot blocks a scanner after four bad connections, so its signatures run before other web-port signatures
   # wowhoneypot (ids 460-469)
   - name: wowhoneypot-default-page-direct
@@ -1030,7 +1030,7 @@ signatures:
         output: '^SSH-2\.0-[^\r\n]*$'
         invert_match: false
     confidence: High
-    comment: "After the client identification, OpenCanary sends only its banner and never its KEXINIT. Genuine SSH servers send KEXINIT immediately. Run without -u/-pw (raw mode)."
+    comment: "After the client identification, OpenCanary sends only its banner and never its KEXINIT. Genuine SSH servers send KEXINIT immediately. Run without -u/-pw (raw mode). Also matches MockSSH 2.0.0 (4cb930c, 2026-11)."
   - name: opencanary-ssh-default-banner
     id: 59
     port: 22
@@ -9349,3 +9349,27 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: "Kojoney2 builds its identification string as 'SSH-2.0-OpenSSH_5.1p1 ' followed by a distribution text (FAKE_DISTRO_VERSION), so a changed distribution still gives OpenSSH 5.1p1 with a comment of several words ('CentOS release 6.3 (Final)', 'Ubuntu 12.04 LTS'). OpenSSH 5.1p1 had no VersionAddendum and its packaged builds use a single-word comment ('Debian-4', 'Debian-5'). Medium: catches modified Kojoney2 banners, but any other tool announcing OpenSSH 5.1p1 with a multi-word comment would match. Matched: Kojoney2 a1b653a (Python 2.7, Twisted 14.0.2) and kojoney2-nx 5aac7a7 (Python 3.11, Twisted 26.10.0) (2026-11)."
+  - name: mockssh-ssh-default-banner
+    id: 1090
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^SSH-2\.0-OpenSSH_Mock MockSSH\.py(?:\r?\n|$)'
+        invert_match: false
+    confidence: High
+    comment: "MockSSH, a Twisted Conch library for mock SSH servers, announces the identification string 'SSH-2.0-OpenSSH_Mock MockSSH.py', set in SSHFactory.buildProtocol in MockSSH.py; every server built with the library (the bundled Cisco and F5 examples, the HyLang DSL) sends it. Genuine OpenSSH announces a numeric version (OpenSSH_9.2p1). Not configurable without changing the library. Matched: MockSSH 2.0.0 (4cb930c, Twisted 25.5.0, Python 3.12) example server examples/mock_cisco.py (2026-11)."
+  - name: mockssh-ssh-kexinit-rsa-names-without-rsa-key
+    id: 1091
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "5353482d322e302d4f70656e5353485f392e3270310d0a0000013c0514000102030405060708090a0b0c0d0e0f0000005f637572766532353531392d7368613235362c637572766532353531392d736861323536406c69627373682e6f72672c656364682d736861322d6e697374703235362c6469666669652d68656c6c6d616e2d67726f757031342d736861323536000000397373682d656432353531392c65636473612d736861322d6e697374703235362c7273612d736861322d3531322c7273612d736861322d323536000000156165733132382d6374722c6165733235362d637472000000156165733132382d6374722c6165733235362d63747200000017686d61632d736861322d3235362c686d61632d7368613100000017686d61632d736861322d3235362c686d61632d73686131000000046e6f6e65000000046e6f6e65000000000000000000000000000000000000"
+        output_match_type: hex
+        output: "000000397373682d656432353531392c65636473612d736861322d6e697374703235362c7273612d736861322d3235362c7273612d736861322d353132000000416165733235362d6374722c6165733139322d6374722c6165733132382d6374722c6165733235362d6362632c6165733139322d6362632c6165733132382d636263000000416165733235362d6374722c6165733139322d6374722c6165733132382d6374722c6165733235362d6362632c6165733139322d6362632c6165733132382d63626300000025686d61632d736861322d3531322c686d61632d736861322d3235362c686d61632d7368613100000025686d61632d736861322d3531322c686d61632d736861322d3235362c686d61632d73686131"
+        invert_match: false
+    confidence: High
+    comment: "Sends a client identification and KEXINIT, then looks for MockSSH's fixed algorithm lists in the server's KEXINIT: host key algorithms exactly 'ssh-ed25519,ecdsa-sha2-nistp256,rsa-sha2-256,rsa-sha2-512' (RSA signature names advertised although MockSSH only generates Ed25519 and ECDSA keys, and rsa-sha2-256 before rsa-sha2-512), ciphers 'aes256-ctr,aes192-ctr,aes128-ctr,aes256-cbc,aes192-cbc,aes128-cbc' (no ChaCha20 or GCM) and MACs 'hmac-sha2-512,hmac-sha2-256,hmac-sha1' (no encrypt-then-MAC), hard-coded in MockSSH.py. OpenSSH, Dropbear, libssh and stock Twisted Conch offer other lists. The key exchange list is left out because it depends on /etc/ssh/moduli. No login. Matched: MockSSH 2.0.0 (4cb930c, Twisted 25.5.0, Python 3.12) example server examples/mock_cisco.py (2026-11)."
