@@ -81,6 +81,13 @@ type Step struct {
 	OutputMatchType string `yaml:"output_match_type"`
 	Output          string `yaml:"output"`
 	InvertMatch     string `yaml:"invert_match"`
+	// Optional: open a new connection before this step (raw TCP only)
+	Reconnect bool `yaml:"reconnect"`
+	// Optional timing constraints, measured from sending the step's input to the first byte of its response
+	MinResponseMs  int     `yaml:"min_response_ms"`
+	MaxResponseMs  int     `yaml:"max_response_ms"`
+	FasterThanStep int     `yaml:"faster_than_step"`
+	SpeedupFactor  float64 `yaml:"speedup_factor"`
 }
 
 type Signatures struct {

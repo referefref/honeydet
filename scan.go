@@ -186,8 +186,25 @@ func detectHoneypot(host string, ports []int, proto string, signatures Signature
 				}
 
 				signatureMatched := true
-				for _, step := range signature.Steps {
+				randToken := newRandToken()
+				elapsed := make([]time.Duration, len(signature.Steps))
+				for i, step := range signature.Steps {
+					step = applyRandToken(step, randToken)
+					if step.Reconnect && i > 0 && conn != nil {
+						conn.Close()
+						conn, err = connectToNetworkService(host, port, proto, timeout)
+						if err != nil {
+							if *debug {
+								fmt.Println(color.Ize(color.Red, fmt.Sprintf("[Debug] Unable to reconnect to host %s:%d: %s", host, port, err)))
+							}
+							signatureMatched = false
+							break
+						}
+						defer conn.Close()
+					}
 					var response string
+					start := time.Now()
+					end := time.Time{}
 					if port == 161 {
 						response, err = sendSNMPRequest(snmpClient, step)
 						if err != nil {
@@ -234,7 +251,7 @@ func detectHoneypot(host string, ports []int, proto string, signatures Signature
 							signatureMatched = false
 							break
 						}
-						response, err = readResponse(conn)
+						response, end, err = readResponse(conn)
 						if err != nil {
 							if *debug {
 								fmt.Println(color.Ize(color.Red, fmt.Sprintf("[Debug] Error reading response: %s", err)))
@@ -259,6 +276,19 @@ func detectHoneypot(host string, ports []int, proto string, signatures Signature
 					if !isResponseMatch(response, step.OutputMatchType, step.Output, invertMatch) {
 						signatureMatched = false
 						break
+					}
+					if end.IsZero() {
+						end = time.Now()
+					}
+					elapsed[i] = end.Sub(start)
+					if hasTimingConstraint(step) {
+						if *verbose {
+							fmt.Println(color.Ize(color.Purple, fmt.Sprintf("[Verbose] Signature '%s' step %d on %s:%d answered in %d ms", signature.Name, i+1, host, port, elapsed[i].Milliseconds())))
+						}
+						if !isTimingMatch(step, elapsed, i) {
+							signatureMatched = false
+							break
+						}
 					}
 				}
 
@@ -340,11 +370,17 @@ func sendRequest(conn net.Conn, step Step, timeout int) error {
 	return nil
 }
 
-func readResponse(conn net.Conn) (string, error) {
+// readResponse also returns when the first byte arrived (or the connection closed),
+// for signatures with timing constraints
+func readResponse(conn net.Conn) (string, time.Time, error) {
 	var response strings.Builder
+	var firstByte time.Time
 	buffer := make([]byte, 16048)
 	for {
 		n, err := conn.Read(buffer)
+		if firstByte.IsZero() && (n > 0 || err == io.EOF) {
+			firstByte = time.Now()
+		}
 		if n > 0 {
 			response.Write(buffer[:n])
 			if *debug {
@@ -364,7 +400,7 @@ func readResponse(conn net.Conn) (string, error) {
 			if *debug {
 				fmt.Println(color.Ize(color.Red, fmt.Sprintf("[Debug] Error reading response: %s", err)))
 			}
-			return "", err
+			return "", firstByte, err
 		}
 	}
 
@@ -373,7 +409,7 @@ func readResponse(conn net.Conn) (string, error) {
 		fmt.Println(color.Ize(color.Green, fmt.Sprintf("[Debug] Full Response received: %s", fullResponse)))
 	}
 
-	return fullResponse, nil
+	return fullResponse, firstByte, nil
 }
 func isResponseMatch(response, matchType, matchPattern string, invertMatch bool) bool {
 	trimmedResponse := strings.TrimSpace(response)
