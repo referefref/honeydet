@@ -9759,3 +9759,20 @@ signatures:
       invert_match: false
     confidence: Medium
     comment: 'Any OpenSSH identification string followed by the russh 0.3x KEXINIT: MAC list ''...,hmac-sha1-etm@openssh.com,hmac-sha1,none'' in both directions and compression ''none,zlib,zlib@openssh.com''. OpenSSH never offers the ''none'' MAC or plain ''zlib'', so a server that claims to be OpenSSH with these lists is a russh program spoofing OpenSSH, such as honeyssh with an edited banner. Medium because it describes the library (russh of 2022) rather than honeyssh alone. Matched: honeyssh afc7063 with and without the CR LF fix (russh tatref 5ec09d2, 0.35.0-beta.6) built with Rust 1.99.1 (2026-11).'
+  - name: hornet-ssh-paramiko-banner-1024-bit-rsa-host-key
+    id: 1160
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^SSH-2\.0-paramiko_[0-9][0-9.]*$'
+        invert_match: false
+      - input_type: hex
+        input: "5353482d322e302d4f70656e5353485f392e3270310d0a000000a40914000102030405060708090a0b0c0d0e0f00000012656364682d736861322d6e69737470323536000000147273612d736861322d3235362c7373682d7273610000000a6165733132382d6374720000000a6165733132382d6374720000000d686d61632d736861322d3235360000000d686d61632d736861322d323536000000046e6f6e65000000046e6f6e65000000000000000000000000000000000000000000000000004c051e0000004104f727019145268d2b0742a41711b0ce23d5cde0f19a0ba59acf1a486a2766f9ddd0ec21bf75dab30b23008ab413193bc92e3acf90bf2c21a20a57dd46e60f95cc0000000000"
+        output_match_type: hex
+        output: '00000097000000077373682d7273610000000301000100000081'
+        invert_match: false
+    confidence: High
+    comment: "Hornet's SSH server is paramiko, which announces itself as SSH-2.0-paramiko_<version> (Hornet has no banner setting), and on the first connection Hornet creates its host key as a 1024-bit RSA key (hornet/common/helpers.py, RSAKey.generate(1024), file test_server.key). The probe sends a client identification, a key exchange offer limited to ecdh-sha2-nistp256 with rsa-sha2-256 or ssh-rsa host keys and a fixed ECDH public value, and matches the server's host key in KEX_ECDH_REPLY: an ssh-rsa key blob of 0x97 bytes with exponent 65537 and a 129-byte (1024-bit) modulus, without logging in. Genuine OpenSSH announces its own name, and its ssh-keygen creates 3072-bit RSA host keys (the default since OpenSSH 8.0) and created 2048-bit ones before that. Does not match when the operator places a larger RSA key in the key file before the first connection. Matched: Hornet b16ed6b as hornet-nx 10f9c81 with paramiko 5.1.0 on Python 3.11 (2026-11)."
