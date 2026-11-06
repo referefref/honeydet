@@ -9674,3 +9674,88 @@ signatures:
         max_response_ms: 2000
     confidence: Low
     comment: "As 1142 on port 5777, the README configuration's second example port. Matched: go-HoneyPot d98cff6 (2026-11)."
+  - name: honeyssh-openssh-7.2p2-banner-russh-kexinit
+    id: 1150
+    port: 22
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: not-equals
+      output: "SSH-2.0-OpenSSH_7.2p2\r\n"
+      invert_match: true
+    - input_type: string
+      input: "SSH-2.0-OpenSSH_9.2p1 Debian-2+deb12u3\r\n"
+      output_match_type: regex
+      output: (?s)\x00\x00\x00\x71curve25519-sha256@libssh\.org,diffie-hellman-group14-sha256,diffie-hellman-group14-sha1,diffie-hellman-group1-sha1\x00\x00\x00\x0bssh-ed25519\x00.*,hmac-sha1,none\x00\x00\x00\x1anone,zlib,zlib@openssh\.com\x00
+      invert_match: false
+    confidence: High
+    comment: 'honeyssh hard-codes the identification string ''SSH-2.0-OpenSSH_7.2p2'' (Ubuntu 16.04''s OpenSSH version, but without the ''Ubuntu-4ubuntu2.x'' suffix Ubuntu''s package sends; a source build sends the bare version but OpenSSH''s own algorithm lists) on top of the russh 0.35 library, whose KEXINIT differs from every OpenSSH release: kex list curve25519-sha256@libssh.org, diffie-hellman-group14-sha256, group14-sha1, group1-sha1, a single ssh-ed25519 host key, a MAC list that ends with ''none'' and compression ''none,zlib,zlib@openssh.com''. OpenSSH never offers the ''none'' MAC or plain ''zlib''. Genuine OpenSSH 7.2p2 (Ubuntu 16.04) and 9.2p1 send their distribution suffix and OpenSSH algorithm lists; Warpgate 0.30 (russh 0.65) sends ''SSH-2.0-russh_0.65.0'' without the ''none'' MAC. Matched: honeyssh afc7063 with the CR LF fix of the companion scripts (russh tatref 5ec09d2, 0.35.0-beta.6) built with Rust 1.99.1 (2026-11).'
+  - name: honeyssh-openssh-7.2p2-banner-russh-kexinit-2222
+    id: 1151
+    port: 2222
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: not-equals
+      output: "SSH-2.0-OpenSSH_7.2p2\r\n"
+      invert_match: true
+    - input_type: string
+      input: "SSH-2.0-OpenSSH_9.2p1 Debian-2+deb12u3\r\n"
+      output_match_type: regex
+      output: (?s)\x00\x00\x00\x71curve25519-sha256@libssh\.org,diffie-hellman-group14-sha256,diffie-hellman-group14-sha1,diffie-hellman-group1-sha1\x00\x00\x00\x0bssh-ed25519\x00.*,hmac-sha1,none\x00\x00\x00\x1anone,zlib,zlib@openssh\.com\x00
+      invert_match: false
+    confidence: High
+    comment: 'Port 2222 form of 1150 (the port in honeyssh''s README examples). honeyssh hard-codes the identification string ''SSH-2.0-OpenSSH_7.2p2'' (Ubuntu 16.04''s OpenSSH version, but without the ''Ubuntu-4ubuntu2.x'' suffix Ubuntu''s package sends; a source build sends the bare version but OpenSSH''s own algorithm lists) on top of the russh 0.35 library, whose KEXINIT differs from every OpenSSH release: kex list curve25519-sha256@libssh.org, diffie-hellman-group14-sha256, group14-sha1, group1-sha1, a single ssh-ed25519 host key, a MAC list that ends with ''none'' and compression ''none,zlib,zlib@openssh.com''. OpenSSH never offers the ''none'' MAC or plain ''zlib''. Genuine OpenSSH 7.2p2 (Ubuntu 16.04) and 9.2p1 send their distribution suffix and OpenSSH algorithm lists; Warpgate 0.30 (russh 0.65) sends ''SSH-2.0-russh_0.65.0'' without the ''none'' MAC. Matched: honeyssh afc7063 with the CR LF fix of the companion scripts (russh tatref 5ec09d2, 0.35.0-beta.6) built with Rust 1.99.1 (2026-11).'
+  - name: honeyssh-unterminated-openssh-banner
+    id: 1152
+    port: 22
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: not-equals
+      output: SSH-2.0-OpenSSH_7.2p2
+      invert_match: true
+    - input_type: string
+      input: "SSH-2.0-OpenSSH_9.2p1 Debian-2+deb12u3\r\n"
+      output_match_type: regex
+      output: (?s)\x00\x00\x00\x71curve25519-sha256@libssh\.org,diffie-hellman-group14-sha256,diffie-hellman-group14-sha1,diffie-hellman-group1-sha1\x00\x00\x00\x0bssh-ed25519\x00.*,hmac-sha1,none\x00\x00\x00\x1anone,zlib,zlib@openssh\.com\x00
+      invert_match: false
+    confidence: High
+    comment: 'Upstream honeyssh as published (russh SshId::Raw) sends ''SSH-2.0-OpenSSH_7.2p2'' with no CR LF line terminator, so the identification line never ends; OpenSSH clients refuse it (''banner line contains invalid characters''). After the client''s identification it still sends the russh 0.35 KEXINIT (MAC list ending in ''none'', compression ''none,zlib,zlib@openssh.com''). No genuine SSH server omits the terminator. Matched: honeyssh afc7063 unmodified (no CR LF) (russh tatref 5ec09d2, 0.35.0-beta.6) built with Rust 1.99.1 (2026-11).'
+  - name: honeyssh-unterminated-openssh-banner-2222
+    id: 1153
+    port: 2222
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: not-equals
+      output: SSH-2.0-OpenSSH_7.2p2
+      invert_match: true
+    - input_type: string
+      input: "SSH-2.0-OpenSSH_9.2p1 Debian-2+deb12u3\r\n"
+      output_match_type: regex
+      output: (?s)\x00\x00\x00\x71curve25519-sha256@libssh\.org,diffie-hellman-group14-sha256,diffie-hellman-group14-sha1,diffie-hellman-group1-sha1\x00\x00\x00\x0bssh-ed25519\x00.*,hmac-sha1,none\x00\x00\x00\x1anone,zlib,zlib@openssh\.com\x00
+      invert_match: false
+    confidence: High
+    comment: 'Port 2222 form of 1152 (the port in honeyssh''s README examples). Upstream honeyssh as published (russh SshId::Raw) sends ''SSH-2.0-OpenSSH_7.2p2'' with no CR LF line terminator, so the identification line never ends; OpenSSH clients refuse it (''banner line contains invalid characters''). After the client''s identification it still sends the russh 0.35 KEXINIT (MAC list ending in ''none'', compression ''none,zlib,zlib@openssh.com''). No genuine SSH server omits the terminator. Matched: honeyssh afc7063 unmodified (no CR LF) (russh tatref 5ec09d2, 0.35.0-beta.6) built with Rust 1.99.1 (2026-11).'
+  - name: russh-0.3x-kexinit-behind-openssh-banner
+    id: 1154
+    port: 22
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: ^SSH-2\.0-OpenSSH_[0-9][^\r\n]*$
+      invert_match: false
+    - input_type: string
+      input: "SSH-2.0-OpenSSH_9.2p1 Debian-2+deb12u3\r\n"
+      output_match_type: regex
+      output: (?s),hmac-sha1-etm@openssh\.com,hmac-sha1,none\x00\x00\x00.hmac-sha2-512-etm@openssh\.com,.*,hmac-sha1,none\x00\x00\x00\x1anone,zlib,zlib@openssh\.com\x00\x00\x00\x1anone,zlib,zlib@openssh\.com\x00
+      invert_match: false
+    confidence: Medium
+    comment: 'Any OpenSSH identification string followed by the russh 0.3x KEXINIT: MAC list ''...,hmac-sha1-etm@openssh.com,hmac-sha1,none'' in both directions and compression ''none,zlib,zlib@openssh.com''. OpenSSH never offers the ''none'' MAC or plain ''zlib'', so a server that claims to be OpenSSH with these lists is a russh program spoofing OpenSSH, such as honeyssh with an edited banner. Medium because it describes the library (russh of 2022) rather than honeyssh alone. Matched: honeyssh afc7063 with and without the CR LF fix (russh tatref 5ec09d2, 0.35.0-beta.6) built with Rust 1.99.1 (2026-11).'
