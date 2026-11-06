@@ -121,7 +121,7 @@ signatures:
         output: bad version 1111
         invert_match: false
     confidence: High
-    comment: "Twisted Conch rejects the malformed version with 'bad version'. Matches OpenCanary 0.9.10 and Cowrie before 3.x; Cowrie 3.1.3 replies 'Invalid SSH identification string.' like OpenSSH (see ids 43-49). Also matches twisted-honeypots 0a83d90 SSH (2026-11). Also matches HonSSH 821ce87 and honssh-nx 0b1761c (2026-11)."
+    comment: "Twisted Conch rejects the malformed version with 'bad version'. Matches OpenCanary 0.9.10 and Cowrie before 3.x; Cowrie 3.1.3 replies 'Invalid SSH identification string.' like OpenSSH (see ids 43-49). Also matches twisted-honeypots 0a83d90 SSH (2026-11). Also matches HonSSH 821ce87 and honssh-nx 0b1761c (2026-11). Also matches Kojoney2 a1b653a and kojoney2-nx 5aac7a7 (2026-11)."
   # WOWHoneypot blocks a scanner after four bad connections, so its signatures run before other web-port signatures
   # wowhoneypot (ids 460-469)
   - name: wowhoneypot-default-page-direct
@@ -9313,3 +9313,39 @@ signatures:
         invert_match: false
     confidence: High
     comment: "A non-SSH line after the banner is answered with the clear-text 'Protocol mismatch.' (the Kippo workaround in honsshServer.py, which replaces Twisted's 'bad packet length' disconnect) while the banner, copied from the honeypot, claims OpenSSH 8.2 or later. Those releases reply 'Invalid SSH identification string.' (checked on 8.2p1, 8.9p1, 9.2p1 and 9.6); OpenSSH 7.6p1 and older send 'Protocol mismatch.', so a banner set to an old OpenSSH release hides this. Matched: honssh-nx 0b1761c and HonSSH 821ce87 with the copied banner SSH-2.0-OpenSSH_9.2p1 Debian-2+deb12u10 (2026-11)."
+  - name: kojoney2-ssh-default-banner-centos-comment
+    id: 1080
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^SSH-2\.0-OpenSSH_5\.1p1 CentOS release 6\.3 \(Final\)(?:\r?\n|$)'
+        invert_match: false
+    confidence: High
+    comment: "Kojoney2's default identification string, 'SSH-2.0-OpenSSH_' + '5.1p1 ' + the fake distribution text 'CentOS release 6.3 (Final)' (FAKE_SSH_SERVER_VERSION in conf/fake_responses.py). Genuine OpenSSH never puts a distribution release text in its version string, and CentOS 6.3 shipped OpenSSH 5.3p1, whose Red Hat build announces 'SSH-2.0-OpenSSH_5.3'. Configurable (FAKE_DISTRO_VERSION). Matched: Kojoney2 a1b653a (Python 2.7, Twisted 14.0.2) and kojoney2-nx 5aac7a7 (Python 3.11, Twisted 26.10.0) (2026-11)."
+  - name: kojoney2-ssh-bundled-768-bit-rsa-host-key
+    id: 1081
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "5353482d322e302d4f70656e5353485f392e3270310d0a000001140514000102030405060708090a0b0c0d0e0f00000065637572766532353531392d7368613235362c637572766532353531392d736861323536406c69627373682e6f72672c6469666669652d68656c6c6d616e2d67726f757031342d736861312c6469666669652d68656c6c6d616e2d67726f7570312d73686131000000217273612d736861322d3531322c7273612d736861322d3235362c7373682d7273610000000a6165733132382d6374720000000a6165733132382d63747200000017686d61632d736861322d3235362c686d61632d7368613100000017686d61632d736861322d3235362c686d61632d73686131000000046e6f6e65000000046e6f6e650000000000000000000000000000000000000000002c061e00000020132c442be010fbd57e72603328aa76e71fccc1503aae219327d14d9c9993f472000000000000"
+        output_match_type: hex
+        output: "000000077373682d72736100000001230000006100af3271f0e60e9c99b37f8b5f044bcb8bc0d53eb277fdcf64d88fc0cfae1fc6"
+        invert_match: false
+    confidence: High
+    comment: "Sends a client identification, a KEXINIT (curve25519-sha256, diffie-hellman-group14-sha1 and group1-sha1; rsa-sha2-512, rsa-sha2-256, ssh-rsa; aes128-ctr; hmac-sha2-256, hmac-sha1) and a key exchange init with a fixed 32-byte value that serves as an X25519 public key or a Diffie-Hellman e, then looks for Kojoney2's bundled host key in the clear-text key exchange reply: the ssh-rsa blob with exponent 35 and the start of the 768-bit modulus (SHA256:ryaugIFT0B8ItuszldMEU7q14rG/wj9HkRosMeBWkts, FAKE_SSH_PRIVKEY in conf/fake_responses.py). The same key is in every installation that keeps the default. No login. Matched: Kojoney2 a1b653a (Python 2.7, Twisted 14.0.2) and kojoney2-nx 5aac7a7 (Python 3.11, Twisted 26.10.0) (2026-11)."
+  - name: kojoney2-ssh-openssh51-multiword-comment
+    id: 1082
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^SSH-2\.0-OpenSSH_5\.1p1 [^ \r\n]+ [^\r\n]+(?:\r?\n|$)'
+        invert_match: false
+    confidence: Medium
+    comment: "Kojoney2 builds its identification string as 'SSH-2.0-OpenSSH_5.1p1 ' followed by a distribution text (FAKE_DISTRO_VERSION), so a changed distribution still gives OpenSSH 5.1p1 with a comment of several words ('CentOS release 6.3 (Final)', 'Ubuntu 12.04 LTS'). OpenSSH 5.1p1 had no VersionAddendum and its packaged builds use a single-word comment ('Debian-4', 'Debian-5'). Medium: catches modified Kojoney2 banners, but any other tool announcing OpenSSH 5.1p1 with a multi-word comment would match. Matched: Kojoney2 a1b653a (Python 2.7, Twisted 14.0.2) and kojoney2-nx 5aac7a7 (Python 3.11, Twisted 26.10.0) (2026-11)."
