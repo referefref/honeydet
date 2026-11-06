@@ -8764,3 +8764,198 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: "A multi-protocol SMB1 NEGOTIATE offering NT LM 0.12, SMB 2.002 and SMB 2.??? (the first request of Windows clients and nmap) is read and the connection is closed with no reply. Windows and Samba answer it, with an SMB2 NEGOTIATE response when SMB1 is disabled. The ten following steps send nothing and only confirm that the connection ended cleanly, with no reset. That separates SMB-Honeypot, which waits for the client's first packet (as a genuine server does) and closes after reading it, from listeners that close every connection as soon as it is accepted (Oh-my-honeypot's port 445 listener, honeydet 848, or a host refusing the client): the probe's data reaches an already closed socket and is answered with a reset. A filtering device that drops SMB clients after their first packet would look the same, hence Medium. With the honeypot's iptables ban on (its default), only the first connection from an address gets through for 30 minutes. Matched: SMB-Honeypot 70d55be (2026-11)."
+  - name: honeymail-ehlo-hello-bare-ip-fixed-extensions
+    id: 1010
+    port: 25
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^220 '
+        invert_match: false
+      - input_type: string
+        input: "EHLO probe.example\r"
+        output_match_type: regex
+        output: '^250-\S+ Hello \d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\r\n250-PIPELINING\r\n250-SIZE 26214400\r\n250-VRFY\r\n250-HELP\r\n250-8BITMIME\r\n(?:250-STARTTLS\r\n)?250 SMTPUTF8$'
+        invert_match: false
+    confidence: High
+    comment: "EHLO is answered with '250-<name> Hello <client IP>' (the bare address, no brackets and no EHLO name) and a fixed extension list: PIPELINING, SIZE 26214400, VRFY, HELP, 8BITMIME, STARTTLS, SMTPUTF8, in that order. Postfix, Exim, OpenSMTPD, Sendmail, aiosmtpd and maddy each send a different first line (Exim, OpenSMTPD and Sendmail bracket the address) and a different list. Matched: Honeymail ce62f66 (2026-11)."
+  - name: honeymail-null-reverse-path-451
+    id: 1011
+    port: 25
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^220 '
+        invert_match: false
+      - input_type: string
+        input: "EHLO probe.example\r"
+        output_match_type: regex
+        output: '^250-'
+        invert_match: false
+      - input_type: string
+        input: "MAIL FROM:<>\r"
+        output_match_type: regex
+        output: '^451 [^\r\n]*$'
+        invert_match: false
+    confidence: High
+    comment: "MAIL FROM:<> (the null reverse-path used by bounces and delivery notifications, which RFC 5321 requires a server to accept) is refused with a temporary 451 error, because the address parser rejects an empty address. Every genuine server tested accepts it with 250. Matched: Honeymail ce62f66 (2026-11)."
+  - name: honeymail-rcpt-postmaster-451
+    id: 1012
+    port: 25
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^220 '
+        invert_match: false
+      - input_type: string
+        input: "EHLO probe.example\r"
+        output_match_type: regex
+        output: '^250-'
+        invert_match: false
+      - input_type: string
+        input: "MAIL FROM:<probe@example.org>\r"
+        output_match_type: regex
+        output: '^250 '
+        invert_match: false
+      - input_type: string
+        input: "RCPT TO:<postmaster>\r"
+        output_match_type: regex
+        output: '^451 [^\r\n]*$'
+        invert_match: false
+    confidence: High
+    comment: "RCPT TO:<postmaster> without a domain (which RFC 5321 requires servers to accept) gets a temporary 451 error from the address parser, although any other recipient is accepted. Postfix, Exim and aiosmtpd accept it; OpenSMTPD and maddy refuse it permanently (550, 501); none answers 451. Matched: Honeymail ce62f66 (2026-11)."
+  - name: honeymail-help-advertised-not-recognised
+    id: 1013
+    port: 25
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^220 '
+        invert_match: false
+      - input_type: string
+        input: "EHLO probe.example\r"
+        output_match_type: regex
+        output: '\r\n250-HELP\r\n'
+        invert_match: false
+      - input_type: string
+        input: "HELP\r"
+        output_match_type: regex
+        output: '^500 [^\r\n]*$'
+        invert_match: false
+    confidence: High
+    comment: "HELP is advertised in the EHLO reply, but the command parser does not know it and answers 500 (command not recognised). Exim, OpenSMTPD, Sendmail and aiosmtpd advertise HELP and answer it with help text (214 or 250); Postfix and maddy do not advertise it. Matched: Honeymail ce62f66 (2026-11)."
+  - name: honeymail-ehlo-prefix-accepted
+    id: 1014
+    port: 25
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^220 '
+        invert_match: false
+      - input_type: string
+        input: "EHLOX probe.example\r"
+        output_match_type: regex
+        output: '^250-\S+ Hello '
+        invert_match: false
+    confidence: High
+    comment: "Commands are recognised by prefix, so the unknown verb EHLOX is treated as EHLO and answered with the EHLO reply. Every genuine server tested rejects it as an unrecognised command (500 or 501). Matched: Honeymail ce62f66 (2026-11)."
+  - name: honeymail-silent-close-after-five-errors
+    id: 1015
+    port: 25
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^220 '
+        invert_match: false
+      - input_type: string
+        input: "XYZZY\r\nXYZZY\r\nXYZZY\r\nXYZZY\r\nXYZZY\r\nNOOP\r"
+        output_match_type: regex
+        output: '^(?:500 [^\r\n]*\r\n){4}500 [^\r\n]*$'
+        invert_match: false
+    confidence: High
+    comment: "After five consecutive unrecognised commands the connection is closed without a closing reply, so the NOOP that follows is never answered: the response is exactly five 500 lines. Postfix, OpenSMTPD and Sendmail answer all six commands; Exim, aiosmtpd and maddy end with an explicit 'too many' reply after a different number of errors. Matched: Honeymail ce62f66 (2026-11)."
+  - name: honeymail-helo-hello-bare-ip
+    id: 1016
+    port: 25
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^220 '
+        invert_match: false
+      - input_type: string
+        input: "HELO probe.example\r"
+        output_match_type: regex
+        output: '^250 \S+ Hello \d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$'
+        invert_match: false
+    confidence: High
+    comment: "HELO is answered with '250 <name> Hello <client IP>': the bare address, without the HELO name or brackets. Exim, OpenSMTPD and Sendmail bracket the address ('Hello name [IP]' or 'Hello [IP], pleased to meet you'); Postfix, aiosmtpd and maddy do not show it. Matched: Honeymail ce62f66 (2026-11)."
+  - name: honeymail-noop-default-text
+    id: 1017
+    port: 25
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^220 '
+        invert_match: false
+      - input_type: string
+        input: "NOOP\r"
+        output_match_type: string
+        output: "250 Yes I am still here"
+        invert_match: false
+    confidence: Medium
+    comment: "NOOP is answered with Honeymail's built-in text '250 Yes I am still here'. Medium: the text can be changed with the smtp.noop_response setting, which the upstream example configuration does not include. Matched: Honeymail ce62f66 (2026-11)."
+  - name: honeymail-example-config-replies
+    id: 1018
+    port: 25
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^220 \S+ Simple Mail Transfer Service Ready$'
+        invert_match: false
+      - input_type: string
+        input: "HELO probe.example\r"
+        output_match_type: regex
+        output: '^250 '
+        invert_match: false
+      - input_type: string
+        input: "MAIL FROM:<probe@example.org>\r"
+        output_match_type: string
+        output: "250 Okay, I'll believe you for now"
+        invert_match: false
+    confidence: Medium
+    comment: "The greeting '220 <domain> Simple Mail Transfer Service Ready' (without ESMTP) and the reply '250 Okay, I'll believe you for now' to MAIL FROM are the values in Honeymail's example configuration. Medium: the README recommends changing them. Matched: Honeymail ce62f66 (2026-11)."
+  - name: honeymail-vrfy-example-config-reply
+    id: 1019
+    port: 25
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^220 '
+        invert_match: false
+      - input_type: string
+        input: "VRFY postmaster\r"
+        output_match_type: string
+        output: "252 Send some mail, I'll try my best"
+        invert_match: false
+    confidence: Medium
+    comment: "VRFY is answered, even before HELO, with '252 Send some mail, I'll try my best', the value in Honeymail's example configuration. Medium: the text is configurable (smtp.verify_addr_response). Matched: Honeymail ce62f66 (2026-11)."
