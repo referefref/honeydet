@@ -16,6 +16,11 @@ Signatures support multi-step, hex, string and regex detection on TCP and UDP.
 Features a SQL backend for persistent scans which can be managed through the web interface.
 Shodan API integration for non-private IPs, automatically adds shodan host information when the flag is set (currently CLI only)
 
+### What's new in 1.6.0
+- Response-timing matching in signature steps: `min_response_ms`, `max_response_ms`, `faster_than_step` with `speedup_factor`, `reconnect` for a new connection, and a `{{rand}}` token shared by a signature's steps (see Signature format).
+- Galah cache-timing signature (id 369): a new random path is slow while the model writes it, and the repeat is served from the cache.
+- Signatures for many more honeypots since 1.5.0, 687 in total.
+
 ### What's new in 1.5.0
 - Licence changed to GPL-3.0.
 - Standard file locations: signatures, config and scan history are found in the user and system directories (see Files), with new -config and -db flags.
@@ -235,6 +240,10 @@ signatures:
 - `input_type`: `string` (a newline is appended) or `hex` (raw bytes). `GET`/`POST` send a request for `/`.
 - `output_match_type`: `string` (contains), `hex` (hex of the response contains), `regex` (Go RE2 syntax, matched against the trimmed response), `no-response` or `not-equals`.
 - `invert_match`: optional, defaults to `false`. Set `true` to match when the pattern is absent.
+- `reconnect`: optional, defaults to `false`. Set `true` to open a new TCP connection before this step (otherwise all steps share one connection).
+- `min_response_ms`, `max_response_ms`: optional. The step's response time (from sending its input to the first byte of the reply, or to the connection closing) must be at least / at most this many milliseconds.
+- `faster_than_step`, `speedup_factor`: optional. The step must answer at least `speedup_factor` times faster than the earlier step numbered `faster_than_step` (1-based; the factor defaults to 1).
+- `{{rand}}` in `input` or `output` is replaced by a random 16-character hex token, new for each signature run and the same in all of that run's steps.
 - All steps must match for the signature to match. Quote values containing `: ` or a leading special character, otherwise the YAML will not parse and no signatures load.
 
 **Authenticated SSH signatures**
@@ -259,6 +268,26 @@ Many SSH honeypots accept any password, so `-u root -pw <random>` is itself a us
 **SNMP and Modbus**
 
 Port 161 steps are sent as SNMP GET requests (the `input` is an OID) and port 502 steps as Modbus requests. Signatures for these ports only run on them, even with `-bypassPortCheck`.
+
+**Timing signatures**
+
+Some honeypots generate content on demand and cache it, so a new request is slow and an identical repeat is near-instant, while a genuine server answers both quickly. Timing fields express this. Example (Galah, which asks a language model for each new URL):
+```yaml
+    steps:
+      - input_type: string
+        input: "GET /hd-{{rand}}.html HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: "(?s).*"
+        min_response_ms: 1000
+      - input_type: string
+        input: "GET /hd-{{rand}}.html HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        reconnect: true
+        output_match_type: regex
+        output: '^HTTP/1\.1 200 OK'
+        faster_than_step: 1
+        speedup_factor: 10
+```
+Raise `-timeout` above the slowest expected first response (each step's read waits up to the timeout).
 
 **Testing a signature**
 
