@@ -8959,3 +8959,170 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: "VRFY is answered, even before HELO, with '252 Send some mail, I'll try my best', the value in Honeymail's example configuration. Medium: the text is configurable (smtp.verify_addr_response). Matched: Honeymail ce62f66 (2026-11)."
+  - name: honeygogo-smtp-ehlo-extensions-1mib-no-starttls
+    id: 1020
+    port: 25
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^220 '
+      invert_match: false
+    - input_type: string
+      input: "EHLO probe.example\r"
+      output_match_type: regex
+      output: ^250-Hello probe\.example\r\n250-PIPELINING\r\n250-8BITMIME\r\n250-ENHANCEDSTATUSCODES\r\n250-CHUNKING\r\n250 SIZE 1048576\r?\n?$
+      invert_match: false
+    confidence: High
+    comment: 'EHLO is answered by the go-smtp library with ''250-Hello <EHLO name>'' and exactly PIPELINING, 8BITMIME, ENHANCEDSTATUSCODES, CHUNKING and SIZE 1048576: a 1 MiB message limit fixed in the code, no STARTTLS, no AUTH and no SMTPUTF8. maddy (also go-smtp) adds STARTTLS, SMTPUTF8, SIZE 33554432 and LIMITS; Postfix, Exim, OpenSMTPD, aiosmtpd, Mailpit and MailHog send different first lines and lists. Matched: honeygogo-smtp 7252001 (2026-11).'
+  - name: honeygogo-smtp-mail-size-2mb-552
+    id: 1021
+    port: 25
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^220 '
+      invert_match: false
+    - input_type: string
+      input: "EHLO probe.example\r"
+      output_match_type: regex
+      output: ^250-
+      invert_match: false
+    - input_type: string
+      input: "MAIL FROM:<probe@example.org> SIZE=2000000\r"
+      output_match_type: regex
+      output: ^552 5\.3\.4 Max message size exceeded
+      invert_match: false
+    confidence: High
+    comment: 'MAIL FROM with SIZE=2000000 (a 2 MB message) is refused with go-smtp''s ''552 5.3.4 Max message size exceeded'', because the honeypot fixes the limit at 1 MiB. Postfix (10 MB default), Exim, OpenSMTPD, aiosmtpd, maddy, Mailpit and MailHog accept the size; Postfix''s refusal of larger sizes reads ''Message size exceeds fixed limit''. Matched: honeygogo-smtp 7252001 (2026-11).'
+  - name: honeygogo-smtp-open-relay-ill-make-sure
+    id: 1022
+    port: 25
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^220 '
+      invert_match: false
+    - input_type: string
+      input: "EHLO probe.example\r"
+      output_match_type: regex
+      output: ^250-
+      invert_match: false
+    - input_type: string
+      input: "MAIL FROM:<probe@example.org>\r"
+      output_match_type: regex
+      output: ^250 2\.0\.0 Roger, accepting mail from <probe@example\.org>
+      invert_match: false
+    - input_type: string
+      input: "RCPT TO:<relaytest@elsewhere.example>\r"
+      output_match_type: regex
+      output: ^250 2\.0\.0 I'll make sure <relaytest@elsewhere\.example> gets this
+      invert_match: false
+    confidence: High
+    comment: 'A recipient in an outside domain is accepted with go-smtp''s ''250 2.0.0 I''ll make sure <address> gets this'' (the honeypot accepts every recipient, an apparent open relay). maddy, the genuine go-smtp mail server, refuses unknown and outside recipients (550 5.1.1); Postfix, Exim and OpenSMTPD deny relaying; aiosmtpd, Mailpit and MailHog accept with other texts. Matched: honeygogo-smtp 7252001 (2026-11).'
+  - name: honeygogo-smtp-starttls-not-supported
+    id: 1023
+    port: 25
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^220 '
+      invert_match: false
+    - input_type: string
+      input: "EHLO probe.example\r"
+      output_match_type: regex
+      output: ^250-
+      invert_match: false
+    - input_type: string
+      input: "STARTTLS\r"
+      output_match_type: regex
+      output: ^502 5\.5\.1 TLS not supported
+      invert_match: false
+    confidence: Medium
+    comment: 'STARTTLS (not advertised) is answered ''502 5.5.1 TLS not supported'', the go-smtp reply when no TLS configuration is set; honeygogo-smtp has no TLS option. Postfix, Exim and maddy start TLS; OpenSMTPD, aiosmtpd, Mailpit and MailHog refuse with other texts. Other go-smtp applications without TLS would answer the same. Matched: honeygogo-smtp 7252001 (2026-11).'
+  - name: honeygogo-smtp-auth-disabled-500
+    id: 1024
+    port: 25
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^220 '
+      invert_match: false
+    - input_type: string
+      input: "EHLO probe.example\r"
+      output_match_type: regex
+      output: ^250-
+      invert_match: false
+    - input_type: string
+      input: "AUTH LOGIN\r"
+      output_match_type: regex
+      output: ^500 5\.5\.2 Syntax error, AUTH command unrecognized
+      invert_match: false
+    confidence: Medium
+    comment: 'AUTH is answered ''500 5.5.2 Syntax error, AUTH command unrecognized'' (go-smtp with AuthDisabled set). Postfix, Exim, OpenSMTPD, aiosmtpd, maddy (523 TLS is required), Mailpit and MailHog answer differently. Other go-smtp applications with authentication disabled would answer the same. Matched: honeygogo-smtp 7252001 (2026-11).'
+  - name: honeygogo-smtp-smtputf8-not-implemented
+    id: 1025
+    port: 25
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^220 '
+      invert_match: false
+    - input_type: string
+      input: "EHLO probe.example\r"
+      output_match_type: regex
+      output: ^250-
+      invert_match: false
+    - input_type: string
+      input: "MAIL FROM:<probe@example.org> BODY=8BITMIME SMTPUTF8\r"
+      output_match_type: regex
+      output: ^504 5\.5\.4 SMTPUTF8 is not implemented
+      invert_match: false
+    confidence: Medium
+    comment: 'MAIL FROM with the SMTPUTF8 parameter is refused ''504 5.5.4 SMTPUTF8 is not implemented'' (go-smtp without SMTPUTF8 enabled). Postfix and maddy accept it; Exim, OpenSMTPD, aiosmtpd and Mailpit refuse with other texts; MailHog accepts. Other go-smtp applications without SMTPUTF8 would answer the same. Matched: honeygogo-smtp 7252001 (2026-11).'
+  - name: honeygogo-smtp-50-recipient-limit
+    id: 1026
+    port: 25
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^220 '
+      invert_match: false
+    - input_type: string
+      input: "EHLO probe.example\r"
+      output_match_type: regex
+      output: ^250-
+      invert_match: false
+    - input_type: string
+      input: "MAIL FROM:<probe@example.org>\r\nRCPT TO:<user01@corp.example>\r\nRCPT TO:<user02@corp.example>\r\nRCPT TO:<user03@corp.example>\r\nRCPT TO:<user04@corp.example>\r\nRCPT TO:<user05@corp.example>\r\nRCPT TO:<user06@corp.example>\r\nRCPT TO:<user07@corp.example>\r\nRCPT TO:<user08@corp.example>\r\nRCPT TO:<user09@corp.example>\r\nRCPT TO:<user10@corp.example>\r\nRCPT TO:<user11@corp.example>\r\nRCPT TO:<user12@corp.example>\r\nRCPT TO:<user13@corp.example>\r\nRCPT TO:<user14@corp.example>\r\nRCPT TO:<user15@corp.example>\r\nRCPT TO:<user16@corp.example>\r\nRCPT TO:<user17@corp.example>\r\nRCPT TO:<user18@corp.example>\r\nRCPT TO:<user19@corp.example>\r\nRCPT TO:<user20@corp.example>\r\nRCPT TO:<user21@corp.example>\r\nRCPT TO:<user22@corp.example>\r\nRCPT TO:<user23@corp.example>\r\nRCPT TO:<user24@corp.example>\r\nRCPT TO:<user25@corp.example>\r\nRCPT TO:<user26@corp.example>\r\nRCPT TO:<user27@corp.example>\r\nRCPT TO:<user28@corp.example>\r\nRCPT TO:<user29@corp.example>\r\n\
+        RCPT TO:<user30@corp.example>\r\nRCPT TO:<user31@corp.example>\r\nRCPT TO:<user32@corp.example>\r\nRCPT TO:<user33@corp.example>\r\nRCPT TO:<user34@corp.example>\r\nRCPT TO:<user35@corp.example>\r\nRCPT TO:<user36@corp.example>\r\nRCPT TO:<user37@corp.example>\r\nRCPT TO:<user38@corp.example>\r\nRCPT TO:<user39@corp.example>\r\nRCPT TO:<user40@corp.example>\r\nRCPT TO:<user41@corp.example>\r\nRCPT TO:<user42@corp.example>\r\nRCPT TO:<user43@corp.example>\r\nRCPT TO:<user44@corp.example>\r\nRCPT TO:<user45@corp.example>\r\nRCPT TO:<user46@corp.example>\r\nRCPT TO:<user47@corp.example>\r\nRCPT TO:<user48@corp.example>\r\nRCPT TO:<user49@corp.example>\r\nRCPT TO:<user50@corp.example>\r\nRCPT TO:<user51@corp.example>\r\n\r"
+      output_match_type: regex
+      output: 452 4\.5\.3 Maximum limit of 50 recipients reached
+      invert_match: false
+    confidence: High
+    comment: 'The 51st recipient of one message is refused with go-smtp''s ''452 4.5.3 Maximum limit of 50 recipients reached'' (a limit fixed in the honeypot''s code). maddy advertises and enforces 20000 recipients; the other servers tested refuse outside recipients or accept them with other texts. Matched: honeygogo-smtp 7252001 (2026-11).'
+  - name: honeygogo-smtp-default-localhost-banner
+    id: 1027
+    port: 25
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: ^220 localhost ESMTP Service Ready\r?\n?$
+      invert_match: false
+    confidence: Medium
+    comment: 'The greeting is go-smtp''s ''220 <banner> ESMTP Service Ready'' with the upstream default banner ''localhost'' (option --banner / HGG_BANNER). maddy uses the same wording with its host name; Postfix, Exim, OpenSMTPD, aiosmtpd, Mailpit and MailHog use other texts. Matched: honeygogo-smtp 7252001 (2026-11).'
