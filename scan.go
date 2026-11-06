@@ -166,7 +166,6 @@ func detectHoneypot(host string, ports []int, proto string, signatures Signature
 						}
 						continue
 					}
-					defer conn.Close()
 				}
 
 				// Some SSH honeypots (e.g. Cowrie) drop the connection after an exec
@@ -200,7 +199,6 @@ func detectHoneypot(host string, ports []int, proto string, signatures Signature
 							signatureMatched = false
 							break
 						}
-						defer conn.Close()
 					}
 					var response string
 					start := time.Now()
@@ -290,6 +288,12 @@ func detectHoneypot(host string, ports []int, proto string, signatures Signature
 							break
 						}
 					}
+				}
+
+				// Close each signature's connection when it finishes, so servers that handle
+				// one connection at a time answer the next signature
+				if conn != nil {
+					conn.Close()
 				}
 
 				if signatureMatched {
