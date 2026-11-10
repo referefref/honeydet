@@ -5901,7 +5901,7 @@ signatures:
         output: '(?s)rsa-sha2-256,rsa-sha2-512,ssh-rsa.{4}aes128-gcm@openssh\.com,aes256-gcm@openssh\.com,chacha20-poly1305@openssh\.com,aes128-ctr,aes192-ctr,aes256-ctr.{4}aes128-gcm@openssh\.com'
         invert_match: false
     confidence: High
-    comment: "A server that announces itself as OpenSSH but whose KEXINIT is that of Go's golang.org/x/crypto/ssh (via gliderlabs/ssh): a single RSA host key offered as rsa-sha2-256,rsa-sha2-512,ssh-rsa and Go's cipher order beginning aes128-gcm@openssh.com,aes256-gcm@openssh.com,chacha20-poly1305@openssh.com. OpenSSH puts chacha20-poly1305 first, offers ed25519 and ECDSA host keys and zlib@openssh.com. Holds whatever serverVersion is set to, as long as it claims OpenSSH. Matched: Beelzebub v3.10.0 (2026-11). Also matches ssh-auth-logger f53dddc (2026-11). Also matches sshForShits 4a2bef3 built with x/crypto v0.58.0 (2026-11)."
+    comment: "A server that announces itself as OpenSSH but whose KEXINIT is that of Go's golang.org/x/crypto/ssh (via gliderlabs/ssh): a single RSA host key offered as rsa-sha2-256,rsa-sha2-512,ssh-rsa and Go's cipher order beginning aes128-gcm@openssh.com,aes256-gcm@openssh.com,chacha20-poly1305@openssh.com. OpenSSH puts chacha20-poly1305 first, offers ed25519 and ECDSA host keys and zlib@openssh.com. Holds whatever serverVersion is set to, as long as it claims OpenSSH. Matched: Beelzebub v3.10.0 (2026-11). Also matches ssh-auth-logger f53dddc (2026-11). Also matches sshForShits 4a2bef3 built with x/crypto v0.58.0 (2026-11). Also matches sshhipot master 089cad6 built with x/crypto v0.58.0 (2026-11)."
   - name: beelzebub-telnet-login-without-negotiation
     id: 752
     port: 23
@@ -8226,7 +8226,7 @@ signatures:
         output: '(?s)rsa-sha2-256,rsa-sha2-512,ssh-rsa.{4}aes128-gcm@openssh\.com,aes256-gcm@openssh\.com,chacha20-poly1305@openssh\.com,aes128-ctr,aes192-ctr,aes256-ctr.{4}aes128-gcm@openssh\.com'
         invert_match: false
     confidence: High
-    comment: "Port 2222 form of signature 751 for Beelzebub's LLM SSH example (ssh-2222), which listens there: the identification string claims OpenSSH but the key exchange is Go's golang.org/x/crypto/ssh (a single RSA host key offered as rsa-sha2-256,rsa-sha2-512,ssh-rsa, AES-GCM before ChaCha20-Poly1305). Protocol behaviour, independent of the model; no model call is made before login. Matched: Beelzebub v3.10.0 with claude-haiku-5-5 via an OpenAI-compatible endpoint (2026-11). Also matches ssh-auth-logger f53dddc (2026-11). Also matches sshForShits 4a2bef3 built with x/crypto v0.58.0 (2026-11)."
+    comment: "Port 2222 form of signature 751 for Beelzebub's LLM SSH example (ssh-2222), which listens there: the identification string claims OpenSSH but the key exchange is Go's golang.org/x/crypto/ssh (a single RSA host key offered as rsa-sha2-256,rsa-sha2-512,ssh-rsa, AES-GCM before ChaCha20-Poly1305). Protocol behaviour, independent of the model; no model call is made before login. Matched: Beelzebub v3.10.0 with claude-haiku-5-5 via an OpenAI-compatible endpoint (2026-11). Also matches ssh-auth-logger f53dddc (2026-11). Also matches sshForShits 4a2bef3 built with x/crypto v0.58.0 (2026-11). Also matches sshhipot master 089cad6 built with x/crypto v0.58.0 (2026-11)."
   - name: pyrdp-mcs-maxpdusize-short-integer
     id: 940
     port: 3389
@@ -10490,3 +10490,115 @@ signatures:
       invert_match: false
     confidence: High
     comment: 'Port 2022 form: sshesame''s default listening port, used by its Docker image and compose example. Authenticated signature (run with -username and a random -password; sshesame accepts any password by default, a genuine server rejects it). sshesame never runs programs: its built-in shell knows only sh, true, false, echo, cat and su, so cat reports that every file, even /etc/passwd, does not exist, and any other program, such as uname, gets ''<name>: command not found'' with no shell prefix (bash writes ''bash: ...'', dash ''sh: 1: ... not found''). Steps: ''cat /etc/passwd'' and ''uname -a'' as commands; match both error lines. Matched: sshesame v0.0.39 (commit 0627956, 2024-08-03; golang.org/x/crypto v0.25.0, Go 1.27.3) and the Debian 12 package 0.0~git20210926.d7fdb81-1+b6 (2026-11).'
+  - name: sshhipot-v2-all-ciphers-arcfour-3des
+    id: 1240
+    port: 22
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^SSH-2\.0-'
+      invert_match: false
+    - input_type: hex
+      input: '5353482d322e302d4f70656e5353485f392e3270312044656269616e2d322b646562313275330d0a000000a40814111111111111111111111111111111110000001b6469666669652d68656c6c6d616e2d67726f757031342d73686131000000147273612d736861322d3235362c7373682d7273610000000a6165733132382d6374720000000a6165733132382d63747200000009686d61632d7368613100000009686d61632d73686131000000046e6f6e65000000046e6f6e65000000000000000000000000000000000000000000'
+      output_match_type: regex
+      output: '(?s)\x00\x00\x00.aes128-gcm@openssh\.com,chacha20-poly1305@openssh\.com,aes128-ctr,aes192-ctr,aes256-ctr,arcfour128,arcfour256,arcfour,aes128-cbc,3des-cbc\x00\x00\x00.aes128-gcm@openssh\.com,chacha20-poly1305@openssh\.com,aes128-ctr,aes192-ctr,aes256-ctr,arcfour128,arcfour256,arcfour,aes128-cbc,3des-cbc\x00'
+      invert_match: false
+    confidence: High
+    comment: 'sshhipot v2 (the version its README recommends) is a logging SSH proxy written in Go on golang.org/x/crypto/ssh. It copies the upstream server''s version string, so the banner looks genuine, but it sets its own cipher list to ''enable ALL the ciphers'': aes128-gcm@openssh.com, chacha20-poly1305@openssh.com, aes128-ctr, aes192-ctr, aes256-ctr, arcfour128, arcfour256, arcfour, aes128-cbc, 3des-cbc, in that order and in both directions. No current OpenSSH, Dropbear or libssh server offers RC4 (arcfour), and OpenSSH puts chacha20-poly1305 first. Steps: the version string; a client identification and KEXINIT (no authentication), answered by a KEXINIT with this cipher list. The list is fixed in the code. Matched: sshhipot v2 branch commit 2767658 (2018-05-13) built with golang.org/x/crypto v0.58.0 and with the x/crypto of its era (034e532, 2018-05-14), Go 1.27.3 (2026-11).'
+  - name: sshhipot-v2-all-ciphers-arcfour-3des-default-port
+    id: 1241
+    port: 2222
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^SSH-2\.0-'
+      invert_match: false
+    - input_type: hex
+      input: '5353482d322e302d4f70656e5353485f392e3270312044656269616e2d322b646562313275330d0a000000a40814111111111111111111111111111111110000001b6469666669652d68656c6c6d616e2d67726f757031342d73686131000000147273612d736861322d3235362c7373682d7273610000000a6165733132382d6374720000000a6165733132382d63747200000009686d61632d7368613100000009686d61632d73686131000000046e6f6e65000000046e6f6e65000000000000000000000000000000000000000000'
+      output_match_type: regex
+      output: '(?s)\x00\x00\x00.aes128-gcm@openssh\.com,chacha20-poly1305@openssh\.com,aes128-ctr,aes192-ctr,aes256-ctr,arcfour128,arcfour256,arcfour,aes128-cbc,3des-cbc\x00\x00\x00.aes128-gcm@openssh\.com,chacha20-poly1305@openssh\.com,aes128-ctr,aes192-ctr,aes256-ctr,arcfour128,arcfour256,arcfour,aes128-cbc,3des-cbc\x00'
+      invert_match: false
+    confidence: High
+    comment: 'Port 2222 form (sshhipot''s default listen address). sshhipot v2 (the version its README recommends) is a logging SSH proxy written in Go on golang.org/x/crypto/ssh. It copies the upstream server''s version string, so the banner looks genuine, but it sets its own cipher list to ''enable ALL the ciphers'': aes128-gcm@openssh.com, chacha20-poly1305@openssh.com, aes128-ctr, aes192-ctr, aes256-ctr, arcfour128, arcfour256, arcfour, aes128-cbc, 3des-cbc, in that order and in both directions. No current OpenSSH, Dropbear or libssh server offers RC4 (arcfour), and OpenSSH puts chacha20-poly1305 first. Steps: the version string; a client identification and KEXINIT (no authentication), answered by a KEXINIT with this cipher list. The list is fixed in the code. Matched: sshhipot v2 branch commit 2767658 (2018-05-13) built with golang.org/x/crypto v0.58.0 and with the x/crypto of its era (034e532, 2018-05-14), Go 1.27.3 (2026-11).'
+  - name: sshhipot-rsa-2014-bit-host-key
+    id: 1242
+    port: 22
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^SSH-2\.0-'
+      invert_match: false
+    - input_type: hex
+      input: '5353482d322e302d4f70656e5353485f392e3270312044656269616e2d322b646562313275330d0a000000a40814111111111111111111111111111111110000001b6469666669652d68656c6c6d616e2d67726f757031342d73686131000000147273612d736861322d3235362c7373682d7273610000000a6165733132382d6374720000000a6165733132382d63747200000009686d61632d7368613100000009686d61632d73686131000000046e6f6e65000000046e6f6e65000000000000000000000000000000000000000000'
+      output_match_type: regex
+      output: '(?s)diffie-hellman-group14-sha1'
+      invert_match: false
+    - input_type: hex
+      input: '0000000c051e00000001020000000000'
+      output_match_type: hex
+      output: '000000077373682d72736100000003010001000000fc'
+      invert_match: false
+    confidence: Medium
+    comment: 'sshhipot (both the master branch and v2) generates its own RSA host key on first start, and the code asks for 2014 bits (a typing slip for 2048), so the modulus is 252 bytes long. ssh-keygen and other servers make 2048, 3072 or 4096 bit keys. Steps: the version string; a client identification and KEXINIT offering diffie-hellman-group14-sha1 and rsa-sha2-256/ssh-rsa; a KEXDH_INIT, answered by a KEXDH_REPLY whose host key is ssh-rsa with exponent 65537 and a 252-byte modulus (hex match). Servers that do not offer group14-sha1 (current OpenSSH) never reach the host key step. An operator who supplies a key file made with ssh-keygen removes this tell, hence Medium. Matched: sshhipot v2 branch commit 2767658 (2018-05-13) and master commit 089cad6 (2018-05-13), each built with golang.org/x/crypto v0.58.0 and with the x/crypto of their era (034e532, 2018-05-14), Go 1.27.3 (2026-11).'
+  - name: sshhipot-rsa-2014-bit-host-key-default-port
+    id: 1243
+    port: 2222
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^SSH-2\.0-'
+      invert_match: false
+    - input_type: hex
+      input: '5353482d322e302d4f70656e5353485f392e3270312044656269616e2d322b646562313275330d0a000000a40814111111111111111111111111111111110000001b6469666669652d68656c6c6d616e2d67726f757031342d73686131000000147273612d736861322d3235362c7373682d7273610000000a6165733132382d6374720000000a6165733132382d63747200000009686d61632d7368613100000009686d61632d73686131000000046e6f6e65000000046e6f6e65000000000000000000000000000000000000000000'
+      output_match_type: regex
+      output: '(?s)diffie-hellman-group14-sha1'
+      invert_match: false
+    - input_type: hex
+      input: '0000000c051e00000001020000000000'
+      output_match_type: hex
+      output: '000000077373682d72736100000003010001000000fc'
+      invert_match: false
+    confidence: Medium
+    comment: 'Port 2222 form (sshhipot''s default listen address). sshhipot (both the master branch and v2) generates its own RSA host key on first start, and the code asks for 2014 bits (a typing slip for 2048), so the modulus is 252 bytes long. ssh-keygen and other servers make 2048, 3072 or 4096 bit keys. Steps: the version string; a client identification and KEXINIT offering diffie-hellman-group14-sha1 and rsa-sha2-256/ssh-rsa; a KEXDH_INIT, answered by a KEXDH_REPLY whose host key is ssh-rsa with exponent 65537 and a 252-byte modulus (hex match). Servers that do not offer group14-sha1 (current OpenSSH) never reach the host key step. An operator who supplies a key file made with ssh-keygen removes this tell, hence Medium. Matched: sshhipot v2 branch commit 2767658 (2018-05-13) and master commit 089cad6 (2018-05-13), each built with golang.org/x/crypto v0.58.0 and with the x/crypto of their era (034e532, 2018-05-14), Go 1.27.3 (2026-11).'
+  - name: sshhipot-v1-openssh-7-2-go-kex-default-port
+    id: 1244
+    port: 2222
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^SSH-2\.0-OpenSSH_7\.2$'
+      invert_match: false
+    - input_type: hex
+      input: '5353482d322e302d4f70656e5353485f392e3270312044656269616e2d322b646562313275330d0a000000a40814111111111111111111111111111111110000001b6469666669652d68656c6c6d616e2d67726f757031342d73686131000000147273612d736861322d3235362c7373682d7273610000000a6165733132382d6374720000000a6165733132382d63747200000009686d61632d7368613100000009686d61632d73686131000000046e6f6e65000000046e6f6e65000000000000000000000000000000000000000000'
+      output_match_type: regex
+      output: '(?s)\x00\x00\x00.(?:rsa-sha2-256,rsa-sha2-512,)?ssh-rsa\x00\x00\x00.aes128-gcm@openssh\.com,(?:aes256-gcm@openssh\.com,)?chacha20-poly1305@openssh\.com,aes128-ctr,aes192-ctr,aes256-ctr\x00'
+      invert_match: false
+    confidence: Medium
+    comment: 'Port 2222 form (sshhipot''s default listen address). sshhipot master branch (version 1, the code the book''s link opens on) announces ''SSH-2.0-OpenSSH_7.2'' by default (-v flag) while the key exchange is golang.org/x/crypto/ssh with its default lists: RSA host key algorithms only ((rsa-sha2-256,rsa-sha2-512,)ssh-rsa) and the cipher list aes128-gcm@openssh.com,(aes256-gcm@openssh.com,)chacha20-poly1305@openssh.com,aes128-ctr,aes192-ctr,aes256-ctr. Genuine OpenSSH 7.2 lists chacha20-poly1305 first and also offers ECDSA and Ed25519 host keys. Steps: the version string; a client identification and KEXINIT, answered by the Go lists. The banner is a flag, hence Medium. Matched: sshhipot master commit 089cad6 (2018-05-13) built with golang.org/x/crypto v0.58.0 and with the x/crypto of its era (034e532, 2018-05-14), Go 1.27.3 (2026-11).'
+  - name: sshhipot-v1-openssh-7-2-go-kex
+    id: 1245
+    port: 22
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^SSH-2\.0-OpenSSH_7\.2$'
+      invert_match: false
+    - input_type: hex
+      input: '5353482d322e302d4f70656e5353485f392e3270312044656269616e2d322b646562313275330d0a000000a40814111111111111111111111111111111110000001b6469666669652d68656c6c6d616e2d67726f757031342d73686131000000147273612d736861322d3235362c7373682d7273610000000a6165733132382d6374720000000a6165733132382d63747200000009686d61632d7368613100000009686d61632d73686131000000046e6f6e65000000046e6f6e65000000000000000000000000000000000000000000'
+      output_match_type: regex
+      output: '(?s)\x00\x00\x00.(?:rsa-sha2-256,rsa-sha2-512,)?ssh-rsa\x00\x00\x00.aes128-gcm@openssh\.com,(?:aes256-gcm@openssh\.com,)?chacha20-poly1305@openssh\.com,aes128-ctr,aes192-ctr,aes256-ctr\x00'
+      invert_match: false
+    confidence: Medium
+    comment: 'sshhipot master branch (version 1, the code the book''s link opens on) announces ''SSH-2.0-OpenSSH_7.2'' by default (-v flag) while the key exchange is golang.org/x/crypto/ssh with its default lists: RSA host key algorithms only ((rsa-sha2-256,rsa-sha2-512,)ssh-rsa) and the cipher list aes128-gcm@openssh.com,(aes256-gcm@openssh.com,)chacha20-poly1305@openssh.com,aes128-ctr,aes192-ctr,aes256-ctr. Genuine OpenSSH 7.2 lists chacha20-poly1305 first and also offers ECDSA and Ed25519 host keys. Steps: the version string; a client identification and KEXINIT, answered by the Go lists. The banner is a flag, hence Medium. Matched: sshhipot master commit 089cad6 (2018-05-13) built with golang.org/x/crypto v0.58.0 and with the x/crypto of its era (034e532, 2018-05-14), Go 1.27.3 (2026-11).'
