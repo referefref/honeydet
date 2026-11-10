@@ -9926,3 +9926,71 @@ signatures:
       invert_match: false
     confidence: High
     comment: 'Port 2222 form: the project''s Dockerfile and compose example listen on 2222. ssh-auth-logger from 2017 until 2025-10 announces ''SSH-2.0-libssh-0.6.1'' on every address (the only entry in its version list) but runs golang.org/x/crypto/ssh, with a 1024-bit RSA host key. libssh 0.6.1 offers curve25519-sha256@libssh.org first and never curve25519-sha256, while the Go library lists curve25519-sha256, curve25519-sha256@libssh.org and then the ECDH curves. Steps: the version string; a client identification and KEXINIT (no authentication), answered by the Go key exchange list. A Go SSH program configured with the same version string would also match. Matched: ssh-auth-logger commit 31e9582 (2024-08-06, unchanged in behaviour since 2017; x/crypto v0.1.0), commit a114b25 (2025-10-08; x/crypto v0.1.0) (2026-11).'
+  - name: ssh-honeypot-droberson-banner-list-libssh-kex
+    id: 1180
+    port: 22
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^SSH-2\.0-(?:|OpenSSH_5\.9p1 Debian-5ubuntu1\.4|OpenSSH_7\.2p2 Ubuntu-4ubuntu2\.1|OpenSSH_7\.6p1 Ubuntu-4ubuntu0\.3|OpenSSH_8\.2p1 Ubuntu-4ubuntu0\.4|OpenSSH_6\.6\.1|OpenSSH_6\.7p1 Debian-5\+deb8u3|OpenSSH_7\.5|dropbear_2014\.63|OpenSSH_6\.7p1 Raspbian-5\+deb8u4|ROSSSH)\r?\n?$'
+      invert_match: false
+    - input_type: hex
+      input: 5353482d322e302d4f70656e5353485f392e3270312044656269616e2d322b646562313275330d0a000000a40814111111111111111111111111111111110000001b6469666669652d68656c6c6d616e2d67726f757031342d73686131000000147273612d736861322d3235362c7373682d7273610000000a6165733132382d6374720000000a6165733132382d63747200000009686d61632d7368613100000009686d61632d73686131000000046e6f6e65000000046e6f6e65000000000000000000000000000000000000000000
+      output_match_type: regex
+      output: '(?s)ecdh-sha2-nistp521,diffie-hellman-group(?:18-sha512,diffie-hellman-group16|16-sha512,diffie-hellman-group18)-sha512,.*(?:aes256-gcm@openssh\.com,aes128-gcm@openssh\.com,|chacha20-poly1305@openssh\.com,)aes256-ctr,aes192-ctr,aes128-ctr'
+      invert_match: false
+    confidence: High
+    comment: 'ssh-honeypot (droberson) announces one of its eleven built-in version strings (default index 1, OpenSSH_5.9p1 Debian-5ubuntu1.4 of Ubuntu 12.04; the others are OpenSSH 7.2p2, 7.6p1 and 8.2p1 Ubuntu, 6.6.1 openSUSE, 6.7p1 Debian and Raspbian, 7.5 pfSense, dropbear_2014.63, ROSSSH for MikroTik, and an empty version for index 0). The key exchange underneath is libssh''s: its KEXINIT lists the three NIST ECDH curves followed directly by diffie-hellman-group18-sha512 and diffie-hellman-group16-sha512 (0.9 onwards; group16 then group18 in 0.8), and its ciphers as aes256-gcm, aes128-gcm, aes256-ctr, aes192-ctr, aes128-ctr (0.9 onwards, after chacha20-poly1305 where available; chacha20-poly1305, aes256-ctr, aes192-ctr, aes128-ctr in 0.8). OpenSSH puts diffie-hellman-group-exchange-sha256 (or group16) after the ECDH curves and lists aes128-ctr first, Dropbear and MikroTik RouterOS have their own lists, and none of the OpenSSH releases named in the banners offered group18 before group16; a genuine libssh server announces SSH-2.0-libssh_<version>. Steps: the version string (nothing sent); a client identification and KEXINIT (no authentication), answered by the server KEXINIT. Matched: ssh-honeypot 0.2.0 commit 4bda71c (2024-10-29) built against libssh 0.10.6 (Debian 12 package 0.10.6-0+deb12u3), 0.8.9, 0.9.8 and 0.11.5 (2026-11).'
+  - name: ssh-honeypot-droberson-banner-list-libssh-kex-alt-port
+    id: 1181
+    port: 2022
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^SSH-2\.0-(?:|OpenSSH_5\.9p1 Debian-5ubuntu1\.4|OpenSSH_7\.2p2 Ubuntu-4ubuntu2\.1|OpenSSH_7\.6p1 Ubuntu-4ubuntu0\.3|OpenSSH_8\.2p1 Ubuntu-4ubuntu0\.4|OpenSSH_6\.6\.1|OpenSSH_6\.7p1 Debian-5\+deb8u3|OpenSSH_7\.5|dropbear_2014\.63|OpenSSH_6\.7p1 Raspbian-5\+deb8u4|ROSSSH)\r?\n?$'
+      invert_match: false
+    - input_type: hex
+      input: 5353482d322e302d4f70656e5353485f392e3270312044656269616e2d322b646562313275330d0a000000a40814111111111111111111111111111111110000001b6469666669652d68656c6c6d616e2d67726f757031342d73686131000000147273612d736861322d3235362c7373682d7273610000000a6165733132382d6374720000000a6165733132382d63747200000009686d61632d7368613100000009686d61632d73686131000000046e6f6e65000000046e6f6e65000000000000000000000000000000000000000000
+      output_match_type: regex
+      output: '(?s)ecdh-sha2-nistp521,diffie-hellman-group(?:18-sha512,diffie-hellman-group16|16-sha512,diffie-hellman-group18)-sha512,.*(?:aes256-gcm@openssh\.com,aes128-gcm@openssh\.com,|chacha20-poly1305@openssh\.com,)aes256-ctr,aes192-ctr,aes128-ctr'
+      invert_match: false
+    confidence: High
+    comment: 'Port 2022 form: the project''s Docker image listens on 2022. ssh-honeypot (droberson) announces one of its eleven built-in version strings (default OpenSSH_5.9p1 Debian-5ubuntu1.4; also OpenSSH 7.2p2, 7.6p1, 8.2p1, 6.6.1, 6.7p1, 7.5, dropbear_2014.63, ROSSSH and an empty version). The key exchange underneath is libssh''s: its KEXINIT lists the three NIST ECDH curves followed directly by diffie-hellman-group18-sha512 and diffie-hellman-group16-sha512 (0.9 onwards; group16 then group18 in 0.8), and its ciphers as aes256-gcm, aes128-gcm, aes256-ctr, aes192-ctr, aes128-ctr (0.9 onwards, after chacha20-poly1305 where available; chacha20-poly1305, aes256-ctr, aes192-ctr, aes128-ctr in 0.8). OpenSSH puts diffie-hellman-group-exchange-sha256 (or group16) after the ECDH curves and lists aes128-ctr first, Dropbear and MikroTik RouterOS have their own lists, and none of the OpenSSH releases named in the banners offered group18 before group16; a genuine libssh server announces SSH-2.0-libssh_<version>. Steps: the version string (nothing sent); a client identification and KEXINIT (no authentication), answered by the server KEXINIT. Matched: ssh-honeypot 0.2.0 commit 4bda71c (2024-10-29) built against libssh 0.10.6 (Debian 12 package 0.10.6-0+deb12u3), 0.8.9, 0.9.8 and 0.11.5 (2026-11).'
+  - name: ssh-honeypot-droberson-custom-banner-libssh-kex
+    id: 1182
+    port: 22
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^SSH-2\.0-(?:OpenSSH|dropbear|ROSSSH)'
+      invert_match: false
+    - input_type: hex
+      input: 5353482d322e302d4f70656e5353485f392e3270312044656269616e2d322b646562313275330d0a000000a40814111111111111111111111111111111110000001b6469666669652d68656c6c6d616e2d67726f757031342d73686131000000147273612d736861322d3235362c7373682d7273610000000a6165733132382d6374720000000a6165733132382d63747200000009686d61632d7368613100000009686d61632d73686131000000046e6f6e65000000046e6f6e65000000000000000000000000000000000000000000
+      output_match_type: regex
+      output: '(?s)ecdh-sha2-nistp521,diffie-hellman-group(?:18-sha512,diffie-hellman-group16|16-sha512,diffie-hellman-group18)-sha512,.*(?:aes256-gcm@openssh\.com,aes128-gcm@openssh\.com,|chacha20-poly1305@openssh\.com,)aes256-ctr,aes192-ctr,aes128-ctr'
+      invert_match: false
+    confidence: Medium
+    comment: 'Covers ssh-honeypot (droberson) run with its own banner (-b), which the README suggests in order to blend in: any OpenSSH, Dropbear or ROSSSH version string followed by libssh''s key exchange offer. The key exchange underneath is libssh''s: its KEXINIT lists the three NIST ECDH curves followed directly by diffie-hellman-group18-sha512 and diffie-hellman-group16-sha512 (0.9 onwards; group16 then group18 in 0.8), and its ciphers as aes256-gcm, aes128-gcm, aes256-ctr, aes192-ctr, aes128-ctr (0.9 onwards, after chacha20-poly1305 where available; chacha20-poly1305, aes256-ctr, aes192-ctr, aes128-ctr in 0.8). OpenSSH puts diffie-hellman-group-exchange-sha256 (or group16) after the ECDH curves and lists aes128-ctr first, Dropbear and MikroTik RouterOS have their own lists, and none of the OpenSSH releases named in the banners offered group18 before group16; a genuine libssh server announces SSH-2.0-libssh_<version>. Steps: the version string (nothing sent); a client identification and KEXINIT (no authentication), answered by the server KEXINIT. Medium because any other libssh-based server given an OpenSSH-style banner would match as well. Matched: ssh-honeypot 0.2.0 commit 4bda71c (2024-10-29) built against libssh 0.10.6 (Debian 12 package 0.10.6-0+deb12u3), 0.8.9, 0.9.8 and 0.11.5 (2026-11).'
+  - name: ssh-honeypot-droberson-custom-banner-libssh-kex-alt-port
+    id: 1183
+    port: 2022
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^SSH-2\.0-(?:OpenSSH|dropbear|ROSSSH)'
+      invert_match: false
+    - input_type: hex
+      input: 5353482d322e302d4f70656e5353485f392e3270312044656269616e2d322b646562313275330d0a000000a40814111111111111111111111111111111110000001b6469666669652d68656c6c6d616e2d67726f757031342d73686131000000147273612d736861322d3235362c7373682d7273610000000a6165733132382d6374720000000a6165733132382d63747200000009686d61632d7368613100000009686d61632d73686131000000046e6f6e65000000046e6f6e65000000000000000000000000000000000000000000
+      output_match_type: regex
+      output: '(?s)ecdh-sha2-nistp521,diffie-hellman-group(?:18-sha512,diffie-hellman-group16|16-sha512,diffie-hellman-group18)-sha512,.*(?:aes256-gcm@openssh\.com,aes128-gcm@openssh\.com,|chacha20-poly1305@openssh\.com,)aes256-ctr,aes192-ctr,aes128-ctr'
+      invert_match: false
+    confidence: Medium
+    comment: 'Port 2022 form (the project''s Docker image listens on 2022). Covers ssh-honeypot (droberson) run with its own banner (-b): any OpenSSH, Dropbear or ROSSSH version string followed by libssh''s key exchange offer. The key exchange underneath is libssh''s: its KEXINIT lists the three NIST ECDH curves followed directly by diffie-hellman-group18-sha512 and diffie-hellman-group16-sha512 (0.9 onwards; group16 then group18 in 0.8), and its ciphers as aes256-gcm, aes128-gcm, aes256-ctr, aes192-ctr, aes128-ctr (0.9 onwards, after chacha20-poly1305 where available; chacha20-poly1305, aes256-ctr, aes192-ctr, aes128-ctr in 0.8). OpenSSH puts diffie-hellman-group-exchange-sha256 (or group16) after the ECDH curves and lists aes128-ctr first, Dropbear and MikroTik RouterOS have their own lists, and none of the OpenSSH releases named in the banners offered group18 before group16; a genuine libssh server announces SSH-2.0-libssh_<version>. Steps: the version string (nothing sent); a client identification and KEXINIT (no authentication), answered by the server KEXINIT. Medium because any other libssh-based server given an OpenSSH-style banner would match as well. Matched: ssh-honeypot 0.2.0 commit 4bda71c (2024-10-29) built against libssh 0.10.6 (Debian 12 package 0.10.6-0+deb12u3), 0.8.9, 0.9.8 and 0.11.5 (2026-11).'
