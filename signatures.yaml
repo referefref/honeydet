@@ -845,7 +845,7 @@ signatures:
         output: '^\$\$$'
         invert_match: false
     confidence: High
-    comment: "Requires -u/-pw (Cowrie accepts any root password except root/123456). Cowrie's shell does not expand $$; a real shell prints its PID. Behavioural, survives config changes."
+    comment: "Requires -u/-pw (Cowrie accepts any root password except root/123456). Cowrie's shell does not expand $$; a real shell prints its PID. Behavioural, survives config changes. Also fires on sshesame v0.0.39 when credentials are supplied (2026-11)."
   - name: cowrie-no-arithmetic-expansion
     id: 44
     port: 22
@@ -1030,7 +1030,7 @@ signatures:
         output: '^SSH-2\.0-[^\r\n]*$'
         invert_match: false
     confidence: High
-    comment: "After the client identification, OpenCanary sends only its banner and never its KEXINIT. Genuine SSH servers send KEXINIT immediately. Run without -u/-pw (raw mode). Also matches MockSSH 2.0.0 (4cb930c, 2026-11)."
+    comment: "After the client identification, OpenCanary sends only its banner and never its KEXINIT. Genuine SSH servers send KEXINIT immediately. Run without -u/-pw (raw mode). Also matches MockSSH 2.0.0 (4cb930c, 2026-11). Also fires on sshesame v0.0.39 when credentials are supplied (2026-11)."
   - name: opencanary-ssh-default-banner
     id: 59
     port: 22
@@ -10398,3 +10398,95 @@ signatures:
       invert_match: false
     confidence: High
     comment: 'Port 2222 form: sshForShits falls back to 2222 when -p is empty, and 2222 is the usual port for a honeypot run without root behind a port redirect. sshForShits presents the identification ''SSH-2.0-OpenSSH_6.0p1 Debian-4+deb7u2'' by default (flag -v), but the server behind it is golang.org/x/crypto/ssh, whose KEXINIT offers AES-GCM first, then ChaCha20-Poly1305, then AES-CTR. Genuine OpenSSH 6.0p1 (Debian 7, tested: 1:6.0p1-4+deb7u7) offers neither AES-GCM (added in 6.2) nor ChaCha20-Poly1305 (6.5), and starts its list with aes128-ctr; Cowrie with the same identification string keeps the Twisted cipher list (aes128-ctr first). Steps: read the identification; send a client identification and read the server KEXINIT. The -v option changes the identification, which defeats this signature. Matched: sshForShits 4a2bef3 (2020-04-08) built with Go 1.27.3 and golang.org/x/crypto v0.58.0 (go install and the companion build), and with the x/crypto of its last commit (056763e, 2020-04-06) (2026-11).'
+  - name: sshesame-default-version
+    id: 1230
+    port: 22
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: ^SSH-2\.0-sshesame$
+      invert_match: false
+    confidence: High
+    comment: 'sshesame announces its own name, ''SSH-2.0-sshesame'', unless ssh_proto.version is set in its configuration (the sample sshesame.yaml and the Docker image keep it). Step: read the version string (nothing sent). No genuine SSH server uses this version string. Matched: sshesame v0.0.39 (commit 0627956, 2024-08-03; golang.org/x/crypto v0.25.0, Go 1.27.3) and the Debian 12 package 0.0~git20210926.d7fdb81-1+b6 (2026-11).'
+  - name: sshesame-default-version-2022
+    id: 1231
+    port: 2022
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: ^SSH-2\.0-sshesame$
+      invert_match: false
+    confidence: High
+    comment: 'Port 2022 form: sshesame''s default listening port, used by its Docker image and compose example. sshesame announces its own name, ''SSH-2.0-sshesame'', unless ssh_proto.version is set in its configuration (the sample sshesame.yaml and the Docker image keep it). Step: read the version string (nothing sent). No genuine SSH server uses this version string. Matched: sshesame v0.0.39 (commit 0627956, 2024-08-03; golang.org/x/crypto v0.25.0, Go 1.27.3) and the Debian 12 package 0.0~git20210926.d7fdb81-1+b6 (2026-11).'
+  - name: sshesame-openssh-version-go-kex-three-keys
+    id: 1232
+    port: 22
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: ^SSH-2\.0-(?:OpenSSH|dropbear)
+      invert_match: false
+    - input_type: hex
+      input: 5353482d322e302d4f70656e5353485f392e3270312044656269616e2d322b646562313275330d0a000000a40814111111111111111111111111111111110000001b6469666669652d68656c6c6d616e2d67726f757031342d73686131000000147273612d736861322d3235362c7373682d7273610000000a6165733132382d6374720000000a6165733132382d63747200000009686d61632d7368613100000009686d61632d73686131000000046e6f6e65000000046e6f6e65000000000000000000000000000000000000000000
+      output_match_type: regex
+      output: (?s)\x00\x00\x00.(?:mlkem768x25519-sha256,)?curve25519-sha256,curve25519-sha256@libssh\.org,ecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521,diffie-hellman-group14-sha256[a-z0-9@.,-]*\x00\x00\x00\x41rsa-sha2-256,rsa-sha2-512,ssh-rsa,ecdsa-sha2-nistp256,ssh-ed25519\x00
+      invert_match: false
+    confidence: Medium
+    comment: 'sshesame configured to imitate OpenSSH or Dropbear (the project''s openssh.yaml sets ''SSH-2.0-OpenSSH_8.2p1 Ubuntu-4ubuntu0.2''): the version string changes but the key exchange is still golang.org/x/crypto/ssh with the three generated host keys, listed as rsa-sha2-256, rsa-sha2-512, ssh-rsa, ecdsa-sha2-nistp256, ssh-ed25519. OpenSSH lists rsa-sha2-512 before rsa-sha2-256, never offers ssh-rsa by default since 8.8, and its key exchange list differs (diffie-hellman-group-exchange-sha256, sntrup761 or mlkem768); Dropbear has its own lists. Steps: an OpenSSH or Dropbear version string; a client identification and KEXINIT (no authentication) answered by the Go key exchange list and that host key list. Any Go SSH server that claims to be OpenSSH or Dropbear and loads RSA, ECDSA and Ed25519 keys in that order would also match, hence Medium. Matched: sshesame v0.0.39 (commit 0627956, 2024-08-03; golang.org/x/crypto v0.25.0, Go 1.27.3) and the Debian 12 package 0.0~git20210926.d7fdb81-1+b6 (2026-11).'
+  - name: sshesame-openssh-version-go-kex-three-keys-2022
+    id: 1233
+    port: 2022
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: ^SSH-2\.0-(?:OpenSSH|dropbear)
+      invert_match: false
+    - input_type: hex
+      input: 5353482d322e302d4f70656e5353485f392e3270312044656269616e2d322b646562313275330d0a000000a40814111111111111111111111111111111110000001b6469666669652d68656c6c6d616e2d67726f757031342d73686131000000147273612d736861322d3235362c7373682d7273610000000a6165733132382d6374720000000a6165733132382d63747200000009686d61632d7368613100000009686d61632d73686131000000046e6f6e65000000046e6f6e65000000000000000000000000000000000000000000
+      output_match_type: regex
+      output: (?s)\x00\x00\x00.(?:mlkem768x25519-sha256,)?curve25519-sha256,curve25519-sha256@libssh\.org,ecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521,diffie-hellman-group14-sha256[a-z0-9@.,-]*\x00\x00\x00\x41rsa-sha2-256,rsa-sha2-512,ssh-rsa,ecdsa-sha2-nistp256,ssh-ed25519\x00
+      invert_match: false
+    confidence: Medium
+    comment: 'Port 2022 form: sshesame''s default listening port, used by its Docker image and compose example. sshesame configured to imitate OpenSSH or Dropbear (the project''s openssh.yaml sets ''SSH-2.0-OpenSSH_8.2p1 Ubuntu-4ubuntu0.2''): the version string changes but the key exchange is still golang.org/x/crypto/ssh with the three generated host keys, listed as rsa-sha2-256, rsa-sha2-512, ssh-rsa, ecdsa-sha2-nistp256, ssh-ed25519. OpenSSH lists rsa-sha2-512 before rsa-sha2-256, never offers ssh-rsa by default since 8.8, and its key exchange list differs (diffie-hellman-group-exchange-sha256, sntrup761 or mlkem768); Dropbear has its own lists. Steps: an OpenSSH or Dropbear version string; a client identification and KEXINIT (no authentication) answered by the Go key exchange list and that host key list. Any Go SSH server that claims to be OpenSSH or Dropbear and loads RSA, ECDSA and Ed25519 keys in that order would also match, hence Medium. Matched: sshesame v0.0.39 (commit 0627956, 2024-08-03; golang.org/x/crypto v0.25.0, Go 1.27.3) and the Debian 12 package 0.0~git20210926.d7fdb81-1+b6 (2026-11).'
+  - name: sshesame-auth-missing-programs
+    id: 1234
+    port: 22
+    proto: tcp
+    steps:
+    - input_type: string
+      input: cat /etc/passwd
+      output_match_type: regex
+      output: '^cat: /etc/passwd: No such file or directory$'
+      invert_match: false
+    - input_type: string
+      input: uname -a
+      output_match_type: regex
+      output: '^uname: command not found$'
+      invert_match: false
+    confidence: High
+    comment: 'Authenticated signature (run with -username and a random -password; sshesame accepts any password by default, a genuine server rejects it). sshesame never runs programs: its built-in shell knows only sh, true, false, echo, cat and su, so cat reports that every file, even /etc/passwd, does not exist, and any other program, such as uname, gets ''<name>: command not found'' with no shell prefix (bash writes ''bash: ...'', dash ''sh: 1: ... not found''). Steps: ''cat /etc/passwd'' and ''uname -a'' as commands; match both error lines. Matched: sshesame v0.0.39 (commit 0627956, 2024-08-03; golang.org/x/crypto v0.25.0, Go 1.27.3) and the Debian 12 package 0.0~git20210926.d7fdb81-1+b6 (2026-11).'
+  - name: sshesame-auth-missing-programs-2022
+    id: 1235
+    port: 2022
+    proto: tcp
+    steps:
+    - input_type: string
+      input: cat /etc/passwd
+      output_match_type: regex
+      output: '^cat: /etc/passwd: No such file or directory$'
+      invert_match: false
+    - input_type: string
+      input: uname -a
+      output_match_type: regex
+      output: '^uname: command not found$'
+      invert_match: false
+    confidence: High
+    comment: 'Port 2022 form: sshesame''s default listening port, used by its Docker image and compose example. Authenticated signature (run with -username and a random -password; sshesame accepts any password by default, a genuine server rejects it). sshesame never runs programs: its built-in shell knows only sh, true, false, echo, cat and su, so cat reports that every file, even /etc/passwd, does not exist, and any other program, such as uname, gets ''<name>: command not found'' with no shell prefix (bash writes ''bash: ...'', dash ''sh: 1: ... not found''). Steps: ''cat /etc/passwd'' and ''uname -a'' as commands; match both error lines. Matched: sshesame v0.0.39 (commit 0627956, 2024-08-03; golang.org/x/crypto v0.25.0, Go 1.27.3) and the Debian 12 package 0.0~git20210926.d7fdb81-1+b6 (2026-11).'
