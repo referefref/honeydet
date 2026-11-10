@@ -10699,3 +10699,152 @@ signatures:
       invert_match: false
     confidence: Medium
     comment: 'Authenticated signature (-username root and a random -password, see 1253). Programs listed in sshsyrup''s commands.txt (the GNU coreutils names, including echo, sort and head) have no implementation: they print one of two canned errors, ''Segmentation fault'' or ''Permission denied'', chosen at random. Step: ''echo hd<random>'' as a command; a genuine shell prints the token. commands.txt is configurable, hence Medium. Matched: sshsyrup commit 4f50f01 (2019-02-25, HEAD; golang.org/x/crypto 2018-01-23 3d37316, built with Go 1.27.3) and the v0.6.1 release binary (2026-11).'
+  - name: hontel-telnet-issue-established
+    id: 1260
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '(?s).+'
+        invert_match: false
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '(?s)^TELNET session now in ESTABLISHED state\r\n\r\n[^\r\n]* login: ?$'
+        invert_match: false
+    confidence: High
+    comment: "After the option negotiation HonTel sends the fixed issue line 'TELNET session now in ESTABLISHED state' (the TELNET_ISSUE constant in hontel.py) followed by a blank line and the login prompt. No genuine telnetd or embedded device prints this text. Matched: HonTel 2bedc3b (Python 2.7) and hontel-nx 96cc339 (Python 3.11) (2026-11)."
+  - name: hontel-telnetsrvlib-option-burst
+    id: 1261
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: hex
+        output: "fffb01fffb03fffc27fffe01fffd03fffe22fffd27fffd18fffe1f"
+        invert_match: false
+    confidence: High
+    comment: "HonTel's bundled telnetsrvlib (Ian Epperson) opens with nine unsolicited options in a fixed order: WILL ECHO, WILL SGA, WONT NEW-ENVIRON, DONT ECHO, DO SGA, DONT LINEMODE, DO NEW-ENVIRON, DO TTYPE, DONT NAWS. inetutils telnetd sends DO TTYPE/TSPEED/XDISPLOC/NEW-ENVIRON, BusyBox telnetd sends WILL ECHO and WILL SGA only. Other honeypots built on telnetsrvlib with the same option tables would also match. Matched: HonTel 2bedc3b (Python 2.7) and hontel-nx 96cc339 (Python 3.11) (2026-11)."
+  - name: hontel-default-prodigy-login
+    id: 1262
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '(?s).+'
+        invert_match: false
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '(?s)\r\nprodigy login: ?$'
+        invert_match: false
+    confidence: Medium
+    comment: "The login prompt uses the default FAKE_HOSTNAME 'prodigy' (HonTel rewrites the real host name to it in every line it sends). Medium: the value can be changed in hontel.py. Matched: HonTel 2bedc3b (Python 2.7) and hontel-nx 96cc339 (Python 3.11) (2026-11)."
+  - name: hontel-ctrl-c-at-login-asks-password
+    id: 1263
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '(?s).+'
+        invert_match: false
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '(?s)login: ?$'
+        invert_match: false
+      - input_type: hex
+        input: "03"
+        output_match_type: regex
+        output: '^\^C\r\nPassword:$'
+        invert_match: false
+    confidence: High
+    comment: "Ctrl-C (0x03) at the login prompt is echoed as '^C' and HonTel moves on to the Password: prompt with an empty user name, because telnetsrvlib's readline returns an empty line and HonTel rewrites its '^C ABORT' echo. A genuine login program either ignores the interrupt or restarts the login. Matched: HonTel 2bedc3b (Python 2.7) and hontel-nx 96cc339 (Python 3.11) (2026-11)."
+  - name: hontel-telnetsrvlib-ctrl-d-quit
+    id: 1264
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '(?s).+'
+        invert_match: false
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '(?s)login: ?$'
+        invert_match: false
+      - input_type: hex
+        input: "04"
+        output_match_type: regex
+        output: '^\^D QUIT\r\nPassword:$'
+        invert_match: false
+    confidence: High
+    comment: "Ctrl-D (0x04) on an empty login line prints telnetsrvlib's '^D QUIT' message and the word QUIT is taken as the user name, so the Password: prompt follows. Genuine login programs close the session or ignore it. A telnetsrvlib behaviour, shared by other honeypots built on that library. Matched: HonTel 2bedc3b (Python 2.7) and hontel-nx 96cc339 (Python 3.11) (2026-11)."
+  - name: hontel-failed-login-no-message
+    id: 1265
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '(?s).+'
+        invert_match: false
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '(?s)login: ?$'
+        invert_match: false
+      - input_type: string
+        input: "hd{{rand}}"
+        output_match_type: regex
+        output: '(?s)Password:$'
+        invert_match: false
+      - input_type: string
+        input: "{{rand}}"
+        output_match_type: regex
+        output: '^[A-Za-z0-9._-]+ login:$'
+        invert_match: false
+    confidence: Medium
+    comment: "A wrong user name and password are answered at once with a blank line and a new login prompt, without the 'Login incorrect' message and the delay of a genuine login program; the third failure closes the connection. Medium: a few appliances re-prompt silently. Matched: HonTel 2bedc3b (Python 2.7) and hontel-nx 96cc339 (Python 3.11) (2026-11)."
+  - name: hontel-output-rewrite-ubuntu-arch
+    id: 1266
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '(?s).+'
+        invert_match: false
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '(?s)login: ?$'
+        invert_match: false
+      - input_type: string
+        input: "root"
+        output_match_type: regex
+        output: '(?s)Password:$'
+        invert_match: false
+      - input_type: string
+        input: "123456"
+        output_match_type: regex
+        output: '#$'
+        invert_match: false
+      - input_type: string
+        input: "echo Ubuntu-x86_64-{{rand}}"
+        output_match_type: regex
+        output: '\r\nDebian-[A-Za-z0-9_]+-{{rand}}\r\n'
+        invert_match: false
+    confidence: High
+    comment: "With HonTel's default credentials (root / 123456, the AUTH_USERNAME and AUTH_PASSWORD constants) the shell is a real BusyBox shell, but HonTel rewrites every line it sends: 'Ubuntu' becomes 'Debian' and x86_64, amd64, i386 and i686 become the fake architecture (MIPS by default), so 'echo Ubuntu-x86_64' prints 'Debian-MIPS'. A genuine shell echoes its argument unchanged. Needs the default credentials. Matched: HonTel 2bedc3b (Python 2.7) and hontel-nx 96cc339 (Python 3.11) (2026-11)."
