@@ -11,7 +11,7 @@ signatures:
         output: 030000130ed00000000000c1020000c2020000
         invert_match: false
     confidence: High
-    comment: Detected Siemens specific conpot instance
+    comment: "Detected Siemens specific conpot instance. Matched: Conpot 0.6.0 or earlier; not Conpot 1.0.0 / 40cee33 (2026-11)."
   - name: express-honeypot
     id: 2
     port: 3001
@@ -452,7 +452,7 @@ signatures:
         output: Overview - Siemens, SIMATIC, S7-200
         invert_match: false
     confidence: High
-    comment: Hardcoded Siemens title tag default
+    comment: "Hardcoded Siemens title tag default. Matched: Conpot 0.6.0 or earlier; not Conpot 1.0.0 / 40cee33 (2026-11)."
   - name: Glastopf
     id: 26
     port: web-ports
@@ -11165,3 +11165,163 @@ signatures:
         invert_match: false
     confidence: High
     comment: "A VNC authentication response (sixteen zero bytes, a wrong password whatever the challenge) is refused with the reason 'Invalid username or password.', although VNC authentication has no user name. Genuine servers give their own reasons: TigerVNC 'Authentication failure', x11vnc 'password check failed!', TightVNC 'Authentication failed'. Independent of the challenge value. Matched: vnclowpot 78de7e9 (2026-11)."
+  - name: conpot-s7-cotp-cc-without-tpdu-size
+    id: 1290
+    port: 102
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "0300001611e00000000100c0010ac1020100c2020102"
+        output_match_type: hex
+        output: "030000130ed00001000000c1020100c2020102"
+        invert_match: false
+    confidence: High
+    comment: "ISO-on-TCP: a COTP Connection Request that offers a TPDU size (C0 01 0A) is confirmed with a 19-byte Connection Confirm that drops the TPDU size parameter and carries a zero source reference. Siemens CPUs and Snap7 confirm with 22 bytes, a non-zero source reference and the TPDU size. Matched: Conpot 40cee33 and v1.0.0 (2026-11)."
+  - name: conpot-s7-szl-0011-index0-empty
+    id: 1291
+    port: 102
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "0300001611e00000000100c0010ac1020100c2020102"
+        output_match_type: hex
+        output: "d00001"
+        invert_match: false
+      - input_type: hex
+        input: "0300001902f08032010000000000080000f0000001000101e0"
+        output_match_type: hex
+        output: "02f0803203"
+        invert_match: false
+      - input_type: hex
+        input: "0300002102f080320700000003000800080001120411440100ff09000400110000"
+        output_match_type: hex
+        output: "0300001902f080320700000003000800000001120812840101"
+        invert_match: false
+    confidence: High
+    comment: "S7comm: Read SZL 0x0011 (module identification) with index 0, the request nmap's s7-info and most S7 scanners send, returns a userdata response with no data at all, so s7-info fails. Siemens CPUs and Snap7 return the module, hardware and firmware records. Matched: Conpot 40cee33 and v1.0.0 (2026-11)."
+  - name: conpot-s7-szl-short-userdata-parameters
+    id: 1292
+    port: 102
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "0300001611e00000000100c0010ac1020100c2020102"
+        output_match_type: hex
+        output: "d00001"
+        invert_match: false
+      - input_type: hex
+        input: "0300001902f08032010000000000080000f0000001000101e0"
+        output_match_type: hex
+        output: "02f0803203"
+        invert_match: false
+      - input_type: hex
+        input: "0300002102f080320700000004000800080001120411440100ff090004001c0000"
+        output_match_type: hex
+        output: "0001120812840101ff09"
+        invert_match: false
+    confidence: High
+    comment: "S7comm: the Read SZL 0x001C (component identification) response carries an 8-byte userdata parameter block, which announces 8 following bytes but stops after 4, so the data block (FF 09) starts where the data unit reference, last-unit flag and error code should be. Siemens CPUs and Snap7 send the full 12-byte block (...84 01 01 00 00 00 00). Independent of the template's identity strings. Matched: Conpot 40cee33 and v1.0.0 (2026-11)."
+  - name: conpot-enip-unsupported-command-closes
+    id: 1293
+    port: 44818
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "630000000000000000000000010203040506070800000000"
+        output_match_type: hex
+        output: "0102030405060708"
+        invert_match: false
+      - input_type: hex
+        input: "990000000000000000000000010203040506070800000000"
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+    confidence: Medium
+    comment: "EtherNet/IP: after a normal ListIdentity exchange, an encapsulation command the server does not support (0x99) is met by closing the connection without a reply. The EtherNet/IP specification requires a reply with encapsulation status 0x0001 (invalid or unsupported command), which OpENer and Rockwell controllers send. Medium: a firewall or proxy that drops the reply also matches. Matched: Conpot 40cee33 and v1.0.0 (2026-11)."
+  - name: conpot-modbus-unknown-unit-device-failure
+    id: 1294
+    port: 5020
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "000700000006630100000008"
+        output_match_type: hex
+        output: "000700000003638104"
+        invert_match: false
+    confidence: Medium
+    comment: "Modbus/TCP on Conpot's own default port 5020 (the port it uses unless the template or a port mapping changes it): Read Coils addressed to a unit identifier the template does not define (99) is answered with exception 04, Server Device Failure. Single devices built on libmodbus or pymodbus answer the request normally, and gateways use exceptions 0A or 0B. On port 502 honeydet uses its own Modbus client, so the same probe there needs another tool. Medium: a template that defines unit 99 does not match. Matched: Conpot 40cee33 and v1.0.0 (2026-11)."
+  - name: conpot-ftp-login-reply-220
+    id: 1295
+    port: 21
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^220 '
+        invert_match: false
+      - input_type: string
+        input: "USER anonymous\r"
+        output_match_type: regex
+        output: '^331 Now specify the Password\.'
+        invert_match: false
+      - input_type: string
+        input: "PASS guest@example.com\r"
+        output_match_type: regex
+        output: '^(220-|230 Log in Successful\.|530 Authentication Failed\.)'
+        invert_match: false
+    confidence: High
+    comment: "FTP: after USER, a successful PASS is answered with the template's message of the day as a '220-' multi-line reply ended by a bare '220 ' (or '230 Log in Successful.' when no message is set), and a refused one with '530 Authentication Failed.'. RFC 959 allows only 230, 202, 332, 530, 500, 501, 503 and 421 after PASS; vsftpd, ProFTPD and Pure-FTPd use 230 and their own 530 texts. Matched: Conpot 40cee33 and v1.0.0 (2026-11)."
+  - name: conpot-enip-default-identity
+    id: 1296
+    port: 44818
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "630000000000000000000000010203040506070800000000"
+        output_match_type: hex
+        output: "1a066c0014313735362d4c36312f42204c4f47495835353631"
+        invert_match: false
+    confidence: Medium
+    comment: "EtherNet/IP ListIdentity returns the default template's identity: product name '1756-L61/B LOGIX5561' with serial number 0x006C061A (7079450), the same on every default deployment. Template values. Matched: Conpot 40cee33 and v1.0.0 (2026-11)."
+  - name: conpot-bacnet-object-name-literal-key
+    id: 1297
+    port: 47808
+    proto: udp
+    steps:
+      - input_type: hex
+        input: "810a001101040005010c0c023fffff194d"
+        output_match_type: hex
+        output: "750b0053797374656d4e616d65"
+        invert_match: false
+    confidence: Medium
+    comment: "BACnet/IP ReadProperty object-name of the device (wildcard instance 4194303) returns the literal text 'SystemName': the default template names the device after a data bus key that is not resolved (the other protocols report the key's value, 'Technodrome'). bacnet-stack and commercial controllers return the configured device name. Template value. Matched: Conpot 40cee33 and v1.0.0 (2026-11)."
+  - name: conpot-http-default-s7-200-page
+    id: 1298
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /index.html HTTP/1.0\r\n\r"
+        output_match_type: regex
+        output: '(?s)<TITLE>Overview - Siemens, SIMATIC, S7-200</TITLE>.*System uptime:.*timeticks \(deciseconds\)'
+        invert_match: false
+    confidence: Medium
+    comment: "HTTP: the default template's status page, 'Overview - Siemens, SIMATIC, S7-200', reports the system uptime as 'timeticks (deciseconds)' (the value counts seconds); / redirects to /index.html. Siemens S7-200 CPUs have no web server. Successor of signature 25, which requests / and no longer matches. Template values. Matched: Conpot 40cee33 and v1.0.0 (2026-11)."
+  - name: conpot-snmp-default-identity
+    id: 1299
+    port: 161
+    proto: udp
+    steps:
+      - input_type: string
+        input: "1.3.6.1.2.1.1.1.0"
+        output_match_type: string
+        output: "Siemens, SIMATIC, S7-200"
+        invert_match: false
+      - input_type: string
+        input: "1.3.6.1.2.1.1.5.0"
+        output_match_type: string
+        output: "CP 443-1 EX40"
+        invert_match: false
+    confidence: Medium
+    comment: "SNMPv2c (community public): sysDescr 'Siemens, SIMATIC, S7-200' together with sysName 'CP 443-1 EX40', the default template's values. A CP 443-1 is an S7-400 Ethernet module and an S7-200 has no SNMP agent, so the pair does not describe one device. Template values. Matched: Conpot 40cee33 and v1.0.0 (2026-11)."
