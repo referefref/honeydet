@@ -10082,3 +10082,85 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: 'SSH-Honeypot (internetwache, 2015) is a short paramiko server that loads exactly one host key, the RSA key the README creates with ''ssh-keygen -t rsa'' (3072 bits with current OpenSSH, 2048 before OpenSSH 8.0), and has no banner setting, so it announces SSH-2.0-paramiko_<version>. The probe reads the identification, sends a client identification and checks that the server''s KEXINIT offers RSA host key algorithms only, then sends a KEXINIT limited to ecdh-sha2-nistp256 with a fixed ECDH public value and checks the host key in KEX_ECDH_REPLY: ssh-rsa, e=65537, a 2048 to 4096-bit modulus. No login. Genuine OpenSSH announces its own name and offers Ed25519 and ECDSA host keys as well. Port 22 form of 1192. paramiko 2.10.1 is excluded: OWASP Python Honeypot''s ssh/strong_password module is adapted from this code and pins that version (honeydet 422, 423, 428). Medium: other paramiko 1.x to 4.x servers with a single 2048 to 4096-bit RSA key on port 22 look the same before login. Matched: SSH-Honeypot 3ee0815 on Python 2.7 with paramiko 2.12.0, and SSH-Honeypot-nx 72b34d1 with paramiko 2.12.0, 3.5.1 and 4.0.0 (2026-11).'
+  - name: ssh-honeypot-0xnslabs-hostkeys-without-rsa-sha2
+    id: 1200
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "SSH-2.0-OpenSSH_9.2p1\r"
+        output_match_type: regex
+        output: '(?s)^SSH-[12]\.[0-9]+-[^\r\n]*\r?\n.*\x00\x00\x00[\x1b\x27]ssh-rsa,ecdsa-sha2-nistp256(?:,ssh-ed25519)?\x00\x00\x00.aes256-ctr,aes256-cbc,aes192-ctr,'
+        invert_match: false
+    confidence: High
+    comment: "Sends a client identification and reads the server's identification and KEXINIT. ssh-honeypot (0xNslabs, Twisted Conch) sets the transport's supportedPublicKeys to the raw names of the keys it loaded, so the host key list is exactly 'ssh-rsa,ecdsa-sha2-nistp256' (',ssh-ed25519' only if an OpenSSH-format Ed25519 key is supplied; the PKCS#8 Ed25519 key the tool generates itself cannot be loaded by Twisted and is silently skipped), without the rsa-sha2-512 and rsa-sha2-256 names, followed by Twisted's cipher list (aes256-ctr,aes256-cbc,aes192-ctr,...). Stock Twisted Conch advertises rsa-sha2-512,rsa-sha2-256,ssh-rsa; OpenSSH 7.2 and later (CentOS 7 OpenSSH 7.4 included) always add rsa-sha2-512 and rsa-sha2-256 for an RSA key and list chacha20 or aes128-ctr first; Dropbear and other libraries use their own lists. Independent of the banner (--version). Matched: ssh-honeypot 4c4eccc (0xNslabs, December 2025) on Twisted 26.10.0, cryptography 50.0.2 (2026-11)."
+  - name: ssh-honeypot-0xnslabs-hostkeys-without-rsa-sha2-default-port
+    id: 1201
+    port: 2222
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "SSH-2.0-OpenSSH_9.2p1\r"
+        output_match_type: regex
+        output: '(?s)^SSH-[12]\.[0-9]+-[^\r\n]*\r?\n.*\x00\x00\x00[\x1b\x27]ssh-rsa,ecdsa-sha2-nistp256(?:,ssh-ed25519)?\x00\x00\x00.aes256-ctr,aes256-cbc,aes192-ctr,'
+        invert_match: false
+    confidence: High
+    comment: "Sends a client identification and reads the server's identification and KEXINIT. ssh-honeypot (0xNslabs, Twisted Conch) sets the transport's supportedPublicKeys to the raw names of the keys it loaded, so the host key list is exactly 'ssh-rsa,ecdsa-sha2-nistp256' (',ssh-ed25519' only if an OpenSSH-format Ed25519 key is supplied; the PKCS#8 Ed25519 key the tool generates itself cannot be loaded by Twisted and is silently skipped), without the rsa-sha2-512 and rsa-sha2-256 names, followed by Twisted's cipher list (aes256-ctr,aes256-cbc,aes192-ctr,...). Stock Twisted Conch advertises rsa-sha2-512,rsa-sha2-256,ssh-rsa; OpenSSH 7.2 and later (CentOS 7 OpenSSH 7.4 included) always add rsa-sha2-512 and rsa-sha2-256 for an RSA key and list chacha20 or aes128-ctr first; Dropbear and other libraries use their own lists. Independent of the banner (--version). Matched: ssh-honeypot 4c4eccc (0xNslabs, December 2025) on Twisted 26.10.0, cryptography 50.0.2 (2026-11)."
+  - name: ssh-honeypot-0xnslabs-openssh74-banner-twisted-macs
+    id: 1202
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "SSH-2.0-OpenSSH_9.2p1\r"
+        output_match_type: regex
+        output: '(?s)^SSH-2\.0-OpenSSH_7\.4\r?\n.*\x00\x00\x00.hmac-sha2-512,hmac-sha2-384,hmac-sha2-256,hmac-sha1,hmac-md5\x00'
+        invert_match: false
+    confidence: Medium
+    comment: "The tool's default identification string 'SSH-2.0-OpenSSH_7.4' (as sent by CentOS 7) followed by Twisted Conch's MAC list 'hmac-sha2-512,hmac-sha2-384,hmac-sha2-256,hmac-sha1,hmac-md5'. OpenSSH has never implemented hmac-sha2-384, and genuine OpenSSH 7.4 offers umac and encrypt-then-MAC variants first. Medium: the banner is set with --version, and any Twisted SSH server announcing OpenSSH 7.4 would match. Matched: ssh-honeypot 4c4eccc (0xNslabs, December 2025) on Twisted 26.10.0, cryptography 50.0.2 (2026-11)."
+  - name: ssh-honeypot-0xnslabs-openssh74-banner-twisted-macs-default-port
+    id: 1203
+    port: 2222
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "SSH-2.0-OpenSSH_9.2p1\r"
+        output_match_type: regex
+        output: '(?s)^SSH-2\.0-OpenSSH_7\.4\r?\n.*\x00\x00\x00.hmac-sha2-512,hmac-sha2-384,hmac-sha2-256,hmac-sha1,hmac-md5\x00'
+        invert_match: false
+    confidence: Medium
+    comment: "The tool's default identification string 'SSH-2.0-OpenSSH_7.4' (as sent by CentOS 7) followed by Twisted Conch's MAC list 'hmac-sha2-512,hmac-sha2-384,hmac-sha2-256,hmac-sha1,hmac-md5'. OpenSSH has never implemented hmac-sha2-384, and genuine OpenSSH 7.4 offers umac and encrypt-then-MAC variants first. Medium: the banner is set with --version, and any Twisted SSH server announcing OpenSSH 7.4 would match. Matched: ssh-honeypot 4c4eccc (0xNslabs, December 2025) on Twisted 26.10.0, cryptography 50.0.2 (2026-11)."
+  - name: ssh-honeypot-0xnslabs-openssh74-banner-bad-packet-length
+    id: 1204
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^SSH-2\.0-OpenSSH_7\.4\r?\n'
+        invert_match: false
+      - input_type: string
+        input: "GET / HTTP/1.0\r"
+        output_match_type: regex
+        output: 'bad packet length 1195725856'
+        invert_match: false
+    confidence: Medium
+    comment: "The tool's default identification string 'SSH-2.0-OpenSSH_7.4', then a non-SSH line ('GET / HTTP/1.0') is parsed by Twisted Conch as a binary packet and answered with an SSH disconnect 'bad packet length 1195725856' (the bytes 'GET ' read as a length). Genuine OpenSSH 7.4 (CentOS 7) replies 'Protocol mismatch.' in clear text. Medium: the banner is set with --version. Matched: ssh-honeypot 4c4eccc (0xNslabs, December 2025) on Twisted 26.10.0, cryptography 50.0.2 (2026-11)."
+  - name: ssh-honeypot-0xnslabs-openssh74-banner-bad-packet-length-default-port
+    id: 1205
+    port: 2222
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^SSH-2\.0-OpenSSH_7\.4\r?\n'
+        invert_match: false
+      - input_type: string
+        input: "GET / HTTP/1.0\r"
+        output_match_type: regex
+        output: 'bad packet length 1195725856'
+        invert_match: false
+    confidence: Medium
+    comment: "The tool's default identification string 'SSH-2.0-OpenSSH_7.4', then a non-SSH line ('GET / HTTP/1.0') is parsed by Twisted Conch as a binary packet and answered with an SSH disconnect 'bad packet length 1195725856' (the bytes 'GET ' read as a length). Genuine OpenSSH 7.4 (CentOS 7) replies 'Protocol mismatch.' in clear text. Medium: the banner is set with --version. Matched: ssh-honeypot 4c4eccc (0xNslabs, December 2025) on Twisted 26.10.0, cryptography 50.0.2 (2026-11)."
