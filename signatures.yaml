@@ -10727,7 +10727,7 @@ signatures:
         output: "fffb01fffb03fffc27fffe01fffd03fffe22fffd27fffd18fffe1f"
         invert_match: false
     confidence: High
-    comment: "HonTel's bundled telnetsrvlib (Ian Epperson) opens with nine unsolicited options in a fixed order: WILL ECHO, WILL SGA, WONT NEW-ENVIRON, DONT ECHO, DO SGA, DONT LINEMODE, DO NEW-ENVIRON, DO TTYPE, DONT NAWS. inetutils telnetd sends DO TTYPE/TSPEED/XDISPLOC/NEW-ENVIRON, BusyBox telnetd sends WILL ECHO and WILL SGA only. Other honeypots built on telnetsrvlib with the same option tables would also match. Matched: HonTel 2bedc3b (Python 2.7) and hontel-nx 96cc339 (Python 3.11) (2026-11)."
+    comment: "HonTel's bundled telnetsrvlib (Ian Epperson) opens with nine unsolicited options in a fixed order: WILL ECHO, WILL SGA, WONT NEW-ENVIRON, DONT ECHO, DO SGA, DONT LINEMODE, DO NEW-ENVIRON, DO TTYPE, DONT NAWS. inetutils telnetd sends DO TTYPE/TSPEED/XDISPLOC/NEW-ENVIRON, BusyBox telnetd sends WILL ECHO and WILL SGA only. Other honeypots built on telnetsrvlib with the same option tables would also match. Matched: HonTel 2bedc3b (Python 2.7) and hontel-nx 96cc339 (Python 3.11) (2026-11). Also matches MTPot c32d433 (telnetsrv 0.4, 2026-11)."
   - name: hontel-default-prodigy-login
     id: 1262
     port: 23
@@ -10848,3 +10848,237 @@ signatures:
         invert_match: false
     confidence: High
     comment: "With HonTel's default credentials (root / 123456, the AUTH_USERNAME and AUTH_PASSWORD constants) the shell is a real BusyBox shell, but HonTel rewrites every line it sends: 'Ubuntu' becomes 'Debian' and x86_64, amd64, i386 and i686 become the fake architecture (MIPS by default), so 'echo Ubuntu-x86_64' prints 'Debian-MIPS'. A genuine shell echoes its argument unchanged. Needs the default credentials. Matched: HonTel 2bedc3b (Python 2.7) and hontel-nx 96cc339 (Python 3.11) (2026-11)."
+  - name: mtpot-any-login-silent-unknown-command
+    id: 1270
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ''
+        output_match_type: regex
+        output: '(?s).+'
+        invert_match: false
+      - input_type: hex
+        input: ''
+        output_match_type: regex
+        output: '(?s)Username:$'
+        invert_match: false
+      - input_type: string
+        input: 'hd{{rand}}'
+        output_match_type: regex
+        output: '(?s)Password:$'
+        invert_match: false
+      - input_type: string
+        input: '{{rand}}'
+        output_match_type: regex
+        output: '^welcome\r\n>$'
+        invert_match: false
+      - input_type: string
+        input: 'hd{{rand}}'
+        output_match_type: regex
+        output: '^hd{{rand}}\r\n>$'
+        invert_match: false
+    confidence: High
+    comment: "MTPot accepts any user name and password (its authCallback only logs them), greets with the bare word 'welcome' and a '>' prompt, and answers a command it does not know with nothing but the echo and a new prompt (MTPot overrides telnetsrvlib's writeerror with an empty method). A genuine telnetd refuses a random password ('Login incorrect') and a shell reports '<command>: not found'; Honeycomb's mirai_worm_monitor, derived from MTPot, prints \"Unknown command '<CMD>'\". Matched: MTPot c32d433 (Python 2.7, telnetsrv 0.4, gevent 1.1.2) and MTPot-nx 0eb1d19 (Python 3.11, gevent 26.9.0) (2026-11)."
+  - name: mtpot-busybox-unknown-applet-empty
+    id: 1271
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ''
+        output_match_type: regex
+        output: '(?s).+'
+        invert_match: false
+      - input_type: hex
+        input: ''
+        output_match_type: regex
+        output: '(?s)Username:$'
+        invert_match: false
+      - input_type: string
+        input: 'hd{{rand}}'
+        output_match_type: regex
+        output: '(?s)Password:$'
+        invert_match: false
+      - input_type: string
+        input: '{{rand}}'
+        output_match_type: regex
+        output: '^welcome\r\n>$'
+        invert_match: false
+      - input_type: string
+        input: '/bin/busybox HD{{rand}}'
+        output_match_type: regex
+        output: '^/bin/busybox HD{{rand}}(\r\n)+>$'
+        invert_match: false
+      - input_type: string
+        input: 'hd{{rand}}'
+        output_match_type: regex
+        output: '^hd{{rand}}\r\n>$'
+        invert_match: false
+    confidence: High
+    comment: "A /bin/busybox command that is not in the configured command table is answered with an empty line instead of BusyBox's '<applet>: applet not found', so a random applet name returns nothing. The last step (silent unknown command) separates MTPot from Honeycomb's mirai_worm_monitor, which shares this behaviour. Matched: MTPot c32d433 (Python 2.7, telnetsrv 0.4, gevent 1.1.2) and MTPot-nx 0eb1d19 (Python 3.11, gevent 26.9.0) (2026-11)."
+  - name: mtpot-help-alias-closes-session
+    id: 1272
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ''
+        output_match_type: regex
+        output: '(?s).+'
+        invert_match: false
+      - input_type: hex
+        input: ''
+        output_match_type: regex
+        output: '(?s)Username:$'
+        invert_match: false
+      - input_type: string
+        input: 'hd{{rand}}'
+        output_match_type: regex
+        output: '(?s)Password:$'
+        invert_match: false
+      - input_type: string
+        input: '{{rand}}'
+        output_match_type: regex
+        output: '^welcome\r\n>$'
+        invert_match: false
+      - input_type: string
+        input: '?'
+        output_match_type: regex
+        output: '^\?\r\nHelp on built in commands$'
+        invert_match: false
+    confidence: High
+    comment: "A question mark is telnetsrvlib's alias for its built-in HELP command. MTPot's own command handlers have no docstrings, so the help listing fails after its heading and MTPot's exception handler ends the session silently: the reply is 'Help on built in commands' and a blank line, then the connection closes. Honeycomb's mirai_worm_monitor sends a Python traceback instead; genuine shells answer with 'not found' or a syntax error. Matched: MTPot c32d433 (Python 2.7, telnetsrv 0.4, gevent 1.1.2) and MTPot-nx 0eb1d19 (Python 3.11, gevent 26.9.0) (2026-11)."
+  - name: mtpot-ctrl-c-abort-password
+    id: 1273
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ''
+        output_match_type: regex
+        output: '(?s).+'
+        invert_match: false
+      - input_type: hex
+        input: ''
+        output_match_type: regex
+        output: '(?s)Username:$'
+        invert_match: false
+      - input_type: hex
+        input: '03'
+        output_match_type: regex
+        output: '^\^C ABORT\r\nPassword:$'
+        invert_match: false
+      - input_type: string
+        input: '{{rand}}'
+        output_match_type: regex
+        output: '^welcome\r\n>$'
+        invert_match: false
+      - input_type: string
+        input: 'hd{{rand}}'
+        output_match_type: regex
+        output: '^hd{{rand}}\r\n>$'
+        invert_match: false
+    confidence: High
+    comment: "Ctrl-C (0x03) at the Username: prompt prints telnetsrvlib's '^C ABORT' and moves on to Password: with an empty user name, which is then accepted. A genuine login program restarts the login or ignores the interrupt. The last step excludes Honeycomb's mirai_worm_monitor (same library). Matched: MTPot c32d433 (Python 2.7, telnetsrv 0.4, gevent 1.1.2) and MTPot-nx 0eb1d19 (Python 3.11, gevent 26.9.0) (2026-11)."
+  - name: mtpot-mirai-nippon-canned
+    id: 1274
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ''
+        output_match_type: regex
+        output: '(?s).+'
+        invert_match: false
+      - input_type: hex
+        input: ''
+        output_match_type: regex
+        output: '(?s)Username:$'
+        invert_match: false
+      - input_type: string
+        input: 'hd{{rand}}'
+        output_match_type: regex
+        output: '(?s)Password:$'
+        invert_match: false
+      - input_type: string
+        input: '{{rand}}'
+        output_match_type: regex
+        output: '^welcome\r\n>$'
+        invert_match: false
+      - input_type: string
+        input: '/bin/busybox cat /dev/.nippon'
+        output_match_type: regex
+        output: '^/bin/busybox cat /dev/\.nippon\r\nkami/dev(\r\n)+>$'
+        invert_match: false
+      - input_type: string
+        input: 'hd{{rand}}'
+        output_match_type: regex
+        output: '^hd{{rand}}\r\n>$'
+        invert_match: false
+    confidence: Medium
+    comment: "The sample mirai_conf.json answers 'cat /dev/.nippon' with 'kami/dev' (the text Mirai's loader writes and reads back) even though nothing was written: a fresh device has no such file and BusyBox reports 'No such file or directory'. The last step excludes Honeycomb's mirai_worm_monitor, which ships the same table. Medium: the command table is configurable. Matched: MTPot c32d433 (Python 2.7, telnetsrv 0.4, gevent 1.1.2) and MTPot-nx 0eb1d19 (Python 3.11, gevent 26.9.0) (2026-11)."
+  - name: mtpot-cat-bin-echo-elf-stub
+    id: 1275
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ''
+        output_match_type: regex
+        output: '(?s).+'
+        invert_match: false
+      - input_type: hex
+        input: ''
+        output_match_type: regex
+        output: '(?s)Username:$'
+        invert_match: false
+      - input_type: string
+        input: 'hd{{rand}}'
+        output_match_type: regex
+        output: '(?s)Password:$'
+        invert_match: false
+      - input_type: string
+        input: '{{rand}}'
+        output_match_type: regex
+        output: '^welcome\r\n>$'
+        invert_match: false
+      - input_type: string
+        input: '/bin/busybox cat /bin/echo'
+        output_match_type: hex
+        output: '7f454c4601010103000000000000000002000800000000000d0a0d0a3e'
+        invert_match: false
+    confidence: Medium
+    comment: "The sample configuration answers 'cat /bin/echo' (Mirai's architecture check) with a fixed 24-byte ELF header stub (32-bit little-endian MIPS) followed directly by the prompt; a genuine device returns the whole binary. Honeycomb's mirai_worm_monitor prints the escape sequences as literal text. Medium: the command table is configurable. Matched: MTPot c32d433 (Python 2.7, telnetsrv 0.4, gevent 1.1.2) and MTPot-nx 0eb1d19 (Python 3.11, gevent 26.9.0) (2026-11)."
+  - name: mtpot-custom-help-response
+    id: 1276
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ''
+        output_match_type: regex
+        output: '(?s).+'
+        invert_match: false
+      - input_type: hex
+        input: ''
+        output_match_type: regex
+        output: '(?s)Username:$'
+        invert_match: false
+      - input_type: string
+        input: 'hd{{rand}}'
+        output_match_type: regex
+        output: '(?s)Password:$'
+        invert_match: false
+      - input_type: string
+        input: '{{rand}}'
+        output_match_type: regex
+        output: '^welcome\r\n>$'
+        invert_match: false
+      - input_type: string
+        input: 'help'
+        output_match_type: regex
+        output: '^help\r\nCustom response for help\r\n>$'
+        invert_match: false
+    confidence: Medium
+    comment: "The sample configuration's overwrite_commands answers 'help' with the placeholder text 'Custom response for help'. Medium: configurable, but the README and the sample configuration ship it. Matched: MTPot c32d433 (Python 2.7, telnetsrv 0.4, gevent 1.1.2) and MTPot-nx 0eb1d19 (Python 3.11, gevent 26.9.0) (2026-11)."
