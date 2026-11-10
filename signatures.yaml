@@ -9994,3 +9994,91 @@ signatures:
       invert_match: false
     confidence: Medium
     comment: 'Port 2022 form (the project''s Docker image listens on 2022). Covers ssh-honeypot (droberson) run with its own banner (-b): any OpenSSH, Dropbear or ROSSSH version string followed by libssh''s key exchange offer. The key exchange underneath is libssh''s: its KEXINIT lists the three NIST ECDH curves followed directly by diffie-hellman-group18-sha512 and diffie-hellman-group16-sha512 (0.9 onwards; group16 then group18 in 0.8), and its ciphers as aes256-gcm, aes128-gcm, aes256-ctr, aes192-ctr, aes128-ctr (0.9 onwards, after chacha20-poly1305 where available; chacha20-poly1305, aes256-ctr, aes192-ctr, aes128-ctr in 0.8). OpenSSH puts diffie-hellman-group-exchange-sha256 (or group16) after the ECDH curves and lists aes128-ctr first, Dropbear and MikroTik RouterOS have their own lists, and none of the OpenSSH releases named in the banners offered group18 before group16; a genuine libssh server announces SSH-2.0-libssh_<version>. Steps: the version string (nothing sent); a client identification and KEXINIT (no authentication), answered by the server KEXINIT. Medium because any other libssh-based server given an OpenSSH-style banner would match as well. Matched: ssh-honeypot 0.2.0 commit 4bda71c (2024-10-29) built against libssh 0.10.6 (Debian 12 package 0.10.6-0+deb12u3), 0.8.9, 0.9.8 and 0.11.5 (2026-11).'
+  - name: ssh-honeypot-internetwache-paramiko5-rsa-only-keygen-key
+    id: 1190
+    port: 2222
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ''
+        output_match_type: regex
+        output: '^SSH-2\.0-paramiko_[0-9][0-9.]*$'
+        invert_match: false
+      - input_type: hex
+        input: '5353482d322e302d4f70656e5353485f392e3270310d0a'
+        output_match_type: regex
+        output: '\x00\x00\x00\x19rsa-sha2-512,rsa-sha2-256\x00\x00\x00'
+        invert_match: false
+      - input_type: hex
+        input: '000000a40914000102030405060708090a0b0c0d0e0f00000012656364682d736861322d6e69737470323536000000147273612d736861322d3235362c7373682d7273610000000a6165733132382d6374720000000a6165733132382d6374720000000d686d61632d736861322d3235360000000d686d61632d736861322d323536000000046e6f6e65000000046e6f6e65000000000000000000000000000000000000000000000000004c051e0000004104f727019145268d2b0742a41711b0ce23d5cde0f19a0ba59acf1a486a2766f9ddd0ec21bf75dab30b23008ab413193bc92e3acf90bf2c21a20a57dd46e60f95cc0000000000'
+        output_match_type: regex
+        output: '(?s)\x00\x00\x00\x07ssh-rsa\x00\x00\x00\x03\x01\x00\x01\x00\x00(?:\x01.|\x02\x01)\x00'
+        invert_match: false
+    confidence: Medium
+    comment: 'SSH-Honeypot (internetwache, 2015) is a short paramiko server that loads exactly one host key, the RSA key the README creates with ''ssh-keygen -t rsa'' (3072 bits with current OpenSSH, 2048 before OpenSSH 8.0), and has no banner setting, so it announces SSH-2.0-paramiko_<version>. The probe reads the identification, sends a client identification and checks that the server''s KEXINIT offers RSA host key algorithms only, then sends a KEXINIT limited to ecdh-sha2-nistp256 with a fixed ECDH public value and checks the host key in KEX_ECDH_REPLY: ssh-rsa, e=65537, a 2048 to 4096-bit modulus. No login. Genuine OpenSSH announces its own name and offers Ed25519 and ECDSA host keys as well. This form: paramiko 5, which lists only rsa-sha2-512,rsa-sha2-256 for an RSA key, on port 2222, SSH-Honeypot''s default port (SSH_PORT). Hornet (also paramiko) creates a 1024-bit key and is not matched. Medium: any paramiko 5 server with a single RSA key of 2048 bits or more looks the same before login (a genuine paramiko SFTP server, sftpserver 0.3, with a 3072-bit ssh-keygen key matched in the lab; with paramiko''s 1024-bit demo key it did not), so confirm with a password attempt: SSH-Honeypot advertises password as its only method and refuses every password. Matched: SSH-Honeypot 3ee0815 as SSH-Honeypot-nx 72b34d1 with paramiko 5.1.0 on Python 3.11, 3072-bit key from ssh-keygen (2026-11).'
+  - name: ssh-honeypot-internetwache-paramiko5-rsa-only-keygen-key-port-22
+    id: 1191
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ''
+        output_match_type: regex
+        output: '^SSH-2\.0-paramiko_[0-9][0-9.]*$'
+        invert_match: false
+      - input_type: hex
+        input: '5353482d322e302d4f70656e5353485f392e3270310d0a'
+        output_match_type: regex
+        output: '\x00\x00\x00\x19rsa-sha2-512,rsa-sha2-256\x00\x00\x00'
+        invert_match: false
+      - input_type: hex
+        input: '000000a40914000102030405060708090a0b0c0d0e0f00000012656364682d736861322d6e69737470323536000000147273612d736861322d3235362c7373682d7273610000000a6165733132382d6374720000000a6165733132382d6374720000000d686d61632d736861322d3235360000000d686d61632d736861322d323536000000046e6f6e65000000046e6f6e65000000000000000000000000000000000000000000000000004c051e0000004104f727019145268d2b0742a41711b0ce23d5cde0f19a0ba59acf1a486a2766f9ddd0ec21bf75dab30b23008ab413193bc92e3acf90bf2c21a20a57dd46e60f95cc0000000000'
+        output_match_type: regex
+        output: '(?s)\x00\x00\x00\x07ssh-rsa\x00\x00\x00\x03\x01\x00\x01\x00\x00(?:\x01.|\x02\x01)\x00'
+        invert_match: false
+    confidence: Medium
+    comment: 'SSH-Honeypot (internetwache, 2015) is a short paramiko server that loads exactly one host key, the RSA key the README creates with ''ssh-keygen -t rsa'' (3072 bits with current OpenSSH, 2048 before OpenSSH 8.0), and has no banner setting, so it announces SSH-2.0-paramiko_<version>. The probe reads the identification, sends a client identification and checks that the server''s KEXINIT offers RSA host key algorithms only, then sends a KEXINIT limited to ecdh-sha2-nistp256 with a fixed ECDH public value and checks the host key in KEX_ECDH_REPLY: ssh-rsa, e=65537, a 2048 to 4096-bit modulus. No login. Genuine OpenSSH announces its own name and offers Ed25519 and ECDSA host keys as well. Port 22 form of 1190 (the README redirects port 22 to the honeypot with iptables). Medium: other paramiko 5 servers with a single RSA key of 2048 bits or more on port 22 (for example Hornet given a larger key, or a paramiko-based SFTP server) look the same before login. Matched: SSH-Honeypot 3ee0815 as SSH-Honeypot-nx 72b34d1 with paramiko 5.1.0 on Python 3.11, 3072-bit key from ssh-keygen (2026-11).'
+  - name: ssh-honeypot-internetwache-paramiko-legacy-rsa-only-keygen-key
+    id: 1192
+    port: 2222
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ''
+        output_match_type: regex
+        output: '^SSH-2\.0-paramiko_(?:1\.[0-9.]+|2\.[0-9](?:\.[0-9]+)?|2\.10(?:\.[02-9][0-9]*)?|2\.1[1-9](?:\.[0-9]+)?|[34]\.[0-9.]+)$'
+        invert_match: false
+      - input_type: hex
+        input: '5353482d322e302d4f70656e5353485f392e3270310d0a'
+        output_match_type: regex
+        output: '\x00\x00\x00(?:!rsa-sha2-512,rsa-sha2-256,ssh-rsa|\x07ssh-rsa)\x00\x00\x00'
+        invert_match: false
+      - input_type: hex
+        input: '000000a40914000102030405060708090a0b0c0d0e0f00000012656364682d736861322d6e69737470323536000000147273612d736861322d3235362c7373682d7273610000000a6165733132382d6374720000000a6165733132382d6374720000000d686d61632d736861322d3235360000000d686d61632d736861322d323536000000046e6f6e65000000046e6f6e65000000000000000000000000000000000000000000000000004c051e0000004104f727019145268d2b0742a41711b0ce23d5cde0f19a0ba59acf1a486a2766f9ddd0ec21bf75dab30b23008ab413193bc92e3acf90bf2c21a20a57dd46e60f95cc0000000000'
+        output_match_type: regex
+        output: '(?s)\x00\x00\x00\x07ssh-rsa\x00\x00\x00\x03\x01\x00\x01\x00\x00(?:\x01.|\x02\x01)\x00'
+        invert_match: false
+    confidence: Medium
+    comment: 'SSH-Honeypot (internetwache, 2015) is a short paramiko server that loads exactly one host key, the RSA key the README creates with ''ssh-keygen -t rsa'' (3072 bits with current OpenSSH, 2048 before OpenSSH 8.0), and has no banner setting, so it announces SSH-2.0-paramiko_<version>. The probe reads the identification, sends a client identification and checks that the server''s KEXINIT offers RSA host key algorithms only, then sends a KEXINIT limited to ecdh-sha2-nistp256 with a fixed ECDH public value and checks the host key in KEX_ECDH_REPLY: ssh-rsa, e=65537, a 2048 to 4096-bit modulus. No login. Genuine OpenSSH announces its own name and offers Ed25519 and ECDSA host keys as well. This form: the original on Python 2 (paramiko 2.12.0 is the last release for Python 2) or the Python 3 copy with paramiko 1.x to 4.x, which also list ssh-rsa (or ssh-rsa only, before 2.9), on the default port 2222. Medium: any paramiko 1.x to 4.x server with a single 2048 to 4096-bit RSA key on this port looks the same before login (sftpserver 0.3 with paramiko 2.12.0 and a 2048-bit ssh-keygen key matched in the lab). Matched: SSH-Honeypot 3ee0815 on Python 2.7 with paramiko 2.12.0, and SSH-Honeypot-nx 72b34d1 with paramiko 2.12.0, 3.5.1 and 4.0.0 (2026-11).'
+  - name: ssh-honeypot-internetwache-paramiko-legacy-rsa-only-keygen-key-port-22
+    id: 1193
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ''
+        output_match_type: regex
+        output: '^SSH-2\.0-paramiko_(?:1\.[0-9.]+|2\.[0-9](?:\.[0-9]+)?|2\.10(?:\.[02-9][0-9]*)?|2\.1[1-9](?:\.[0-9]+)?|[34]\.[0-9.]+)$'
+        invert_match: false
+      - input_type: hex
+        input: '5353482d322e302d4f70656e5353485f392e3270310d0a'
+        output_match_type: regex
+        output: '\x00\x00\x00(?:!rsa-sha2-512,rsa-sha2-256,ssh-rsa|\x07ssh-rsa)\x00\x00\x00'
+        invert_match: false
+      - input_type: hex
+        input: '000000a40914000102030405060708090a0b0c0d0e0f00000012656364682d736861322d6e69737470323536000000147273612d736861322d3235362c7373682d7273610000000a6165733132382d6374720000000a6165733132382d6374720000000d686d61632d736861322d3235360000000d686d61632d736861322d323536000000046e6f6e65000000046e6f6e65000000000000000000000000000000000000000000000000004c051e0000004104f727019145268d2b0742a41711b0ce23d5cde0f19a0ba59acf1a486a2766f9ddd0ec21bf75dab30b23008ab413193bc92e3acf90bf2c21a20a57dd46e60f95cc0000000000'
+        output_match_type: regex
+        output: '(?s)\x00\x00\x00\x07ssh-rsa\x00\x00\x00\x03\x01\x00\x01\x00\x00(?:\x01.|\x02\x01)\x00'
+        invert_match: false
+    confidence: Medium
+    comment: 'SSH-Honeypot (internetwache, 2015) is a short paramiko server that loads exactly one host key, the RSA key the README creates with ''ssh-keygen -t rsa'' (3072 bits with current OpenSSH, 2048 before OpenSSH 8.0), and has no banner setting, so it announces SSH-2.0-paramiko_<version>. The probe reads the identification, sends a client identification and checks that the server''s KEXINIT offers RSA host key algorithms only, then sends a KEXINIT limited to ecdh-sha2-nistp256 with a fixed ECDH public value and checks the host key in KEX_ECDH_REPLY: ssh-rsa, e=65537, a 2048 to 4096-bit modulus. No login. Genuine OpenSSH announces its own name and offers Ed25519 and ECDSA host keys as well. Port 22 form of 1192. paramiko 2.10.1 is excluded: OWASP Python Honeypot''s ssh/strong_password module is adapted from this code and pins that version (honeydet 422, 423, 428). Medium: other paramiko 1.x to 4.x servers with a single 2048 to 4096-bit RSA key on port 22 look the same before login. Matched: SSH-Honeypot 3ee0815 on Python 2.7 with paramiko 2.12.0, and SSH-Honeypot-nx 72b34d1 with paramiko 2.12.0, 3.5.1 and 4.0.0 (2026-11).'
