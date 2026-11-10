@@ -11082,3 +11082,86 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: "The sample configuration's overwrite_commands answers 'help' with the placeholder text 'Custom response for help'. Medium: configurable, but the README and the sample configuration ship it. Matched: MTPot c32d433 (Python 2.7, telnetsrv 0.4, gevent 1.1.2) and MTPot-nx 0eb1d19 (Python 3.11, gevent 26.9.0) (2026-11)."
+  - name: vnclowpot-all-zero-vnc-challenge
+    id: 1280
+    port: 5900
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^RFB 003\.008$'
+        invert_match: false
+      - input_type: hex
+        input: "524642203030332e3030380a"
+        output_match_type: regex
+        output: '^\x01\x02$'
+        invert_match: false
+      - input_type: hex
+        input: "02"
+        output_match_type: regex
+        output: '^\x00{16}$'
+        invert_match: false
+    confidence: High
+    comment: "After the RFB 3.8 handshake the server offers VNC authentication alone and, once it is chosen, sends a challenge of sixteen zero bytes, the same on every connection (a constant in the source). VNC authentication relies on a fresh random challenge per connection; TigerVNC, x11vnc (libvncserver) and TightVNC never send a fixed one. No login is attempted. Matched: vnclowpot 78de7e9 (2026-11)."
+  - name: vnclowpot-rfb37-unsupported-version
+    id: 1281
+    port: 5900
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^RFB 003\.008$'
+        invert_match: false
+      - input_type: hex
+        input: "524642203030332e3030370a"
+        output_match_type: regex
+        output: '^\x00\x00\x00\x00\x14Unsupported RFB version\.$'
+        invert_match: false
+    confidence: High
+    comment: "A server that announces RFB 3.8 answers a client that asks for RFB 3.7 with zero security types and the reason 'Unsupported RFB version.', whose length field says 20 bytes while the text is 24. Servers that offer 3.8 also accept 3.7 (TigerVNC, x11vnc and TightVNC answer with their security types), and a genuine failure reason carries its true length. Matched: vnclowpot 78de7e9 (2026-11)."
+  - name: vnclowpot-rfb33-all-zero-challenge
+    id: 1282
+    port: 5900
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^RFB 003\.008$'
+        invert_match: false
+      - input_type: hex
+        input: "524642203030332e3030330a"
+        output_match_type: regex
+        output: '^\x00\x00\x00\x02\x00{16}$'
+        invert_match: false
+    confidence: High
+    comment: "With an RFB 3.3 client the server names VNC authentication (security type 2) and sends a challenge of sixteen zero bytes in the same reply. Genuine servers send a random challenge on every connection. No login is attempted. Matched: vnclowpot 78de7e9 (2026-11)."
+  - name: vnclowpot-auth-failure-reason
+    id: 1283
+    port: 5900
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^RFB 003\.008$'
+        invert_match: false
+      - input_type: hex
+        input: "524642203030332e3030380a"
+        output_match_type: regex
+        output: '^\x01\x02$'
+        invert_match: false
+      - input_type: hex
+        input: "02"
+        output_match_type: regex
+        output: '(?s)^.+$'
+        invert_match: false
+      - input_type: hex
+        input: "00000000000000000000000000000000"
+        output_match_type: regex
+        output: '^\x00\x00\x00\x01\x00\x00\x00\x1dInvalid username or password\.$'
+        invert_match: false
+    confidence: High
+    comment: "A VNC authentication response (sixteen zero bytes, a wrong password whatever the challenge) is refused with the reason 'Invalid username or password.', although VNC authentication has no user name. Genuine servers give their own reasons: TigerVNC 'Authentication failure', x11vnc 'password check failed!', TightVNC 'Authentication failed'. Independent of the challenge value. Matched: vnclowpot 78de7e9 (2026-11)."
