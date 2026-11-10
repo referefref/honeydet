@@ -10015,7 +10015,7 @@ signatures:
         output: '(?s)\x00\x00\x00\x07ssh-rsa\x00\x00\x00\x03\x01\x00\x01\x00\x00(?:\x01.|\x02\x01)\x00'
         invert_match: false
     confidence: Medium
-    comment: 'SSH-Honeypot (internetwache, 2015) is a short paramiko server that loads exactly one host key, the RSA key the README creates with ''ssh-keygen -t rsa'' (3072 bits with current OpenSSH, 2048 before OpenSSH 8.0), and has no banner setting, so it announces SSH-2.0-paramiko_<version>. The probe reads the identification, sends a client identification and checks that the server''s KEXINIT offers RSA host key algorithms only, then sends a KEXINIT limited to ecdh-sha2-nistp256 with a fixed ECDH public value and checks the host key in KEX_ECDH_REPLY: ssh-rsa, e=65537, a 2048 to 4096-bit modulus. No login. Genuine OpenSSH announces its own name and offers Ed25519 and ECDSA host keys as well. This form: paramiko 5, which lists only rsa-sha2-512,rsa-sha2-256 for an RSA key, on port 2222, SSH-Honeypot''s default port (SSH_PORT). Hornet (also paramiko) creates a 1024-bit key and is not matched. Medium: any paramiko 5 server with a single RSA key of 2048 bits or more looks the same before login (a genuine paramiko SFTP server, sftpserver 0.3, with a 3072-bit ssh-keygen key matched in the lab; with paramiko''s 1024-bit demo key it did not), so confirm with a password attempt: SSH-Honeypot advertises password as its only method and refuses every password. Matched: SSH-Honeypot 3ee0815 as SSH-Honeypot-nx 72b34d1 with paramiko 5.1.0 on Python 3.11, 3072-bit key from ssh-keygen (2026-11).'
+    comment: "SSH-Honeypot (internetwache, 2015) is a short paramiko server that loads exactly one host key, the RSA key the README creates with 'ssh-keygen -t rsa' (3072 bits with current OpenSSH, 2048 before OpenSSH 8.0), and has no banner setting, so it announces SSH-2.0-paramiko_<version>. The probe reads the identification, sends a client identification and checks that the server's KEXINIT offers RSA host key algorithms only, then sends a KEXINIT limited to ecdh-sha2-nistp256 with a fixed ECDH public value and checks the host key in KEX_ECDH_REPLY: ssh-rsa, e=65537, a 2048 to 4096-bit modulus. No login. Genuine OpenSSH announces its own name and offers Ed25519 and ECDSA host keys as well. This form: paramiko 5, which lists only rsa-sha2-512,rsa-sha2-256 for an RSA key, on port 2222, SSH-Honeypot's default port (SSH_PORT). Hornet (also paramiko) creates a 1024-bit key and is not matched. Medium: any paramiko 5 server with a single RSA key of 2048 bits or more looks the same before login (a genuine paramiko SFTP server, sftpserver 0.3, with a 3072-bit ssh-keygen key matched in the lab; with paramiko's 1024-bit demo key it did not), so confirm with a password attempt: SSH-Honeypot advertises password as its only method and refuses every password. Matched: SSH-Honeypot 3ee0815 as SSH-Honeypot-nx 72b34d1 with paramiko 5.1.0 on Python 3.11, 3072-bit key from ssh-keygen (2026-11). Also matches SSH-HoneyPot (1Birdo, paramiko) on port 2222 (2026-11)."
   - name: ssh-honeypot-internetwache-paramiko5-rsa-only-keygen-key-port-22
     id: 1191
     port: 22
@@ -10164,3 +10164,203 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: "The tool's default identification string 'SSH-2.0-OpenSSH_7.4', then a non-SSH line ('GET / HTTP/1.0') is parsed by Twisted Conch as a binary packet and answered with an SSH disconnect 'bad packet length 1195725856' (the bytes 'GET ' read as a length). Genuine OpenSSH 7.4 (CentOS 7) replies 'Protocol mismatch.' in clear text. Medium: the banner is set with --version. Matched: ssh-honeypot 4c4eccc (0xNslabs, December 2025) on Twisted 26.10.0, cryptography 50.0.2 (2026-11)."
+  - name: ssh-honeypot-birdo-paramiko-rsa2048-port-2222
+    id: 1210
+    port: 2222
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ''
+        output_match_type: regex
+        output: '^SSH-2\.0-paramiko_[0-9][0-9.]*$'
+        invert_match: false
+      - input_type: hex
+        input: '5353482d322e302d4f70656e5353485f392e3270310d0a'
+        output_match_type: regex
+        output: '\x00\x00\x00(?:\x19rsa-sha2-512,rsa-sha2-256|\x21rsa-sha2-512,rsa-sha2-256,ssh-rsa|\x07ssh-rsa)\x00\x00\x00'
+        invert_match: false
+      - input_type: hex
+        input: '000000a40914000102030405060708090a0b0c0d0e0f00000012656364682d736861322d6e69737470323536000000147273612d736861322d3235362c7373682d7273610000000a6165733132382d6374720000000a6165733132382d6374720000000d686d61632d736861322d3235360000000d686d61632d736861322d323536000000046e6f6e65000000046e6f6e65000000000000000000000000000000000000000000000000004c051e0000004104f727019145268d2b0742a41711b0ce23d5cde0f19a0ba59acf1a486a2766f9ddd0ec21bf75dab30b23008ab413193bc92e3acf90bf2c21a20a57dd46e60f95cc0000000000'
+        output_match_type: regex
+        output: '(?s)\x00\x00\x00\x07ssh-rsa\x00\x00\x00\x03\x01\x00\x01\x00\x00\x01\x01\x00'
+        invert_match: false
+    confidence: Medium
+    comment: 'SSH-Honeypot (Birdo, 2024) is a short paramiko server that listens on eighteen ports at once, most of them ports that belong to other protocols, and generates a new 2048-bit RSA host key in memory at every start (paramiko.RSAKey.generate(2048)); it has no banner setting, so it announces SSH-2.0-paramiko_<version>. The probe reads the identification, sends a client identification and checks that the server''s KEXINIT offers RSA host key algorithms only, then sends a KEXINIT limited to ecdh-sha2-nistp256 with a fixed ECDH public value and checks the host key in KEX_ECDH_REPLY: ssh-rsa, e=65537 and a modulus of exactly 2048 bits. No login. Port 2222, the first port in its list. Medium: on 2222 other paramiko servers with one 2048-bit RSA key look the same before login (for example SSH-Honeypot by internetwache given a 2048-bit key, or a paramiko SFTP server); confirm with id 1218. Genuine OpenSSH announces its own name and offers Ed25519 and ECDSA host keys as well. Matched: SSH-Honeypot (Birdo) 5ad8694 with paramiko 5.1.0, 4.0.0, 3.5.1 and 2.12.0 on Python 3.11 (2026-11).'
+  - name: ssh-honeypot-birdo-paramiko-rsa2048-port-3389
+    id: 1211
+    port: 3389
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ''
+        output_match_type: regex
+        output: '^SSH-2\.0-paramiko_[0-9][0-9.]*$'
+        invert_match: false
+      - input_type: hex
+        input: '5353482d322e302d4f70656e5353485f392e3270310d0a'
+        output_match_type: regex
+        output: '\x00\x00\x00(?:\x19rsa-sha2-512,rsa-sha2-256|\x21rsa-sha2-512,rsa-sha2-256,ssh-rsa|\x07ssh-rsa)\x00\x00\x00'
+        invert_match: false
+      - input_type: hex
+        input: '000000a40914000102030405060708090a0b0c0d0e0f00000012656364682d736861322d6e69737470323536000000147273612d736861322d3235362c7373682d7273610000000a6165733132382d6374720000000a6165733132382d6374720000000d686d61632d736861322d3235360000000d686d61632d736861322d323536000000046e6f6e65000000046e6f6e65000000000000000000000000000000000000000000000000004c051e0000004104f727019145268d2b0742a41711b0ce23d5cde0f19a0ba59acf1a486a2766f9ddd0ec21bf75dab30b23008ab413193bc92e3acf90bf2c21a20a57dd46e60f95cc0000000000'
+        output_match_type: regex
+        output: '(?s)\x00\x00\x00\x07ssh-rsa\x00\x00\x00\x03\x01\x00\x01\x00\x00\x01\x01\x00'
+        invert_match: false
+    confidence: High
+    comment: 'SSH-Honeypot (Birdo, 2024) is a short paramiko server that listens on eighteen ports at once, most of them ports that belong to other protocols, and generates a new 2048-bit RSA host key in memory at every start (paramiko.RSAKey.generate(2048)); it has no banner setting, so it announces SSH-2.0-paramiko_<version>. The probe reads the identification, sends a client identification and checks that the server''s KEXINIT offers RSA host key algorithms only, then sends a KEXINIT limited to ecdh-sha2-nistp256 with a fixed ECDH public value and checks the host key in KEX_ECDH_REPLY: ssh-rsa, e=65537 and a modulus of exactly 2048 bits. No login. Port 3389, the Remote Desktop port: a genuine RDP server waits silently for an X.224 connection request and never sends an SSH identification. Matched: SSH-Honeypot (Birdo) 5ad8694 with paramiko 5.1.0, 4.0.0, 3.5.1 and 2.12.0 on Python 3.11 (2026-11).'
+  - name: ssh-honeypot-birdo-paramiko-rsa2048-port-5900
+    id: 1212
+    port: 5900
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ''
+        output_match_type: regex
+        output: '^SSH-2\.0-paramiko_[0-9][0-9.]*$'
+        invert_match: false
+      - input_type: hex
+        input: '5353482d322e302d4f70656e5353485f392e3270310d0a'
+        output_match_type: regex
+        output: '\x00\x00\x00(?:\x19rsa-sha2-512,rsa-sha2-256|\x21rsa-sha2-512,rsa-sha2-256,ssh-rsa|\x07ssh-rsa)\x00\x00\x00'
+        invert_match: false
+      - input_type: hex
+        input: '000000a40914000102030405060708090a0b0c0d0e0f00000012656364682d736861322d6e69737470323536000000147273612d736861322d3235362c7373682d7273610000000a6165733132382d6374720000000a6165733132382d6374720000000d686d61632d736861322d3235360000000d686d61632d736861322d323536000000046e6f6e65000000046e6f6e65000000000000000000000000000000000000000000000000004c051e0000004104f727019145268d2b0742a41711b0ce23d5cde0f19a0ba59acf1a486a2766f9ddd0ec21bf75dab30b23008ab413193bc92e3acf90bf2c21a20a57dd46e60f95cc0000000000'
+        output_match_type: regex
+        output: '(?s)\x00\x00\x00\x07ssh-rsa\x00\x00\x00\x03\x01\x00\x01\x00\x00\x01\x01\x00'
+        invert_match: false
+    confidence: High
+    comment: 'SSH-Honeypot (Birdo, 2024) is a short paramiko server that listens on eighteen ports at once, most of them ports that belong to other protocols, and generates a new 2048-bit RSA host key in memory at every start (paramiko.RSAKey.generate(2048)); it has no banner setting, so it announces SSH-2.0-paramiko_<version>. The probe reads the identification, sends a client identification and checks that the server''s KEXINIT offers RSA host key algorithms only, then sends a KEXINIT limited to ecdh-sha2-nistp256 with a fixed ECDH public value and checks the host key in KEX_ECDH_REPLY: ssh-rsa, e=65537 and a modulus of exactly 2048 bits. No login. Port 5900, the VNC port: a genuine VNC server greets with ''RFB 003.00x'', never with an SSH identification. Matched: SSH-Honeypot (Birdo) 5ad8694 with paramiko 5.1.0, 4.0.0, 3.5.1 and 2.12.0 on Python 3.11 (2026-11).'
+  - name: ssh-honeypot-birdo-paramiko-rsa2048-port-23
+    id: 1213
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ''
+        output_match_type: regex
+        output: '^SSH-2\.0-paramiko_(?:1\.[0-9.]+|2\.[0-9](?:\.[0-9]+)?|2\.10(?:\.[02-9][0-9]*)?|2\.1[1-9](?:\.[0-9]+)?|[3-9]\.[0-9.]+|[1-9][0-9]+\.[0-9.]+)$'
+        invert_match: false
+      - input_type: hex
+        input: '5353482d322e302d4f70656e5353485f392e3270310d0a'
+        output_match_type: regex
+        output: '\x00\x00\x00(?:\x19rsa-sha2-512,rsa-sha2-256|\x21rsa-sha2-512,rsa-sha2-256,ssh-rsa|\x07ssh-rsa)\x00\x00\x00'
+        invert_match: false
+      - input_type: hex
+        input: '000000a40914000102030405060708090a0b0c0d0e0f00000012656364682d736861322d6e69737470323536000000147273612d736861322d3235362c7373682d7273610000000a6165733132382d6374720000000a6165733132382d6374720000000d686d61632d736861322d3235360000000d686d61632d736861322d323536000000046e6f6e65000000046e6f6e65000000000000000000000000000000000000000000000000004c051e0000004104f727019145268d2b0742a41711b0ce23d5cde0f19a0ba59acf1a486a2766f9ddd0ec21bf75dab30b23008ab413193bc92e3acf90bf2c21a20a57dd46e60f95cc0000000000'
+        output_match_type: regex
+        output: '(?s)\x00\x00\x00\x07ssh-rsa\x00\x00\x00\x03\x01\x00\x01\x00\x00\x01\x01\x00'
+        invert_match: false
+    confidence: High
+    comment: 'SSH-Honeypot (Birdo, 2024) is a short paramiko server that listens on eighteen ports at once, most of them ports that belong to other protocols, and generates a new 2048-bit RSA host key in memory at every start (paramiko.RSAKey.generate(2048)); it has no banner setting, so it announces SSH-2.0-paramiko_<version>. The probe reads the identification, sends a client identification and checks that the server''s KEXINIT offers RSA host key algorithms only, then sends a KEXINIT limited to ecdh-sha2-nistp256 with a fixed ECDH public value and checks the host key in KEX_ECDH_REPLY: ssh-rsa, e=65537 and a modulus of exactly 2048 bits. No login. Port 23, the Telnet port: a genuine Telnet server starts with option negotiation or a login prompt. paramiko 2.10.1 is excluded from the banner because OWASP Python Honeypot''s ssh/strong_password module pins it and can run on port 23 (honeydet 428). Matched: SSH-Honeypot (Birdo) 5ad8694 with paramiko 5.1.0, 4.0.0, 3.5.1 and 2.12.0 on Python 3.11 (2026-11).'
+  - name: ssh-honeypot-birdo-paramiko-rsa2048-port-6000
+    id: 1214
+    port: 6000
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ''
+        output_match_type: regex
+        output: '^SSH-2\.0-paramiko_[0-9][0-9.]*$'
+        invert_match: false
+      - input_type: hex
+        input: '5353482d322e302d4f70656e5353485f392e3270310d0a'
+        output_match_type: regex
+        output: '\x00\x00\x00(?:\x19rsa-sha2-512,rsa-sha2-256|\x21rsa-sha2-512,rsa-sha2-256,ssh-rsa|\x07ssh-rsa)\x00\x00\x00'
+        invert_match: false
+      - input_type: hex
+        input: '000000a40914000102030405060708090a0b0c0d0e0f00000012656364682d736861322d6e69737470323536000000147273612d736861322d3235362c7373682d7273610000000a6165733132382d6374720000000a6165733132382d6374720000000d686d61632d736861322d3235360000000d686d61632d736861322d323536000000046e6f6e65000000046e6f6e65000000000000000000000000000000000000000000000000004c051e0000004104f727019145268d2b0742a41711b0ce23d5cde0f19a0ba59acf1a486a2766f9ddd0ec21bf75dab30b23008ab413193bc92e3acf90bf2c21a20a57dd46e60f95cc0000000000'
+        output_match_type: regex
+        output: '(?s)\x00\x00\x00\x07ssh-rsa\x00\x00\x00\x03\x01\x00\x01\x00\x00\x01\x01\x00'
+        invert_match: false
+    confidence: High
+    comment: 'SSH-Honeypot (Birdo, 2024) is a short paramiko server that listens on eighteen ports at once, most of them ports that belong to other protocols, and generates a new 2048-bit RSA host key in memory at every start (paramiko.RSAKey.generate(2048)); it has no banner setting, so it announces SSH-2.0-paramiko_<version>. The probe reads the identification, sends a client identification and checks that the server''s KEXINIT offers RSA host key algorithms only, then sends a KEXINIT limited to ecdh-sha2-nistp256 with a fixed ECDH public value and checks the host key in KEX_ECDH_REPLY: ssh-rsa, e=65537 and a modulus of exactly 2048 bits. No login. Port 6000, the X11 port: a genuine X server waits silently for a client setup request. Matched: SSH-Honeypot (Birdo) 5ad8694 with paramiko 5.1.0, 4.0.0, 3.5.1 and 2.12.0 on Python 3.11 (2026-11).'
+  - name: ssh-honeypot-birdo-paramiko-rsa2048-port-2181
+    id: 1215
+    port: 2181
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ''
+        output_match_type: regex
+        output: '^SSH-2\.0-paramiko_[0-9][0-9.]*$'
+        invert_match: false
+      - input_type: hex
+        input: '5353482d322e302d4f70656e5353485f392e3270310d0a'
+        output_match_type: regex
+        output: '\x00\x00\x00(?:\x19rsa-sha2-512,rsa-sha2-256|\x21rsa-sha2-512,rsa-sha2-256,ssh-rsa|\x07ssh-rsa)\x00\x00\x00'
+        invert_match: false
+      - input_type: hex
+        input: '000000a40914000102030405060708090a0b0c0d0e0f00000012656364682d736861322d6e69737470323536000000147273612d736861322d3235362c7373682d7273610000000a6165733132382d6374720000000a6165733132382d6374720000000d686d61632d736861322d3235360000000d686d61632d736861322d323536000000046e6f6e65000000046e6f6e65000000000000000000000000000000000000000000000000004c051e0000004104f727019145268d2b0742a41711b0ce23d5cde0f19a0ba59acf1a486a2766f9ddd0ec21bf75dab30b23008ab413193bc92e3acf90bf2c21a20a57dd46e60f95cc0000000000'
+        output_match_type: regex
+        output: '(?s)\x00\x00\x00\x07ssh-rsa\x00\x00\x00\x03\x01\x00\x01\x00\x00\x01\x01\x00'
+        invert_match: false
+    confidence: High
+    comment: 'SSH-Honeypot (Birdo, 2024) is a short paramiko server that listens on eighteen ports at once, most of them ports that belong to other protocols, and generates a new 2048-bit RSA host key in memory at every start (paramiko.RSAKey.generate(2048)); it has no banner setting, so it announces SSH-2.0-paramiko_<version>. The probe reads the identification, sends a client identification and checks that the server''s KEXINIT offers RSA host key algorithms only, then sends a KEXINIT limited to ecdh-sha2-nistp256 with a fixed ECDH public value and checks the host key in KEX_ECDH_REPLY: ssh-rsa, e=65537 and a modulus of exactly 2048 bits. No login. Port 2181, the ZooKeeper client port: ZooKeeper speaks its own binary protocol and waits for the client. Matched: SSH-Honeypot (Birdo) 5ad8694 with paramiko 5.1.0, 4.0.0, 3.5.1 and 2.12.0 on Python 3.11 (2026-11).'
+  - name: ssh-honeypot-birdo-paramiko-rsa2048-port-8081
+    id: 1216
+    port: 8081
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ''
+        output_match_type: regex
+        output: '^SSH-2\.0-paramiko_[0-9][0-9.]*$'
+        invert_match: false
+      - input_type: hex
+        input: '5353482d322e302d4f70656e5353485f392e3270310d0a'
+        output_match_type: regex
+        output: '\x00\x00\x00(?:\x19rsa-sha2-512,rsa-sha2-256|\x21rsa-sha2-512,rsa-sha2-256,ssh-rsa|\x07ssh-rsa)\x00\x00\x00'
+        invert_match: false
+      - input_type: hex
+        input: '000000a40914000102030405060708090a0b0c0d0e0f00000012656364682d736861322d6e69737470323536000000147273612d736861322d3235362c7373682d7273610000000a6165733132382d6374720000000a6165733132382d6374720000000d686d61632d736861322d3235360000000d686d61632d736861322d323536000000046e6f6e65000000046e6f6e65000000000000000000000000000000000000000000000000004c051e0000004104f727019145268d2b0742a41711b0ce23d5cde0f19a0ba59acf1a486a2766f9ddd0ec21bf75dab30b23008ab413193bc92e3acf90bf2c21a20a57dd46e60f95cc0000000000'
+        output_match_type: regex
+        output: '(?s)\x00\x00\x00\x07ssh-rsa\x00\x00\x00\x03\x01\x00\x01\x00\x00\x01\x01\x00'
+        invert_match: false
+    confidence: High
+    comment: 'SSH-Honeypot (Birdo, 2024) is a short paramiko server that listens on eighteen ports at once, most of them ports that belong to other protocols, and generates a new 2048-bit RSA host key in memory at every start (paramiko.RSAKey.generate(2048)); it has no banner setting, so it announces SSH-2.0-paramiko_<version>. The probe reads the identification, sends a client identification and checks that the server''s KEXINIT offers RSA host key algorithms only, then sends a KEXINIT limited to ecdh-sha2-nistp256 with a fixed ECDH public value and checks the host key in KEX_ECDH_REPLY: ssh-rsa, e=65537 and a modulus of exactly 2048 bits. No login. Port 8081, an HTTP alternative port: web servers and proxies there wait for a request and answer in HTTP. Matched: SSH-Honeypot (Birdo) 5ad8694 with paramiko 5.1.0, 4.0.0, 3.5.1 and 2.12.0 on Python 3.11 (2026-11).'
+  - name: ssh-honeypot-birdo-paramiko-rsa2048-port-5353
+    id: 1217
+    port: 5353
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ''
+        output_match_type: regex
+        output: '^SSH-2\.0-paramiko_[0-9][0-9.]*$'
+        invert_match: false
+      - input_type: hex
+        input: '5353482d322e302d4f70656e5353485f392e3270310d0a'
+        output_match_type: regex
+        output: '\x00\x00\x00(?:\x19rsa-sha2-512,rsa-sha2-256|\x21rsa-sha2-512,rsa-sha2-256,ssh-rsa|\x07ssh-rsa)\x00\x00\x00'
+        invert_match: false
+      - input_type: hex
+        input: '000000a40914000102030405060708090a0b0c0d0e0f00000012656364682d736861322d6e69737470323536000000147273612d736861322d3235362c7373682d7273610000000a6165733132382d6374720000000a6165733132382d6374720000000d686d61632d736861322d3235360000000d686d61632d736861322d323536000000046e6f6e65000000046e6f6e65000000000000000000000000000000000000000000000000004c051e0000004104f727019145268d2b0742a41711b0ce23d5cde0f19a0ba59acf1a486a2766f9ddd0ec21bf75dab30b23008ab413193bc92e3acf90bf2c21a20a57dd46e60f95cc0000000000'
+        output_match_type: regex
+        output: '(?s)\x00\x00\x00\x07ssh-rsa\x00\x00\x00\x03\x01\x00\x01\x00\x00\x01\x01\x00'
+        invert_match: false
+    confidence: High
+    comment: 'SSH-Honeypot (Birdo, 2024) is a short paramiko server that listens on eighteen ports at once, most of them ports that belong to other protocols, and generates a new 2048-bit RSA host key in memory at every start (paramiko.RSAKey.generate(2048)); it has no banner setting, so it announces SSH-2.0-paramiko_<version>. The probe reads the identification, sends a client identification and checks that the server''s KEXINIT offers RSA host key algorithms only, then sends a KEXINIT limited to ecdh-sha2-nistp256 with a fixed ECDH public value and checks the host key in KEX_ECDH_REPLY: ssh-rsa, e=65537 and a modulus of exactly 2048 bits. No login. Port 5353 over TCP, the multicast DNS port: mDNS responders answer DNS messages and never send an SSH identification. Matched: SSH-Honeypot (Birdo) 5ad8694 with paramiko 5.1.0, 4.0.0, 3.5.1 and 2.12.0 on Python 3.11 (2026-11).'
+  - name: ssh-honeypot-birdo-login-attempt-recorded-port-2222
+    id: 1218
+    port: 2222
+    proto: tcp
+    steps:
+      - input_type: string
+        input: 'id'
+        output_match_type: regex
+        output: '^Login attempt recorded\. Thank you\.$'
+        invert_match: false
+    confidence: High
+    comment: 'Authenticated form (honeydet -u <user> -pw <random password>): SSH-Honeypot (Birdo) accepts any user name and password, opens the session channel, writes ''Login attempt recorded. Thank you.'' and closes it without running the command (the exec request fails). A genuine server rejects a random password. Only runs when credentials are supplied; without them the step is a raw TCP read and does not match. Port 2222, the first port in its list. Matched: SSH-Honeypot (Birdo) 5ad8694 with paramiko 5.1.0, 4.0.0, 3.5.1 and 2.12.0 on Python 3.11 (2026-11).'
+  - name: ssh-honeypot-birdo-login-attempt-recorded-port-22
+    id: 1219
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: string
+        input: 'id'
+        output_match_type: regex
+        output: '^Login attempt recorded\. Thank you\.$'
+        invert_match: false
+    confidence: High
+    comment: 'Authenticated form (honeydet -u <user> -pw <random password>): SSH-Honeypot (Birdo) accepts any user name and password, opens the session channel, writes ''Login attempt recorded. Thank you.'' and closes it without running the command (the exec request fails). A genuine server rejects a random password. Only runs when credentials are supplied; without them the step is a raw TCP read and does not match. Port 22, for operators who add it to the port list or redirect it to the honeypot. Matched: SSH-Honeypot (Birdo) 5ad8694 with paramiko 5.1.0, 4.0.0, 3.5.1 and 2.12.0 on Python 3.11 (2026-11).'
