@@ -11325,3 +11325,87 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: "SNMPv2c (community public): sysDescr 'Siemens, SIMATIC, S7-200' together with sysName 'CP 443-1 EX40', the default template's values. A CP 443-1 is an S7-400 Ethernet module and an S7-200 has no SNMP agent, so the pair does not describe one device. Template values. Matched: Conpot 40cee33 and v1.0.0 (2026-11)."
+  - name: gaspot-i20100-lf-envelope-numeric-date
+    id: 1300
+    port: 10001
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "014932303130300a"
+        output_match_type: regex
+        output: '^\x01\nI20100\n[0-9]{2}/[0-9]{2}/[0-9]{4} [0-9]{2}:[0-9]{2}\n(?s:.*)IN-TANK INVENTORY\n'
+        invert_match: false
+    confidence: High
+    comment: "In-tank inventory (I20100) comes back in an SOH envelope whose lines end in a bare line feed, with a numeric MM/DD/YYYY HH:MM (24-hour) header date. Veeder-Root display-format lines end in CR LF plus six nulls and the date reads like 'JAN 22, 1996    3:06 PM' (Serial Interface Manual 576013-635). Conpot and GasPot v1 send no SOH. Matched: GasPot 2.2.0 ee33885 (2026-11)."
+  - name: gaspot-computer-format-refused
+    id: 1301
+    port: 10001
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "016932303130300a"
+        output_match_type: regex
+        output: '^\x019999FF1B\x03$'
+        invert_match: false
+    confidence: High
+    comment: "The computer-format inventory request (lower-case i20100), which every TLS-300/350 console answers with packed data ending in && and a checksum, is refused with <SOH>9999FF1B<ETX> (unrecognised function code). Conpot and GasPot v1 answer 9999FF1B without the envelope. Matched: GasPot 2.2.0 ee33885 (2026-11)."
+  - name: gaspot-single-tank-inventory-refused
+    id: 1302
+    port: 10001
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "014932303130310a"
+        output_match_type: regex
+        output: '^\x019999FF1B\x03$'
+        invert_match: false
+    confidence: High
+    comment: "I20101, the in-tank inventory for tank 1 (function code I201TT, TT 00 = all tanks, 01-16 = one tank), is refused with <SOH>9999FF1B<ETX>; GasPot only knows the all-tanks form I20100. A genuine console returns the tank's report. Matched: GasPot 2.2.0 ee33885 (2026-11)."
+  - name: gaspot-default-serial-and-software-version
+    id: 1303
+    port: 10001
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "014931303130300a"
+        output_match_type: regex
+        output: '^\x01\nI10100\n(?s:.*)SERIAL# : 0000112233\n\s*SOFTWARE VER : V364\.200\n'
+        invert_match: false
+    confidence: High
+    comment: "The system status report (I10100) carries the built-in serial number 0000112233 and software version V364.200, which config.ini cannot change, so every GasPot reports the same console identity. Matched: GasPot 2.2.0 ee33885 (2026-11)."
+  - name: gaspot-fixed-battery-alarm-history
+    id: 1304
+    port: 10001
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "014931313130300a"
+        output_match_type: regex
+        output: '^\x01\nI11100\n(?s:.*)PRIORITY ALARM HISTORY\n(?s:.*)\n\s+SYSTEM\s+BATTERY IS OFF\s+CLEAR\s+[0-9]{1,2}-[0-9]{2}-[0-9]{2}\s+[0-9]{1,2}:[0-9]{2}[AP]M\n\s+SYSTEM\s+BATTERY IS OFF\s+ALARM\s'
+        invert_match: false
+    confidence: High
+    comment: "The priority alarm history (I11100) always holds the same two events, a BATTERY IS OFF alarm six hours ago that cleared fifteen minutes later, relative to the current time. Matched: GasPot 2.2.0 ee33885 (2026-11)."
+  - name: gaspot-atg-error-for-non-atg-input
+    id: 1305
+    port: 10001
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.0\r\n\r"
+        output_match_type: regex
+        output: '^\x019999FF1B\x03$'
+        invert_match: false
+    confidence: Medium
+    comment: "Any input without the SOH framing, here an HTTP request, is answered with the ATG error <SOH>9999FF1B<ETX>. The manual defines 9999FF1B only for SOH-framed commands with an unknown function code; real TCP interface modules have not been compared. Conpot and GasPot v1 close the connection. Matched: GasPot 2.2.0 ee33885 (2026-11)."
+  - name: gaspot-v1-i20100-indented-station
+    id: 1306
+    port: 10001
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "014932303130300a"
+        output_match_type: regex
+        output: '^I20100\n[0-9]{2}/[0-9]{2}/[0-9]{4} [0-9]{2}:[0-9]{2}\n\n    \S[^\n]*\n\n\n\nIN-TANK INVENTORY\n'
+        invert_match: false
+    confidence: High
+    comment: "Older GasPot (v1): I20100 returns the report without SOH or ETX, with bare line feeds, a numeric MM/DD/YYYY HH:MM date and the station name indented by four spaces; Conpot's guardian_ast template, derived from it, does not indent the name. Genuine consoles use the SOH/ETX envelope and CR LF. Matched: GasPot v1 38defc4 (2026-11); not GasPot 2.2.0."
