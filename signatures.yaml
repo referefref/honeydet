@@ -5901,7 +5901,7 @@ signatures:
         output: '(?s)rsa-sha2-256,rsa-sha2-512,ssh-rsa.{4}aes128-gcm@openssh\.com,aes256-gcm@openssh\.com,chacha20-poly1305@openssh\.com,aes128-ctr,aes192-ctr,aes256-ctr.{4}aes128-gcm@openssh\.com'
         invert_match: false
     confidence: High
-    comment: "A server that announces itself as OpenSSH but whose KEXINIT is that of Go's golang.org/x/crypto/ssh (via gliderlabs/ssh): a single RSA host key offered as rsa-sha2-256,rsa-sha2-512,ssh-rsa and Go's cipher order beginning aes128-gcm@openssh.com,aes256-gcm@openssh.com,chacha20-poly1305@openssh.com. OpenSSH puts chacha20-poly1305 first, offers ed25519 and ECDSA host keys and zlib@openssh.com. Holds whatever serverVersion is set to, as long as it claims OpenSSH. Matched: Beelzebub v3.10.0 (2026-11). Also matches ssh-auth-logger f53dddc (2026-11)."
+    comment: "A server that announces itself as OpenSSH but whose KEXINIT is that of Go's golang.org/x/crypto/ssh (via gliderlabs/ssh): a single RSA host key offered as rsa-sha2-256,rsa-sha2-512,ssh-rsa and Go's cipher order beginning aes128-gcm@openssh.com,aes256-gcm@openssh.com,chacha20-poly1305@openssh.com. OpenSSH puts chacha20-poly1305 first, offers ed25519 and ECDSA host keys and zlib@openssh.com. Holds whatever serverVersion is set to, as long as it claims OpenSSH. Matched: Beelzebub v3.10.0 (2026-11). Also matches ssh-auth-logger f53dddc (2026-11). Also matches sshForShits 4a2bef3 built with x/crypto v0.58.0 (2026-11)."
   - name: beelzebub-telnet-login-without-negotiation
     id: 752
     port: 23
@@ -6476,7 +6476,7 @@ signatures:
         output: '(?s)curve25519-sha256@libssh\.org,ecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521,diffie-hellman-group14-sha1\x00\x00\x00\x07ssh-rsa\x00\x00\x00.aes128-gcm@openssh\.com,chacha20-poly1305@openssh\.com,aes128-ctr,aes192-ctr,aes256-ctr\x00'
         invert_match: false
     confidence: High
-    comment: "Banner claims OpenSSH, but the server KEXINIT is that of the Go golang.org/x/crypto/ssh server of early 2020 (five key exchanges ending in diffie-hellman-group14-sha1, a single ssh-rsa host key, AES-GCM/ChaCha20/AES-CTR ciphers). OpenSSH always offers its own, longer lists (and ssh-ed25519 or ECDSA host keys). Matched: honeytrap 05965fc (2026-11)."
+    comment: "Banner claims OpenSSH, but the server KEXINIT is that of the Go golang.org/x/crypto/ssh server of early 2020 (five key exchanges ending in diffie-hellman-group14-sha1, a single ssh-rsa host key, AES-GCM/ChaCha20/AES-CTR ciphers). OpenSSH always offers its own, longer lists (and ssh-ed25519 or ECDSA host keys). Matched: honeytrap 05965fc (2026-11). Also matches sshForShits 4a2bef3 built with its April 2020 x/crypto (2026-11)."
   - name: honeytrap-ssh-exec-ls-not-found
     id: 792
     port: 22
@@ -8226,7 +8226,7 @@ signatures:
         output: '(?s)rsa-sha2-256,rsa-sha2-512,ssh-rsa.{4}aes128-gcm@openssh\.com,aes256-gcm@openssh\.com,chacha20-poly1305@openssh\.com,aes128-ctr,aes192-ctr,aes256-ctr.{4}aes128-gcm@openssh\.com'
         invert_match: false
     confidence: High
-    comment: "Port 2222 form of signature 751 for Beelzebub's LLM SSH example (ssh-2222), which listens there: the identification string claims OpenSSH but the key exchange is Go's golang.org/x/crypto/ssh (a single RSA host key offered as rsa-sha2-256,rsa-sha2-512,ssh-rsa, AES-GCM before ChaCha20-Poly1305). Protocol behaviour, independent of the model; no model call is made before login. Matched: Beelzebub v3.10.0 with claude-haiku-5-5 via an OpenAI-compatible endpoint (2026-11). Also matches ssh-auth-logger f53dddc (2026-11)."
+    comment: "Port 2222 form of signature 751 for Beelzebub's LLM SSH example (ssh-2222), which listens there: the identification string claims OpenSSH but the key exchange is Go's golang.org/x/crypto/ssh (a single RSA host key offered as rsa-sha2-256,rsa-sha2-512,ssh-rsa, AES-GCM before ChaCha20-Poly1305). Protocol behaviour, independent of the model; no model call is made before login. Matched: Beelzebub v3.10.0 with claude-haiku-5-5 via an OpenAI-compatible endpoint (2026-11). Also matches ssh-auth-logger f53dddc (2026-11). Also matches sshForShits 4a2bef3 built with x/crypto v0.58.0 (2026-11)."
   - name: pyrdp-mcs-maxpdusize-short-integer
     id: 940
     port: 3389
@@ -10364,3 +10364,37 @@ signatures:
         invert_match: false
     confidence: High
     comment: 'Authenticated form (honeydet -u <user> -pw <random password>): SSH-Honeypot (Birdo) accepts any user name and password, opens the session channel, writes ''Login attempt recorded. Thank you.'' and closes it without running the command (the exec request fails). A genuine server rejects a random password. Only runs when credentials are supplied; without them the step is a raw TCP read and does not match. Port 22, for operators who add it to the port list or redirect it to the honeypot. Matched: SSH-Honeypot (Birdo) 5ad8694 with paramiko 5.1.0, 4.0.0, 3.5.1 and 2.12.0 on Python 3.11 (2026-11).'
+  - name: sshforshits-openssh60-banner-go-kexinit
+    id: 1220
+    port: 22
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^SSH-2\.0-OpenSSH_6\.0p1 Debian-4\+deb7u2(?:\r?\n|$)'
+      invert_match: false
+    - input_type: string
+      input: "SSH-2.0-OpenSSH_9.2p1 Debian-2+deb12u3\r\n"
+      output_match_type: regex
+      output: '(?s)\x00\x00\x00.aes128-gcm@openssh\.com,(?:aes256-gcm@openssh\.com,)?chacha20-poly1305@openssh\.com,aes128-ctr,aes192-ctr,aes256-ctr\x00'
+      invert_match: false
+    confidence: High
+    comment: 'sshForShits presents the identification ''SSH-2.0-OpenSSH_6.0p1 Debian-4+deb7u2'' by default (flag -v), but the server behind it is golang.org/x/crypto/ssh, whose KEXINIT offers AES-GCM first, then ChaCha20-Poly1305, then AES-CTR. Genuine OpenSSH 6.0p1 (Debian 7, tested: 1:6.0p1-4+deb7u7) offers neither AES-GCM (added in 6.2) nor ChaCha20-Poly1305 (6.5), and starts its list with aes128-ctr; Cowrie with the same identification string keeps the Twisted cipher list (aes128-ctr first). Steps: read the identification; send a client identification and read the server KEXINIT. The -v option changes the identification, which defeats this signature. Matched: sshForShits 4a2bef3 (2020-04-08) built with Go 1.27.3 and golang.org/x/crypto v0.58.0 (go install and the companion build), and with the x/crypto of its last commit (056763e, 2020-04-06) (2026-11).'
+  - name: sshforshits-openssh60-banner-go-kexinit-alt-port
+    id: 1221
+    port: 2222
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^SSH-2\.0-OpenSSH_6\.0p1 Debian-4\+deb7u2(?:\r?\n|$)'
+      invert_match: false
+    - input_type: string
+      input: "SSH-2.0-OpenSSH_9.2p1 Debian-2+deb12u3\r\n"
+      output_match_type: regex
+      output: '(?s)\x00\x00\x00.aes128-gcm@openssh\.com,(?:aes256-gcm@openssh\.com,)?chacha20-poly1305@openssh\.com,aes128-ctr,aes192-ctr,aes256-ctr\x00'
+      invert_match: false
+    confidence: High
+    comment: 'Port 2222 form: sshForShits falls back to 2222 when -p is empty, and 2222 is the usual port for a honeypot run without root behind a port redirect. sshForShits presents the identification ''SSH-2.0-OpenSSH_6.0p1 Debian-4+deb7u2'' by default (flag -v), but the server behind it is golang.org/x/crypto/ssh, whose KEXINIT offers AES-GCM first, then ChaCha20-Poly1305, then AES-CTR. Genuine OpenSSH 6.0p1 (Debian 7, tested: 1:6.0p1-4+deb7u7) offers neither AES-GCM (added in 6.2) nor ChaCha20-Poly1305 (6.5), and starts its list with aes128-ctr; Cowrie with the same identification string keeps the Twisted cipher list (aes128-ctr first). Steps: read the identification; send a client identification and read the server KEXINIT. The -v option changes the identification, which defeats this signature. Matched: sshForShits 4a2bef3 (2020-04-08) built with Go 1.27.3 and golang.org/x/crypto v0.58.0 (go install and the companion build), and with the x/crypto of its last commit (056763e, 2020-04-06) (2026-11).'
