@@ -10602,3 +10602,100 @@ signatures:
       invert_match: false
     confidence: Medium
     comment: 'sshhipot master branch (version 1, the code the book''s link opens on) announces ''SSH-2.0-OpenSSH_7.2'' by default (-v flag) while the key exchange is golang.org/x/crypto/ssh with its default lists: RSA host key algorithms only ((rsa-sha2-256,rsa-sha2-512,)ssh-rsa) and the cipher list aes128-gcm@openssh.com,(aes256-gcm@openssh.com,)chacha20-poly1305@openssh.com,aes128-ctr,aes192-ctr,aes256-ctr. Genuine OpenSSH 7.2 lists chacha20-poly1305 first and also offers ECDSA and Ed25519 host keys. Steps: the version string; a client identification and KEXINIT, answered by the Go lists. The banner is a flag, hence Medium. Matched: sshhipot master commit 089cad6 (2018-05-13) built with golang.org/x/crypto v0.58.0 and with the x/crypto of its era (034e532, 2018-05-14), Go 1.27.3 (2026-11).'
+  - name: sshsyrup-openssh68-go2018-kex
+    id: 1250
+    port: 22
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^SSH-2\.0-OpenSSH_6\.8p1$'
+      invert_match: false
+    - input_type: hex
+      input: '5353482d322e302d4f70656e5353485f392e3270312044656269616e2d322b646562313275330d0a000000a40814111111111111111111111111111111110000001b6469666669652d68656c6c6d616e2d67726f757031342d73686131000000147273612d736861322d3235362c7373682d7273610000000a6165733132382d6374720000000a6165733132382d63747200000009686d61632d7368613100000009686d61632d73686131000000046e6f6e65000000046e6f6e65000000000000000000000000000000000000000000'
+      output_match_type: regex
+      output: '(?s)\x00\x00\x00.curve25519-sha256@libssh\.org,ecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521,diffie-hellman-group14-sha1,diffie-hellman-group1-sha1\x00\x00\x00\x07ssh-rsa\x00\x00\x00.aes128-gcm@openssh\.com,chacha20-poly1305@openssh\.com,aes128-ctr,aes192-ctr,aes256-ctr\x00'
+      invert_match: false
+    confidence: High
+    comment: 'sshsyrup with its default identification string ''SSH-2.0-OpenSSH_6.8p1'' (server.ident) and the key exchange of the golang.org/x/crypto/ssh revision it pins (January 2018): key exchange curve25519-sha256@libssh.org, ecdh-sha2-nistp256/384/521, diffie-hellman-group14-sha1, diffie-hellman-group1-sha1, a single host key type ssh-rsa and ciphers starting aes128-gcm@openssh.com, chacha20-poly1305@openssh.com. OpenSSH 6.8 offers diffie-hellman-group-exchange-sha256, lists chacha20-poly1305 first and offers the ECDSA and Ed25519 host keys a stock install generates; current OpenSSH no longer offers ssh-rsa or group1-sha1 at all. Steps: read the identification string (nothing sent); send a client identification and KEXINIT (no authentication) and match the server''s name-lists. Matched: sshsyrup commit 4f50f01 (2019-02-25, HEAD; golang.org/x/crypto 2018-01-23 3d37316, built with Go 1.27.3) and the v0.6.1 release binary (2026-11).'
+  - name: sshsyrup-openssh68-go2018-kex-2222
+    id: 1251
+    port: 2222
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^SSH-2\.0-OpenSSH_6\.8p1$'
+      invert_match: false
+    - input_type: hex
+      input: '5353482d322e302d4f70656e5353485f392e3270312044656269616e2d322b646562313275330d0a000000a40814111111111111111111111111111111110000001b6469666669652d68656c6c6d616e2d67726f757031342d73686131000000147273612d736861322d3235362c7373682d7273610000000a6165733132382d6374720000000a6165733132382d63747200000009686d61632d7368613100000009686d61632d73686131000000046e6f6e65000000046e6f6e65000000000000000000000000000000000000000000'
+      output_match_type: regex
+      output: '(?s)\x00\x00\x00.curve25519-sha256@libssh\.org,ecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521,diffie-hellman-group14-sha1,diffie-hellman-group1-sha1\x00\x00\x00\x07ssh-rsa\x00\x00\x00.aes128-gcm@openssh\.com,chacha20-poly1305@openssh\.com,aes128-ctr,aes192-ctr,aes256-ctr\x00'
+      invert_match: false
+    confidence: High
+    comment: 'Port 2222 form: sshsyrup''s built-in default port, used when config.yaml does not set server.port (the sample config.yaml and the Docker image use 22). sshsyrup with its default identification string ''SSH-2.0-OpenSSH_6.8p1'' (server.ident) and the key exchange of the golang.org/x/crypto/ssh revision it pins (January 2018): key exchange curve25519-sha256@libssh.org, ecdh-sha2-nistp256/384/521, diffie-hellman-group14-sha1, diffie-hellman-group1-sha1, a single host key type ssh-rsa and ciphers starting aes128-gcm@openssh.com, chacha20-poly1305@openssh.com. OpenSSH 6.8 offers diffie-hellman-group-exchange-sha256, lists chacha20-poly1305 first and offers the ECDSA and Ed25519 host keys a stock install generates; current OpenSSH no longer offers ssh-rsa or group1-sha1 at all. Steps: read the identification string (nothing sent); send a client identification and KEXINIT (no authentication) and match the server''s name-lists. Matched: sshsyrup commit 4f50f01 (2019-02-25, HEAD; golang.org/x/crypto 2018-01-23 3d37316, built with Go 1.27.3) and the v0.6.1 release binary (2026-11).'
+  - name: sshsyrup-openssh-claim-go2018-kex-rsa-only
+    id: 1252
+    port: 22
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^SSH-2\.0-(?:OpenSSH|dropbear)'
+      invert_match: false
+    - input_type: hex
+      input: '5353482d322e302d4f70656e5353485f392e3270312044656269616e2d322b646562313275330d0a000000a40814111111111111111111111111111111110000001b6469666669652d68656c6c6d616e2d67726f757031342d73686131000000147273612d736861322d3235362c7373682d7273610000000a6165733132382d6374720000000a6165733132382d63747200000009686d61632d7368613100000009686d61632d73686131000000046e6f6e65000000046e6f6e65000000000000000000000000000000000000000000'
+      output_match_type: regex
+      output: '(?s)\x00\x00\x00.curve25519-sha256@libssh\.org,ecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521,diffie-hellman-group14-sha1,diffie-hellman-group1-sha1\x00\x00\x00\x07ssh-rsa\x00\x00\x00.aes128-gcm@openssh\.com,chacha20-poly1305@openssh\.com,aes128-ctr,aes192-ctr,aes256-ctr\x00'
+      invert_match: false
+    confidence: Medium
+    comment: 'sshsyrup with server.ident changed to another OpenSSH or Dropbear version: the identification string changes but the key exchange is still that of the January 2018 golang.org/x/crypto/ssh it pins, with ssh-rsa as its only host key type (group1-sha1 last, aes128-gcm before chacha20-poly1305). No OpenSSH or Dropbear release offers this combination. Any other Go SSH server built with x/crypto of 2017 to 2018 that claims to be OpenSSH or Dropbear and loads one RSA key would also match, hence Medium. Steps: an OpenSSH or Dropbear identification string; a client identification and KEXINIT answered by those name-lists. Matched: sshsyrup commit 4f50f01 (2019-02-25, HEAD; golang.org/x/crypto 2018-01-23 3d37316, built with Go 1.27.3) and the v0.6.1 release binary (2026-11).'
+  - name: sshsyrup-auth-uname-x86-64-not-found
+    id: 1253
+    port: 22
+    proto: tcp
+    steps:
+    - input_type: string
+      input: 'uname -a'
+      output_match_type: regex
+      output: '^Linux \S+ 4\.4\.0-43-generic #129-Ubuntu SMP Thu Mar 17 20:17:14 UTC 2017 x86-64 x86-64 x86-64 GNU/Linux\r?\n?$'
+      invert_match: false
+    - input_type: string
+      input: 'hd{{rand}} -x'
+      output_match_type: regex
+      output: '^hd{{rand}} -x: command not found\r?\n?$'
+      invert_match: false
+    confidence: High
+    comment: 'Authenticated signature (run with -username root and a random -password; sshsyrup''s sample passwd file lists root and the usual system accounts with ''*'' as the password, so any password is accepted, while a genuine server rejects it). uname is built into sshsyrup with hard-coded values: kernel 4.4.0-43-generic ''#129-Ubuntu SMP Thu Mar 17 20:17:14 UTC 2017'' and ''x86-64'' (with a hyphen) as machine, processor and platform, where Linux prints x86_64; only the host name (server.hostname, default spr1139) is configurable. An exec request for a program it does not know returns the whole command line followed by '': command not found'' with no shell prefix (bash prints ''bash: line 1: NAME: command not found''). Steps: ''uname -a''; ''hd<random> -x''. Matched: sshsyrup commit 4f50f01 (2019-02-25, HEAD; golang.org/x/crypto 2018-01-23 3d37316, built with Go 1.27.3) and the v0.6.1 release binary (2026-11).'
+  - name: sshsyrup-auth-uname-x86-64-not-found-2222
+    id: 1254
+    port: 2222
+    proto: tcp
+    steps:
+    - input_type: string
+      input: 'uname -a'
+      output_match_type: regex
+      output: '^Linux \S+ 4\.4\.0-43-generic #129-Ubuntu SMP Thu Mar 17 20:17:14 UTC 2017 x86-64 x86-64 x86-64 GNU/Linux\r?\n?$'
+      invert_match: false
+    - input_type: string
+      input: 'hd{{rand}} -x'
+      output_match_type: regex
+      output: '^hd{{rand}} -x: command not found\r?\n?$'
+      invert_match: false
+    confidence: High
+    comment: 'Port 2222 form: sshsyrup''s built-in default port, used when config.yaml does not set server.port (the sample config.yaml and the Docker image use 22). Authenticated signature (run with -username root and a random -password; sshsyrup''s sample passwd file lists root and the usual system accounts with ''*'' as the password, so any password is accepted, while a genuine server rejects it). uname is built into sshsyrup with hard-coded values: kernel 4.4.0-43-generic ''#129-Ubuntu SMP Thu Mar 17 20:17:14 UTC 2017'' and ''x86-64'' (with a hyphen) as machine, processor and platform, where Linux prints x86_64; only the host name (server.hostname, default spr1139) is configurable. An exec request for a program it does not know returns the whole command line followed by '': command not found'' with no shell prefix (bash prints ''bash: line 1: NAME: command not found''). Steps: ''uname -a''; ''hd<random> -x''. Matched: sshsyrup commit 4f50f01 (2019-02-25, HEAD; golang.org/x/crypto 2018-01-23 3d37316, built with Go 1.27.3) and the v0.6.1 release binary (2026-11).'
+  - name: sshsyrup-auth-coreutils-canned-error
+    id: 1255
+    port: 22
+    proto: tcp
+    steps:
+    - input_type: string
+      input: 'echo hd{{rand}}'
+      output_match_type: regex
+      output: '^(?:Segmentation fault|Permission denied)\r?\n?$'
+      invert_match: false
+    confidence: Medium
+    comment: 'Authenticated signature (-username root and a random -password, see 1253). Programs listed in sshsyrup''s commands.txt (the GNU coreutils names, including echo, sort and head) have no implementation: they print one of two canned errors, ''Segmentation fault'' or ''Permission denied'', chosen at random. Step: ''echo hd<random>'' as a command; a genuine shell prints the token. commands.txt is configurable, hence Medium. Matched: sshsyrup commit 4f50f01 (2019-02-25, HEAD; golang.org/x/crypto 2018-01-23 3d37316, built with Go 1.27.3) and the v0.6.1 release binary (2026-11).'
