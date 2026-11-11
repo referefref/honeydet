@@ -11628,3 +11628,148 @@ signatures:
         invert_match: false
     confidence: High
     comment: "The TR-181 process table (Device.DeviceInfo.ProcessStatus) is read from the honeypot host's own /proc and lists the real Linux processes, including catawampus's cwmpd (and systemd, cron and the like), instead of a router's processes. Matched: HoneyThing fe47ba9 (Python 2.7) and honeything-nx 7ced7d0 (2026-11)."
+  - name: riotpot-ftp-loopback-greeting
+    id: 1340
+    port: 21
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^220 Connected to (::1|127\.0\.0\.1)$'
+        invert_match: false
+    confidence: High
+    comment: "RIoTPot's FTP service sits behind its own TCP proxy and greets with '220 Connected to' plus the local address of the proxy-to-service connection, which is the loopback address (::1), never the address the client connected to. Matched: RIoTPot 6d13c90 (2026-11)."
+  - name: riotpot-telnet-banner-password-prompt
+    id: 1341
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '(?s)^This device is for authorized personnel only\.\nIf you have not been provided with permission to\naccess this device - disconnect at once\..*\nUser Access Verification:$'
+        invert_match: false
+      - input_type: string
+        input: "admin"
+        output_match_type: regex
+        output: '^Password:$'
+        invert_match: false
+    confidence: High
+    comment: "RIoTPot Telnet: default banner.txt (LF line endings, no option negotiation) ending 'User Access Verification: ' with no Username prompt, then 'Password: ' for any first line. Matched: RIoTPot 6d13c90 (2026-11)."
+  - name: riotpot-http-scada-login-any-path
+    id: 1342
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "FOO /hd-{{rand}} HTTP/1.0\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.0 200 OK\r\n.*<title>SCADA Login</title>.*bootstrap@5\.0\.0-beta3'
+        invert_match: false
+    confidence: High
+    comment: "RIoTPot HTTP: an unknown method on a random path still returns 200 OK with the fixed 'SCADA Login' page (Bootstrap 5.0.0-beta3 from a CDN, no Server header). Matched: RIoTPot 6d13c90 (2026-11)."
+  - name: riotpot-mqtt-malformed-suback
+    id: 1343
+    port: 1883
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "100f00044d5154540402003c0003616263820812340003612f6201"
+        output_match_type: hex
+        output: "02000092040000"
+        invert_match: false
+    confidence: High
+    comment: "RIoTPot MQTT: CONNECT (MQTT 3.1.1) and SUBSCRIBE (packet id 0x1234, topic a/b, QoS 1) get CONNACK 0 and then a malformed SUBACK: fixed-header byte 0x92 (the SUBSCRIBE flags copied, reserved bits set), packet id 0000 instead of 1234 and no return code. Brokers send 90 03 12 34 01. Matched: RIoTPot 6d13c90 (2026-11)."
+  - name: riotpot-api-proxies-unauthenticated
+    id: 1344
+    port: 3000
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /api/proxies/ HTTP/1.0\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.0 200 OK\r\n.*"network":"(tcp|udp)","status":"(running|stopped)","service":\{.*"interaction":"(low|high)"'
+        invert_match: false
+    confidence: High
+    comment: "RIoTPot management REST API (server mode, port 3000) lists its proxies and services as JSON without authentication. Matched: RIoTPot 6d13c90 server mode (2026-11)."
+  - name: riotpot-ui-title
+    id: 1345
+    port: 3000
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.0\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.0 200 OK\r\n.*<meta name="riotpot UI" content="front-end for riotpot"/>.*<title>RIoTPot</title>'
+        invert_match: false
+    confidence: High
+    comment: "RIoTPot web UI (server --with-ui) served on port 3000. Matched: RIoTPot 6d13c90 server mode with UI (2026-11)."
+  - name: riotpot-coap-unrequested-observe
+    id: 1346
+    port: 5683
+    proto: udp
+    steps:
+      - input_type: hex
+        input: "42011001aabbbb2e77656c6c2d6b6e6f776e04636f7265"
+        output_match_type: hex
+        output: "aabb610260ff"
+        invert_match: false
+    confidence: High
+    comment: "RIoTPot CoAP treats every GET as an Observe registration: a plain confirmable GET /.well-known/core (no Observe option) gets an empty ACK and then a separate 2.05 notification carrying Observe 2 and a text/plain number instead of a CoRE link-format resource list. Matched: RIoTPot 6d13c90 with the CoAP proxy enabled (2026-11)."
+  - name: riotpot-ssh-go-rsa-only-no-strict-kex
+    id: 1347
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^SSH-2\.0-Go$'
+        invert_match: false
+      - input_type: string
+        input: "SSH-2.0-OpenSSH_9.2p1\r"
+        output_match_type: hex
+        output: "6469666669652d68656c6c6d616e2d67726f757031342d73686131000000217273612d736861322d3235362c7273612d736861322d3531322c7373682d7273610000006c"
+        invert_match: false
+    confidence: Medium
+    comment: "RIoTPot SSH (golang.org/x/crypto v0.14): 'SSH-2.0-Go' banner, a key-exchange list ending diffie-hellman-group14-sha1 without the kex-strict-s-v00@openssh.com marker, and a single RSA host key (rsa-sha2-256,rsa-sha2-512,ssh-rsa; 4096-bit, new at every start). Other Go SSH servers built on x/crypto before v0.17 with one RSA key look the same. Matched: RIoTPot 6d13c90 (2026-11)."
+  - name: riotpot-internal-telnet-port
+    id: 1348
+    port: 20023
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '(?s)^This device is for authorized personnel only\..*\nUser Access Verification:$'
+        invert_match: false
+    confidence: Medium
+    comment: "RIoTPot's internal plugin services listen on all interfaces at the public port plus 20000 (20007, 20021, 20022, 20023, 20080, 20443 local only, 20502, 21883, 25683 UDP); the Telnet plugin on 20023 shows the RIoTPot banner. Visible unless the internal ports are filtered. Matched: RIoTPot 6d13c90 (2026-11)."
+  - name: riotpot-telnet-shell-command-not-found
+    id: 1349
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: 'User Access Verification:$'
+        invert_match: false
+      - input_type: string
+        input: "admin"
+        output_match_type: regex
+        output: '^Password:$'
+        invert_match: false
+      - input_type: string
+        input: "hd{{rand}}"
+        output_match_type: regex
+        output: '^root@ubuntu:~#$'
+        invert_match: false
+      - input_type: string
+        input: "uname -a"
+        output_match_type: regex
+        output: '^command not found: uname -a\nroot@ubuntu:~#$'
+        invert_match: false
+    confidence: High
+    comment: "RIoTPot Telnet accepts any password and opens its shared fake shell as root@ubuntu, whose only commands are enable, exit and ./ (everything else, even uname, gives 'command not found: <whole line>', a zsh-style message with an Ubuntu bash prompt). Matched: RIoTPot 6d13c90 (2026-11)."
