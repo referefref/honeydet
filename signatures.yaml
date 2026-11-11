@@ -12153,3 +12153,180 @@ signatures:
       invert_match: false
     confidence: Medium
     comment: 'Greeting ''''220 mail.example.com ESMTP Service Ready'''' with the default server name (MAILONEY_SERVER_NAME). Medium: the name is configurable; the rest of the line has no product name, unlike Postfix, Exim, OpenSMTPD, aiosmtpd and MailHog, and Mailpit writes ''''Service ready'''' in lower case. Matched: Mailoney 2.2.0 (commit b8310a7) (2026-11).'
+  - name: shiva-greeting-truncated-utc-offset
+    id: 1400
+    port: 25
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^220 \S+ .*[A-Z][a-z]{2}, \d{2} [A-Z][a-z]{2} \d{4} \d{2}:\d{2}:\d{2} -0\s*$'
+      invert_match: false
+    confidence: High
+    comment: 'The greeting ends in an Exim-style date whose time zone is the truncated "-0" (SHIVA formats the current UTC time with a literal " -0" after the configurable ident). Exim and Sendmail write a full offset such as +0000 or GMT; Postfix, OpenSMTPD, aiosmtpd, maddy, Mailpit and MailHog put no date in the greeting. Matched: SHIVA receiver commit 6197cd3 (2026-11).'
+  - name: shiva-ehlo-auth-without-tls
+    id: 1401
+    port: 25
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^220 '
+      invert_match: false
+    - input_type: string
+      input: "EHLO probe.example\r"
+      output_match_type: regex
+      output: '^250-\S+\r\n250-SIZE 33554432\r\n250-8BITMIME\r\n250-AUTH LOGIN PLAIN\r\n250 HELP\s*$'
+      invert_match: false
+    confidence: High
+    comment: 'EHLO is answered with exactly SIZE 33554432, 8BITMIME, AUTH LOGIN PLAIN and HELP: AUTH offered on a plain-text connection with no STARTTLS and, because SHIVA builds its aiosmtpd server without the controller defaults, no SMTPUTF8. A plain aiosmtpd server (with or without AUTH) also lists SMTPUTF8; Postfix, Exim, OpenSMTPD, Sendmail, maddy, Mailpit and MailHog send other lists. Matched: SHIVA receiver commit 6197cd3 (2026-11).'
+  - name: shiva-example-credentials-accepted
+    id: 1402
+    port: 25
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^220 '
+      invert_match: false
+    - input_type: string
+      input: "EHLO probe.example\r"
+      output_match_type: regex
+      output: '(?m)^250[- ]AUTH LOGIN PLAIN'
+      invert_match: false
+    - input_type: string
+      input: "AUTH PLAIN AHVzZXJuYW1lAHBhc3N3b3Jk\r"
+      output_match_type: regex
+      output: '^235 2\.7\.0 Authentication successful'
+      invert_match: false
+    confidence: Medium
+    comment: 'AUTH PLAIN with the example credentials from config.ini.example (username / password) succeeds without TLS. Configurable (smpt_username and smtp_password), hence Medium. Matched: SHIVA receiver commit 6197cd3 (2026-11).'
+  - name: shiva-queued-as-uuid
+    id: 1403
+    port: 25
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^220 '
+      invert_match: false
+    - input_type: string
+      input: "EHLO probe.example\r"
+      output_match_type: regex
+      output: '^250-'
+      invert_match: false
+    - input_type: string
+      input: "AUTH PLAIN AHVzZXJuYW1lAHBhc3N3b3Jk\r"
+      output_match_type: regex
+      output: '^235 '
+      invert_match: false
+    - input_type: string
+      input: "MAIL FROM:<probe@example.org>\r"
+      output_match_type: regex
+      output: '^250 OK'
+      invert_match: false
+    - input_type: string
+      input: "RCPT TO:<probe@example.net>\r"
+      output_match_type: regex
+      output: '^250 OK'
+      invert_match: false
+    - input_type: string
+      input: "DATA\r"
+      output_match_type: regex
+      output: '^354 '
+      invert_match: false
+    - input_type: string
+      input: "Subject: probe\r\n\r\nprobe\r\n.\r"
+      output_match_type: regex
+      output: '^250 Ok: queued as: [0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\s*$'
+      invert_match: false
+    confidence: Medium
+    comment: 'After login with the example credentials, a message is accepted with "250 Ok: queued as: " and a random UUID. Postfix answers "250 2.0.0 Ok: queued as" with a short hexadecimal queue id, plain aiosmtpd "250 Message accepted for delivery", and the other servers use their own texts. Needs the example credentials (Medium); leaves one probe message in the honeypot. Matched: SHIVA receiver commit 6197cd3 (2026-11).'
+  - name: shiva-null-sender-rejected-after-data
+    id: 1404
+    port: 25
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^220 '
+      invert_match: false
+    - input_type: string
+      input: "EHLO probe.example\r"
+      output_match_type: regex
+      output: '^250-'
+      invert_match: false
+    - input_type: string
+      input: "AUTH PLAIN AHVzZXJuYW1lAHBhc3N3b3Jk\r"
+      output_match_type: regex
+      output: '^235 '
+      invert_match: false
+    - input_type: string
+      input: "MAIL FROM:<>\r"
+      output_match_type: regex
+      output: '^250 OK'
+      invert_match: false
+    - input_type: string
+      input: "RCPT TO:<probe@example.net>\r"
+      output_match_type: regex
+      output: '^250 OK'
+      invert_match: false
+    - input_type: string
+      input: "DATA\r"
+      output_match_type: regex
+      output: '^354 '
+      invert_match: false
+    - input_type: string
+      input: "Subject: probe\r\n\r\nprobe\r\n.\r"
+      output_match_type: regex
+      output: '^554 Invalid sender address'
+      invert_match: false
+    confidence: Medium
+    comment: 'A message with the null reverse path (MAIL FROM:<>, used by bounces and delivery reports) is accepted at MAIL and RCPT and then refused after the message text with "554 Invalid sender address". RFC 5321 requires the null sender to be accepted; genuine servers do, or refuse it at MAIL. Needs the example credentials (Medium). Matched: SHIVA receiver commit 6197cd3 (2026-11).'
+  - name: shiva-postmaster-rejected-after-data
+    id: 1405
+    port: 25
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^220 '
+      invert_match: false
+    - input_type: string
+      input: "EHLO probe.example\r"
+      output_match_type: regex
+      output: '^250-'
+      invert_match: false
+    - input_type: string
+      input: "AUTH PLAIN AHVzZXJuYW1lAHBhc3N3b3Jk\r"
+      output_match_type: regex
+      output: '^235 '
+      invert_match: false
+    - input_type: string
+      input: "MAIL FROM:<probe@example.org>\r"
+      output_match_type: regex
+      output: '^250 OK'
+      invert_match: false
+    - input_type: string
+      input: "RCPT TO:<postmaster>\r"
+      output_match_type: regex
+      output: '^250 OK'
+      invert_match: false
+    - input_type: string
+      input: "DATA\r"
+      output_match_type: regex
+      output: '^354 '
+      invert_match: false
+    - input_type: string
+      input: "Subject: probe\r\n\r\nprobe\r\n.\r"
+      output_match_type: regex
+      output: '^554 Invalid recipient address: postmaster'
+      invert_match: false
+    confidence: Medium
+    comment: 'RCPT TO:<postmaster> (no domain), which RFC 5321 requires every server to accept, is taken at RCPT and then refused after the message text with "554 Invalid recipient address: postmaster". Genuine servers deliver it to the postmaster. Needs the example credentials (Medium). Matched: SHIVA receiver commit 6197cd3 (2026-11).'
