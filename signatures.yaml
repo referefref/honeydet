@@ -11836,3 +11836,93 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: "A six-byte connect request that claims 65535 bytes of data and carries a zero CRC-16 is accepted with the standard connect reply (02 00 00 00 01 b8): the honeypot looks only at the first byte of a datagram and replays the reply recorded from a real controller. The TriStation frame carries a length field and a CRC-16 that genuine equipment can check; how a Tricon answers this frame was not tested in the lab, hence Medium. Matched: tricotools 2f768c8 as tricotools-py3 4c91f19 + lab patch (2026-11)."
+  - name: dicompot-assoc-ac-no-implementation-class-uid
+    id: 1370
+    port: 11112
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: 0100000000cd00010000414e592d534350202020202020202020484f4e45594445542020202020202020000000000000000000000000000000000000000000000000000000000000000010000015312e322e3834302e31303030382e332e312e312e312000002e0100000030000011312e322e3834302e31303030382e312e3140000011312e322e3834302e31303030382e312e325000003a51000004000040005200001b312e322e3237362e302e373233303031302e332e302e332e362e375500000f4f464649535f44434d544b5f333637
+        output_match_type: hex
+        output: '500000085100000400400000'
+        invert_match: false
+    confidence: High
+    comment: "An A-ASSOCIATE-RQ for the Verification SOP class is accepted with an A-ASSOCIATE-AC whose user information item holds only a maximum-length sub-item of 4194304 (4 MiB) and no Implementation Class UID sub-item. DICOM PS3.7 Annex D requires every A-ASSOCIATE-AC to carry the Implementation Class UID; DCMTK (storescp, dcmqrscp), Orthanc and pynetdicom all send one with a 16 KiB maximum length. The AC is built by Dicompot's copy of the go-netdicom service provider and does not depend on configuration (AE title, port, enforcement or images). Matched: dicompot 7351dbe (2026-11)."
+  - name: dicompot-accepts-invented-abstract-syntax
+    id: 1371
+    port: 11112
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: 0100000000c300010000414e592d534350202020202020202020484f4e45594445542020202020202020000000000000000000000000000000000000000000000000000000000000000010000015312e322e3834302e31303030382e332e312e312e31200000240100000030000011312e322e332e342e352e362e372e382e3940000007312e322e332e345000003a51000004000040005200001b312e322e3237362e302e373233303031302e332e302e332e362e375500000f4f464649535f44434d544b5f333637
+        output_match_type: hex
+        output: '2100000f0100000040000007312e322e332e34500000085100000400400000'
+        invert_match: false
+    confidence: High
+    comment: "An A-ASSOCIATE-RQ proposing an invented abstract syntax (1.2.3.4.5.6.7.8.9) with an invented transfer syntax (1.2.3.4) is accepted: the presentation context comes back with result 0 (acceptance) and transfer syntax 1.2.3.4. Dicompot accepts every proposed presentation context and picks the first transfer syntax offered; DCMTK storescp, Orthanc and pynetdicom answer result 3 (abstract syntax not supported), and dcmqrscp rejects unknown called AE titles outright. The match also requires Dicompot's user information item (maximum length 4194304 only) straight after the presentation context, because Glutton's DICOM handler accepts invented syntaxes too but answers with a DCMTK-style user information item. Configuration independent. Matched: dicompot 7351dbe (2026-11)."
+  - name: dicompot-cecho-rsp-without-affected-sop-class
+    id: 1372
+    port: 11112
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: 0100000000cd00010000414e592d534350202020202020202020484f4e45594445542020202020202020000000000000000000000000000000000000000000000000000000000000000010000015312e322e3834302e31303030382e332e312e312e312000002e0100000030000011312e322e3834302e31303030382e312e3140000011312e322e3834302e31303030382e312e325000003a51000004000040005200001b312e322e3237362e302e373233303031302e332e302e332e362e375500000f4f464649535f44434d544b5f333637
+        output_match_type: hex
+        output: '500000085100000400400000'
+        invert_match: false
+      - input_type: hex
+        input: 04000000004a0000004601030000000004000000380000000000020012000000312e322e3834302e31303030382e312e3100000000010200000030000000100102000000010000000008020000000101
+        output_match_type: hex
+        output: '00000000040000002800000000000001020000003080'
+        invert_match: false
+    confidence: Medium
+    comment: "After an accepted association, a C-ECHO-RQ is answered with a C-ECHO-RSP whose command set has a group length of 40 and goes straight from (0000,0000) to the Command Field (0000,0100): the Affected SOP Class UID (0000,0002) is left out. DCMTK, Orthanc and pynetdicom echo 1.2.840.10008.1.1 in the response (group length 66). The element is optional for the response in PS3.7, so this is rated Medium. Matched: dicompot 7351dbe (2026-11)."
+  - name: dicompot-non-dicom-abort-source0-reason2
+    id: 1373
+    port: 11112
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: 474554202f20485454502f312e300d0a0d0a
+        output_match_type: hex
+        output: '07000000000400000002'
+        invert_match: false
+    confidence: Medium
+    comment: "A plain HTTP request on the DICOM port is answered at once with an A-ABORT PDU giving source 0 (service user) and reason 2. PS3.8 says the reason is not significant when the source is the service user (genuine stacks send 0: pynetdicom replies source 0 reason 0, DCMTK and Orthanc reset the connection). Rated Medium because it rests on a single abort code. Matched: dicompot 7351dbe (2026-11)."
+  - name: dicompot-enforced-aet-delayed-wrong-reject
+    id: 1374
+    port: 11112
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: 0100000000cd0001000048442d4e4f535543482d414520202020484f4e45594445542020202020202020000000000000000000000000000000000000000000000000000000000000000010000015312e322e3834302e31303030382e332e312e312e312000002e0100000030000011312e322e3834302e31303030382e312e3140000011312e322e3834302e31303030382e312e325000003a51000004000040005200001b312e322e3237362e302e373233303031302e332e302e332e362e375500000f4f464649535f44434d544b5f333637
+        output_match_type: hex
+        output: '03000000000400010202'
+        invert_match: false
+        min_response_ms: 4000
+    confidence: High
+    comment: "Only when AE title enforcement is on (-enforce yes): an association to an unknown called AE title is held for about five seconds and then rejected with result 1, source 2 (service provider, ACSE), reason 2 (protocol version not supported). A genuine SCP that checks the called AE title (DCMTK dcmqrscp, Orthanc with DicomCheckCalledAet) rejects at once with source 1, reason 7 (called AE title not recognised). With enforcement off (the default) Dicompot accepts any called AE title and this signature does not match. Needs a honeydet -timeout of 6 seconds or more (the lab used 10). Matched: dicompot 7351dbe (2026-11)."
+  - name: dicompot-assoc-ac-no-implementation-class-uid-104
+    id: 1375
+    port: 104
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: 0100000000cd00010000414e592d534350202020202020202020484f4e45594445542020202020202020000000000000000000000000000000000000000000000000000000000000000010000015312e322e3834302e31303030382e332e312e312e312000002e0100000030000011312e322e3834302e31303030382e312e3140000011312e322e3834302e31303030382e312e325000003a51000004000040005200001b312e322e3237362e302e373233303031302e332e302e332e362e375500000f4f464649535f44434d544b5f333637
+        output_match_type: hex
+        output: '500000085100000400400000'
+        invert_match: false
+    confidence: High
+    comment: "Port 104 (the well-known DICOM port, which T-Pot maps to Dicompot) version of signature 1370. An A-ASSOCIATE-RQ for the Verification SOP class is accepted with an A-ASSOCIATE-AC whose user information item holds only a maximum-length sub-item of 4194304 (4 MiB) and no Implementation Class UID sub-item. DICOM PS3.7 Annex D requires every A-ASSOCIATE-AC to carry the Implementation Class UID; DCMTK (storescp, dcmqrscp), Orthanc and pynetdicom all send one with a 16 KiB maximum length. The AC is built by Dicompot's copy of the go-netdicom service provider and does not depend on configuration (AE title, port, enforcement or images). Matched: dicompot 7351dbe (2026-11)."
+  - name: dicompot-accepts-invented-abstract-syntax-104
+    id: 1376
+    port: 104
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: 0100000000c300010000414e592d534350202020202020202020484f4e45594445542020202020202020000000000000000000000000000000000000000000000000000000000000000010000015312e322e3834302e31303030382e332e312e312e31200000240100000030000011312e322e332e342e352e362e372e382e3940000007312e322e332e345000003a51000004000040005200001b312e322e3237362e302e373233303031302e332e302e332e362e375500000f4f464649535f44434d544b5f333637
+        output_match_type: hex
+        output: '2100000f0100000040000007312e322e332e34500000085100000400400000'
+        invert_match: false
+    confidence: High
+    comment: "Port 104 version of signature 1371. An A-ASSOCIATE-RQ proposing an invented abstract syntax (1.2.3.4.5.6.7.8.9) with an invented transfer syntax (1.2.3.4) is accepted: the presentation context comes back with result 0 (acceptance) and transfer syntax 1.2.3.4. Dicompot accepts every proposed presentation context and picks the first transfer syntax offered; DCMTK storescp, Orthanc and pynetdicom answer result 3 (abstract syntax not supported), and dcmqrscp rejects unknown called AE titles outright. The match also requires Dicompot's user information item (maximum length 4194304 only) straight after the presentation context, because Glutton's DICOM handler accepts invented syntaxes too but answers with a DCMTK-style user information item. Configuration independent. Matched: dicompot 7351dbe (2026-11)."
