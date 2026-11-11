@@ -12330,3 +12330,137 @@ signatures:
       invert_match: false
     confidence: Medium
     comment: 'RCPT TO:<postmaster> (no domain), which RFC 5321 requires every server to accept, is taken at RCPT and then refused after the message text with "554 Invalid recipient address: postmaster". Genuine servers deliver it to the postmaster. Needs the example credentials (Medium). Matched: SHIVA receiver commit 6197cd3 (2026-11).'
+  - name: spamhat-help-without-reply-codes
+    id: 1410
+    port: 25
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^220 '
+      invert_match: false
+    - input_type: string
+      input: "HELP\r"
+      output_match_type: regex
+      output: '^Available Commands:\r?\nHELO/EHLO\r?\nMAIL FROM: <mail_address>'
+      invert_match: false
+    confidence: High
+    comment: 'HELP is answered with a bare list of commands ("Available Commands:", "HELO/EHLO", "MAIL FROM: <mail_address>" and so on) whose lines carry no SMTP reply code, which no SMTP client can parse. Postfix, Exim, OpenSMTPD, Sendmail, aiosmtpd, maddy, Mailpit and MailHog answer HELP with 214 (or 502/500) reply lines. Matched: SpamHAT commit 836c04f (2026-11).'
+  - name: spamhat-noop-not-recognized
+    id: 1411
+    port: 25
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^220 '
+      invert_match: false
+    - input_type: string
+      input: "NOOP\r"
+      output_match_type: regex
+      output: '^502 Error: command not recognized$'
+      invert_match: false
+    confidence: High
+    comment: 'NOOP, which RFC 5321 requires every server to implement, is refused with "502 Error: command not recognized" (Postfix wording without an enhanced status code). Postfix, Exim, OpenSMTPD, Sendmail, aiosmtpd, maddy, Mailpit and MailHog answer NOOP with 250; Mailoney refuses it with an enhanced code (502 5.5.2). Matched: SpamHAT commit 836c04f (2026-11).'
+  - name: spamhat-vrfy-echo-with-carriage-return
+    id: 1412
+    port: 25
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^220 '
+      invert_match: false
+    - input_type: string
+      input: "VRFY hd{{rand}}\r"
+      output_match_type: regex
+      output: '^250 hd{{rand}}\r OK$'
+      invert_match: false
+    confidence: High
+    comment: 'VRFY for a random, non-existent user is confirmed by echoing the argument, including the carriage return of the request, before " OK" ("250 <user>\r OK"). Genuine servers answer 252, 550 or 502 for unknown users and never echo a raw CR inside a reply line. Matched: SpamHAT commit 836c04f (2026-11).'
+  - name: spamhat-data-ends-at-blank-line
+    id: 1413
+    port: 25
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^220 '
+      invert_match: false
+    - input_type: string
+      input: "HELO probe.example\r"
+      output_match_type: regex
+      output: '^250'
+      invert_match: false
+    - input_type: string
+      input: "MAIL FROM:<probe@example.org>\r"
+      output_match_type: regex
+      output: '^250'
+      invert_match: false
+    - input_type: string
+      input: "RCPT TO:<probe@elsewhere.example>\r"
+      output_match_type: regex
+      output: '^250'
+      invert_match: false
+    - input_type: string
+      input: "DATA\r"
+      output_match_type: regex
+      output: '^354'
+      invert_match: false
+    - input_type: string
+      input: "Subject: probe\r\n\r"
+      output_match_type: regex
+      output: '^250 OK: Queued message as [0-9a-f]{10}$'
+      invert_match: false
+    confidence: High
+    comment: 'Accepts a message for an outside domain without authentication (an open relay), and then ends DATA at the first empty line of a CRLF message (the header/body separator) instead of at the "." line, answering "250 OK: Queued message as" and ten hex digits; the body lines that follow are then treated as commands. Postfix, Exim, OpenSMTPD, Sendmail and maddy refuse the relay recipient; aiosmtpd, Mailpit and MailHog accept it but wait for the "." line. Leaves one probe message in the honeypot. Matched: SpamHAT commit 836c04f (2026-11).'
+  - name: spamhat-mail-prefix-accepted-before-helo
+    id: 1414
+    port: 25
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^220 '
+      invert_match: false
+    - input_type: string
+      input: "MAILX\r"
+      output_match_type: regex
+      output: '^250 OK$'
+      invert_match: false
+    confidence: High
+    comment: 'Commands are recognised by their first four characters only and no session state is kept, so "MAILX" with no address and no HELO is accepted with "250 OK". Genuine servers answer 500/501/502 (unknown command or syntax error) or 503 (HELO first). Matched: SpamHAT commit 836c04f (2026-11).'
+  - name: spamhat-ehlo-empty-domain
+    id: 1415
+    port: 25
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^220 '
+      invert_match: false
+    - input_type: string
+      input: "EHLO probe.example\r"
+      output_match_type: regex
+      output: '^250\s*$'
+      invert_match: false
+    confidence: Medium
+    comment: 'EHLO is answered with a bare "250 " line: no server domain and no extension list. RFC 5321 requires the domain, and genuine servers send a multi-line 250 reply with their host name and extensions. The domain comes from $hostname in spampot-ng.conf (empty in the shipped file), hence Medium. Matched: SpamHAT commit 836c04f (2026-11).'
+  - name: spamhat-default-greeting
+    id: 1416
+    port: 25
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^220 SMTP Corp Server\s*$'
+      invert_match: false
+    confidence: Medium
+    comment: 'The greeting is the shipped default banner "220 SMTP Corp Server", with no host name and no ESMTP keyword. Configurable ($banner in spampot-ng.conf), hence Medium. Matched: SpamHAT commit 836c04f (2026-11).'
