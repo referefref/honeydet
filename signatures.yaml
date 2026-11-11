@@ -11520,3 +11520,111 @@ signatures:
         invert_match: false
     confidence: High
     comment: "GridLAB-D's HTTP server (port 6267) reachable from the network, as in GridPot's documented setup (upstream GridLAB-D listens on all interfaces): the GridPot model file that Conpot reads at start is served at /output/IEEE_13_Node_Test_Feeder.gpm (with GridLAB-D's bare-LF header lines and duplicate Cache-Control headers) and begins '#GRIDPOT model for conpot instances' with a [conpot1] section. A GridLAB-D server that is not part of GridPot has no such file. The companion LXC script and Docker version keep this server on 127.0.0.1 by default. Matched: gridpot-nx ef62acb with GRIDLABD_SERVER_ADDR=0.0.0.0 (upstream ff062dd behaviour), 2026-11."
+  - name: honeything-rompager-404-python-framing
+    id: 1330
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /hd-honeything-probe HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.0 404 Not Found\r\nServer: RomPager/4\.07 UPnP/1\.0\r\nDate: [^\r\n]+\r\n\n {8}<html>\n {8}<head>\n {8}<title>Object Not Found</title>'
+        invert_match: false
+    confidence: High
+    comment: "A missing page returns an HTTP/1.0 404 whose header block (Server: RomPager/4.07 UPnP/1.0, Date) has no Content-Type and is ended by a bare line feed, followed by RomPager's 'Object Not Found' page indented by eight spaces: Python's BaseHTTPServer writing a copied page. An HTTP header block ends with CRLF CRLF (RFC 9112), and the embedded RomPager server does not run on Python. Matched: HoneyThing fe47ba9 (Python 2.7) and honeything-nx 7ced7d0 (2026-11)."
+  - name: honeything-rompager-head-unsupported
+    id: 1331
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "HEAD /login_security.html HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.0 501 Unsupported method \(''HEAD''\)\r\nServer: RomPager/4\.07 UPnP/1\.0\r\n'
+        invert_match: false
+    confidence: High
+    comment: "HEAD is refused with Python's BaseHTTPServer status line \"501 Unsupported method ('HEAD')\" under a RomPager/4.07 Server header. The reason phrase is Python's own; RFC 9110 requires general-purpose servers to support HEAD, and RomPager is not built on Python. Matched: HoneyThing fe47ba9 (Python 2.7) and honeything-nx 7ced7d0 (2026-11)."
+  - name: honeything-static-rom-0
+    id: 1332
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /rom-0 HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: hex
+        output: "c99e46493fb84b03623c303f764c"
+        invert_match: false
+    confidence: Medium
+    comment: "/rom-0 (the unauthenticated configuration backup of CVE-2014-4019) returns the same 16 KB image on every installation: a TP-LINK backup shipped in the project's www directory (static compressed spt.dat bytes matched here). A genuine vulnerable router returns its own configuration. Medium: an operator can replace the file. Matched: HoneyThing fe47ba9 (Python 2.7) and honeything-nx 7ced7d0 (2026-11)."
+  - name: honeything-cwmp-tornado-404-rompager
+    id: 1333
+    port: 7547
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 404 Not Found\r\n(?:[^\r\n]+\r\n)*Server: RomPager/4\.07 UPnP/1\.0\r\n(?:[^\r\n]+\r\n)*\r\n<html><title>404: Not Found</title><body>404: Not Found</body></html>$'
+        invert_match: false
+    confidence: High
+    comment: "The TR-069 port answers unknown paths with the tornado web framework's default error page ('<html><title>404: Not Found</title><body>404: Not Found</body></html>') under a RomPager/4.07 Server header. RomPager on 7547 returns its own 'Object Not Found' page, and other CPE connection-request servers do not use tornado. Matched: HoneyThing fe47ba9 (Python 2.7) and honeything-nx 7ced7d0 (2026-11)."
+  - name: honeything-cwmp-cpe-handler-banner
+    id: 1334
+    port: 7547
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /cpe HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\n.*\r\n\r\nThis is the cpe/acs handler\.  It only takes POST requests\.$'
+        invert_match: false
+    confidence: High
+    comment: "GET /cpe on 7547 returns the catawampus text 'This is the cpe/acs handler.  It only takes POST requests.' The /cpe listener is catawampus's test option (--cpe-listener, 'not TR-069 compliant'), which HoneyThing always enables; a CPE only accepts connection requests on 7547 and takes RPCs inside the session it opens to its ACS. Matched: HoneyThing fe47ba9 (Python 2.7) and honeything-nx 7ced7d0 (2026-11)."
+  - name: honeything-cwmp-unauthenticated-rpc
+    id: 1335
+    port: 7547
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST /cpe HTTP/1.1\r\nHost: x\r\nContent-Type: text/xml\r\nContent-Length: 242\r\nConnection: close\r\n\r\n<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:cwmp=\"urn:dslforum-org:cwmp-1-0\"><soap:Header><cwmp:ID soap:mustUnderstand=\"1\">hd1</cwmp:ID></soap:Header><soap:Body><cwmp:GetRPCMethods/></soap:Body></soap:Envelope>"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\n.*<cwmp:ID soap:mustUnderstand="1">hd1</cwmp:ID>.*<cwmp:GetRPCMethodsResponse>.*<string>FactoryReset</string>'
+        invert_match: false
+    confidence: High
+    comment: "An unsolicited, unauthenticated SOAP request posted to /cpe on 7547 is executed: GetRPCMethods returns the full catawampus method list (AddObject to Upload). A genuine CPE never accepts RPCs from an incoming connection; it answers connection requests with a Digest challenge and only takes RPCs from its ACS inside the session it opens. Matched: HoneyThing fe47ba9 (Python 2.7) and honeything-nx 7ced7d0 (2026-11)."
+  - name: honeything-cwmp-any-digest-accepted
+    id: 1336
+    port: 7547
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /tr069 HTTP/1.1\r\nHost: x\r\nAuthorization: Digest username=\"hd\", realm=\"Authusers\", nonce=\"hd\", uri=\"/tr069\", qop=auth, nc=00000001, cnonce=\"hd\", response=\"00000000000000000000000000000000\"\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 204 No Content\r\n'
+        invert_match: false
+    confidence: Medium
+    comment: "The connection-request URL (/tr069) accepts any Digest Authorization header, here with an invented nonce and an all-zero response, and answers 204 No Content (connection request accepted). A genuine CPE verifies the digest against its connection-request credentials and its own nonce, and answers 401. Medium: the path is set by request_path in config.ini (default tr069). Matched: HoneyThing fe47ba9 (Python 2.7) and honeything-nx 7ced7d0 (2026-11)."
+  - name: honeything-cwmp-digest-challenge-authusers
+    id: 1337
+    port: 7547
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /tr069 HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 401 Unauthorized\r\n.*WWW-Authenticate: Digest algorithm=MD5, realm="Authusers", qop=auth, nonce=[0-9a-f]{32}\r\n.*Server: RomPager/4\.07 UPnP/1\.0(?:\r\n|$)'
+        invert_match: false
+    confidence: Medium
+    comment: "The connection-request challenge is 'Digest algorithm=MD5, realm=\"Authusers\", qop=auth, nonce=<32 hex>' with qop and nonce unquoted (RFC 2617 requires quoted strings), from the curtain library's example realm, under a RomPager Server header. Medium: the path is set by request_path in config.ini (default tr069). Matched: HoneyThing fe47ba9 (Python 2.7) and honeything-nx 7ced7d0 (2026-11)."
+  - name: honeything-cwmp-processstatus-cwmpd
+    id: 1338
+    port: 7547
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST /cpe HTTP/1.1\r\nHost: x\r\nContent-Type: text/xml\r\nContent-Length: 456\r\nConnection: close\r\n\r\n<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:cwmp=\"urn:dslforum-org:cwmp-1-0\" xmlns:soap-enc=\"http://schemas.xmlsoap.org/soap/encoding/\"><soap:Header><cwmp:ID soap:mustUnderstand=\"1\">hd2</cwmp:ID></soap:Header><soap:Body><cwmp:GetParameterValues><ParameterNames soap-enc:arrayType=\"xsd:string[1]\"><string>Device.DeviceInfo.ProcessStatus.Process.</string></ParameterNames></cwmp:GetParameterValues></soap:Body></soap:Envelope>"
+        output_match_type: regex
+        output: '(?s)<cwmp:GetParameterValuesResponse>.*<Name>Device\.DeviceInfo\.ProcessStatus\.Process\.[0-9]+\.Command</Name>\s*<Value xsi:type="xsd:string">cwmpd</Value>'
+        invert_match: false
+    confidence: High
+    comment: "The TR-181 process table (Device.DeviceInfo.ProcessStatus) is read from the honeypot host's own /proc and lists the real Linux processes, including catawampus's cwmpd (and systemd, cron and the like), instead of a router's processes. Matched: HoneyThing fe47ba9 (Python 2.7) and honeything-nx 7ced7d0 (2026-11)."
