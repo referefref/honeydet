@@ -12646,3 +12646,133 @@ signatures:
       invert_match: false
     confidence: High
     comment: 'Two pipelined RSET commands are answered with qmail''s "250 flushed" text, but separated by a bare LF instead of CRLF. qmail sends the same text with CRLF; the other genuine servers use different text (250 2.0.0 Ok, 250 Reset state and so on) with CRLF. Matched: spamhole-ng cfe771b (2026-11).'
+  - name: canarytokens-api-commitsha
+    id: 1430
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /d3aece8093b71007b5ccfedad91ebb11/commitsha HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\n.*\r\n\r\n\{"commit_sha":"[0-9a-f]{40}"\}$'
+        invert_match: false
+    confidence: High
+    comment: "The frontend's API lives under a fixed path (/d3aece8093b71007b5ccfedad91ebb11, the ROOT_API_ENDPOINT constant, also routed by the bundled nginx configuration) and /commitsha returns the deployed Git commit as JSON. Generic web servers return 404 for this path. Also answers on the frontend port 8082. Matched: Canarytokens 369ec5c (canarytokens-docker 6db7415, image thinkst/canarytokens:sha-369ec5c) (2026-11)."
+  - name: canarytokens-frontend-landing-page
+    id: 1431
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\n.*<meta name="description" content="Canarytokens is a free tool that helps you discover.*<meta name="author" content="Thinkst Applied Research" />'
+        invert_match: false
+    confidence: High
+    comment: "The landing page is the Vue single-page application of canarytokens.org: description 'Canarytokens is a free tool that helps you discover...', author 'Thinkst Applied Research' and og:url https://canarytokens.org, whatever domain the server runs on. Identifies a Canarytokens server rather than a honeypot imitating something else. Also answers on 8082. Matched: Canarytokens 369ec5c (canarytokens-docker 6db7415, image thinkst/canarytokens:sha-369ec5c) (2026-11)."
+  - name: canarytokens-switchboard-catchall-gif
+    id: 1432
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /hd-{{rand}}.html HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\n.*Server: TwistedWeb/[0-9.]+\r\n.*\r\n\r\nGIF89a\x01\x00\x01\x00|(?s)^HTTP/1\.1 200 OK\r\n.*Server: TwistedWeb/[0-9.]+\r\n\r\nGIF89a\x01\x00\x01\x00'
+        invert_match: false
+    confidence: High
+    comment: "Any path that is not a frontend route is passed by nginx to the switchboard, which answers every request, token or not, with 200 OK, a 43-byte 1x1 GIF and its own 'Server: TwistedWeb/<version>' header (nginx forwards it), while frontend pages on the same port say 'Server: nginx'. Genuine web servers return 404 for a random path. Also matches the switchboard's own port 8083. Matched: Canarytokens 369ec5c (canarytokens-docker 6db7415, image thinkst/canarytokens:sha-369ec5c) (2026-11)."
+  - name: canarytokens-switchboard-post-failed
+    id: 1433
+    port: 8083
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST /hd-{{rand}} HTTP/1.1\r\nHost: x\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: 3\r\nConnection: close\r\n\r\nabc"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\n.*Server: TwistedWeb/[0-9.]+\r\n(?:.*\r\n)?\r\nfailed$'
+        invert_match: false
+    confidence: High
+    comment: "A POST to a path that is not a token is answered by the switchboard with 200 OK and the six-byte body 'failed' (Twisted Web). Genuine servers answer 404, 405 or 501. The switchboard is published directly on 8083 by the upstream compose file; also matches through nginx on 80. Matched: Canarytokens 369ec5c (canarytokens-docker 6db7415, image thinkst/canarytokens:sha-369ec5c) (2026-11)."
+  - name: canarytokens-robots-sitemap
+    id: 1434
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /robots.txt HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\n.*Disallow: /nest/manage\r?\n.*Sitemap: https?://canarytokens\.org/resources/sitemap\.xml'
+        invert_match: false
+    confidence: High
+    comment: "robots.txt is hard-coded in the frontend: it disallows /download, /history, /nest/history, /manage, /nest/manage and /settings and points to the sitemap of canarytokens.org, whatever domain the server uses. Matched: Canarytokens 369ec5c (canarytokens-docker 6db7415, image thinkst/canarytokens:sha-369ec5c) (2026-11)."
+  - name: canarytokens-smtp-hello-there
+    id: 1435
+    port: 25
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^220 Hello there$'
+        invert_match: false
+      - input_type: string
+        input: "EHLO probe.example\r"
+        output_match_type: regex
+        output: '^250 \S+ Hello [0-9A-Fa-f.:]+, nice to meet you$'
+        invert_match: false
+    confidence: High
+    comment: "The SMTP channel (for SMTP tokens) greets with the bare '220 Hello there', without the host name and software name that mail servers send, and answers EHLO with Twisted's single line 'Hello <client address>, nice to meet you' and no extensions (no SIZE, PIPELINING or STARTTLS). Postfix, Exim and Sendmail greet with their host name and ESMTP and list extensions. Matched: Canarytokens 369ec5c (canarytokens-docker 6db7415, image thinkst/canarytokens:sha-369ec5c) (2026-11)."
+  - name: canarytokens-mysql-replayed-greeting
+    id: 1436
+    port: 3306
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: hex
+        output: '5b0000000a382e302e32362d307562756e7475302e32302e30342e3200130000001437065c3c262a0100fff7ff0200ffcf1500000000000000000000503c16612660494f4b6d7a3700'
+        invert_match: false
+    confidence: High
+    comment: "The MySQL channel (for MySQL dump tokens) sends one recorded greeting byte for byte to every client: MySQL 8.0.26-0ubuntu0.20.04.2, connection id 19 and the same 20-byte authentication salt each time. A genuine server increments the connection id and sends a fresh random salt on every connection. Matched: Canarytokens 369ec5c (canarytokens-docker 6db7415, image thinkst/canarytokens:sha-369ec5c) (2026-11)."
+  - name: canarytokens-mysql-login-silent-close
+    id: 1437
+    port: 3306
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: hex
+        output: '0a382e302e32362d307562756e7475302e32302e30342e3200'
+        invert_match: false
+      - input_type: hex
+        input: "3f00000185a6ff0100000001210000000000000000000000000000000000000000000000686470726f626500006d7973716c5f6e61746976655f70617373776f726400"
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+    confidence: High
+    comment: "After the MySQL 8.0.26 greeting, a complete handshake response for an unknown user (hdprobe, mysql_native_password, empty password) is answered by closing the connection without any packet: the channel only looks the user name up as a token and never sends an error. Genuine servers answer with an error packet (MySQL 8.4: 1043 'Bad handshake'; MariaDB 10.11: 1045 'Access denied') rather than closing silently. Matched: Canarytokens 369ec5c (canarytokens-docker 6db7415, image thinkst/canarytokens:sha-369ec5c) (2026-11)."
+  - name: canarytokens-dns-refused-rd-dropped
+    id: 1438
+    port: 53
+    proto: udp
+    steps:
+      - input_type: hex
+        input: "1234010000010000000000000776657273696f6e0462696e640000100003"
+        output_match_type: hex
+        output: '1234808500010000000000000776657273696f6e0462696e640000100003'
+        invert_match: false
+    confidence: Medium
+    comment: "The switchboard's DNS server (Twisted Names, authoritative only for the token domains) answers a recursive query (RD set) for version.bind CH TXT, as it does any name outside its domains, with REFUSED and flags 0x8085: RA set although it offers no recursion, and the RD bit not copied back as RFC 1035 requires. BIND 9.18 answers version.bind with AA and an authority record and refuses other names with RD echoed (0x8105); Unbound answers, or refuses with RD echoed. Medium: other servers built on Twisted Names may behave the same. Matched: Canarytokens 369ec5c (canarytokens-docker 6db7415, image thinkst/canarytokens:sha-369ec5c) (2026-11)."
+  - name: canarytokens-frontend-404-template-200
+    id: 1439
+    port: 8082
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /nest/hd-{{rand}} HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\n.*<title>404 - Page not found</title>'
+        invert_match: false
+    confidence: High
+    comment: "An unknown frontend path (anything under /nest/ through nginx, any path on the frontend port 8082) returns the frontend's '404 - Page not found' HTML page with status 200 OK. Genuine servers send a 404 status with their error pages. Also matches through nginx on 80. Matched: Canarytokens 369ec5c (canarytokens-docker 6db7415, image thinkst/canarytokens:sha-369ec5c) (2026-11)."
