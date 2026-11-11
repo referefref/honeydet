@@ -303,6 +303,7 @@ signatures:
         output: "502 Error: cmomand"
         invert_match: false
     confidence: High
+    comment: "Not Mailoney 2.x (2.2.0 b8310a7, 2026-11)."
   - name: redis-honeypot (beehive redis)
     id: 14
     port: 6379
@@ -494,7 +495,7 @@ signatures:
         output: not implementedd
         invert_match: false
     confidence: High
-    comment: Typographic error in error message when sending double-quote
+    comment: "Typographic error in error message when sending double-quote. Not Mailoney 2.x (2.2.0 b8310a7, 2026-11)."
   - name: Mail-SMTP-Honeypot
     id: 29
     port: 25
@@ -11986,3 +11987,169 @@ signatures:
         max_response_ms: 3700
     confidence: Medium
     comment: "A connection that sends nothing is closed after 3 seconds (a fixed read deadline) without any data. The genuine MLLP receivers tested kept idle connections open for longer (python-hl7 and HAPI indefinitely, hl7apy for its configured time-out); idle time-outs are configurable on real interface engines, so Medium. Needs honeydet -timeout 4 or more. Matched: Medpot master 3ec8740 (2022-06) and T-Pot's pinned commit 75a2e61 (2019-04) (2026-11)."
+  - name: mailoney-ehlo-postfix-list-bare-lf
+    id: 1390
+    port: 25
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^220 '
+      invert_match: false
+    - input_type: string
+      input: "EHLO probe.example\r"
+      output_match_type: regex
+      output: '^250-[^\r\n]+\n250-PIPELINING\n250-SIZE 10240000\n250-VRFY\n250-ETRN\n(250-STARTTLS\n)?250-AUTH LOGIN PLAIN\n250 8BITMIME$'
+      invert_match: false
+    confidence: High
+    comment: 'EHLO is answered with the server name and exactly PIPELINING, SIZE 10240000, VRFY, ETRN, (STARTTLS when a certificate is configured), AUTH LOGIN PLAIN and 8BITMIME, every line ending in a bare LF. The list copies the start of a Postfix reply, but Postfix ends its lines in CRLF and continues with ENHANCEDSTATUSCODES, DSN, SMTPUTF8 and CHUNKING; Exim, OpenSMTPD, aiosmtpd, Mailpit and MailHog send other lists, all with CRLF. Matched: Mailoney 2.2.0 (commit b8310a7) (2026-11).'
+  - name: mailoney-helo-multiline-reply
+    id: 1391
+    port: 25
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^220 '
+      invert_match: false
+    - input_type: string
+      input: "HELO probe.example\r"
+      output_match_type: regex
+      output: '^250-[^\r\n]+\r?\n250-PIPELINING'
+      invert_match: false
+    confidence: High
+    comment: 'HELO is answered with the full multi-line EHLO extension list. RFC 5321 gives HELO a single-line 250 reply, which is what Postfix, Exim, OpenSMTPD, aiosmtpd, Mailpit and MailHog send. Matched: Mailoney 2.2.0 (commit b8310a7) (2026-11).'
+  - name: mailoney-auth-plain-235-failed
+    id: 1392
+    port: 25
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^220 '
+      invert_match: false
+    - input_type: string
+      input: "EHLO probe.example\r"
+      output_match_type: regex
+      output: ^250-
+      invert_match: false
+    - input_type: string
+      input: "AUTH PLAIN AHByb2JlAHByb2JlcGFzcw==\r"
+      output_match_type: regex
+      output: '^235 2\.7\.0 Authentication failed'
+      invert_match: false
+    confidence: High
+    comment: 'AUTH PLAIN with an initial response (any user name and password) is answered ''''235 2.7.0 Authentication failed'''': 235 is the success code, combined with a failure text. Genuine servers answer a wrong password with 535 (or 503 when AUTH is not offered); none uses 235 with this text. Matched: Mailoney 2.2.0 (commit b8310a7) (2026-11).'
+  - name: mailoney-auth-login-advertised-not-recognized
+    id: 1393
+    port: 25
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^220 '
+      invert_match: false
+    - input_type: string
+      input: "EHLO probe.example\r"
+      output_match_type: regex
+      output: '(?m)^250[- ]AUTH LOGIN PLAIN'
+      invert_match: false
+    - input_type: string
+      input: "AUTH LOGIN\r"
+      output_match_type: regex
+      output: '^502 5\.5\.2 Error: command not recognized'
+      invert_match: false
+    confidence: High
+    comment: 'EHLO advertises AUTH LOGIN PLAIN, but AUTH LOGIN is refused as an unknown command (''''502 5.5.2 Error: command not recognized''''). Genuine servers that advertise LOGIN answer with a 334 challenge; Postfix without SASL does not advertise AUTH and answers 503. Matched: Mailoney 2.2.0 (commit b8310a7) (2026-11).'
+  - name: mailoney-rset-noop-not-recognized
+    id: 1394
+    port: 25
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^220 '
+      invert_match: false
+    - input_type: string
+      input: "EHLO probe.example\r"
+      output_match_type: regex
+      output: ^250-
+      invert_match: false
+    - input_type: string
+      input: "RSET\r"
+      output_match_type: regex
+      output: '^502 5\.5\.2 Error: command not recognized'
+      invert_match: false
+    - input_type: string
+      input: "NOOP\r"
+      output_match_type: regex
+      output: '^502 5\.5\.2 Error: command not recognized'
+      invert_match: false
+    confidence: High
+    comment: 'RSET and NOOP, which RFC 5321 requires every server to implement, are refused with ''''502 5.5.2 Error: command not recognized''''. Postfix, Exim, OpenSMTPD, aiosmtpd, Mailpit and MailHog answer both with 250. Matched: Mailoney 2.2.0 (commit b8310a7) (2026-11).'
+  - name: mailoney-vrfy-advertised-not-recognized
+    id: 1395
+    port: 25
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^220 '
+      invert_match: false
+    - input_type: string
+      input: "EHLO probe.example\r"
+      output_match_type: regex
+      output: '(?m)^250-VRFY'
+      invert_match: false
+    - input_type: string
+      input: "VRFY postmaster\r"
+      output_match_type: regex
+      output: '^502 5\.5\.2 Error: command not recognized'
+      invert_match: false
+    confidence: High
+    comment: 'EHLO advertises VRFY, but VRFY is refused as an unknown command with a 502. Postfix, which advertises VRFY, answers 252 (or 250/550); Exim answers 252 Administrative prohibition. Matched: Mailoney 2.2.0 (commit b8310a7) (2026-11).'
+  - name: mailoney-rcpt-and-data-without-mail
+    id: 1396
+    port: 25
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^220 '
+      invert_match: false
+    - input_type: string
+      input: "EHLO probe.example\r"
+      output_match_type: regex
+      output: ^250-
+      invert_match: false
+    - input_type: string
+      input: "RCPT TO:<probe@example.org>\r"
+      output_match_type: regex
+      output: '^250 2\.1\.0 OK$'
+      invert_match: false
+    - input_type: string
+      input: "DATA\r"
+      output_match_type: regex
+      output: '^354 End data with <CR><LF>\.<CR><LF>'
+      invert_match: false
+    confidence: High
+    comment: 'RCPT TO without a preceding MAIL FROM is accepted with ''''250 2.1.0 OK'''' and DATA without any envelope is answered 354. Genuine servers reject both as out of sequence (503 need MAIL / need RCPT, or 5.5.1 bad sequence). Matched: Mailoney 2.2.0 (commit b8310a7) (2026-11).'
+  - name: mailoney-default-greeting
+    id: 1397
+    port: 25
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^220 mail\.example\.com ESMTP Service Ready$'
+      invert_match: false
+    confidence: Medium
+    comment: 'Greeting ''''220 mail.example.com ESMTP Service Ready'''' with the default server name (MAILONEY_SERVER_NAME). Medium: the name is configurable; the rest of the line has no product name, unlike Postfix, Exim, OpenSMTPD, aiosmtpd and MailHog, and Mailpit writes ''''Service ready'''' in lower case. Matched: Mailoney 2.2.0 (commit b8310a7) (2026-11).'
