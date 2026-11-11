@@ -11773,3 +11773,66 @@ signatures:
         invert_match: false
     confidence: High
     comment: "RIoTPot Telnet accepts any password and opens its shared fake shell as root@ubuntu, whose only commands are enable, exit and ./ (everything else, even uname, gives 'command not found: <whole line>', a zsh-style message with an Ubuntu bash prompt). Matched: RIoTPot 6d13c90 (2026-11)."
+  - name: tricotools-tristation-cp-status-fixed-project
+    id: 1350
+    port: 1502
+    proto: udp
+    steps:
+      - input_type: hex
+        input: 05000a0000001307000024000a002694
+        output_match_type: hex
+        output: 0500c40001006c070000
+        invert_match: false
+      - input_type: hex
+        input: 05000a0000001307000024000a002694
+        output_match_type: hex
+        output: '454343454343414848000000000000000000'
+        invert_match: false
+    confidence: High
+    comment: "Get CP status (function 0x13, sequence 7) is answered with the honeypot's fixed CP status frame (reply function 0x6c, 202 bytes): the reply header carries 0x00 in the byte a genuine Tricon sets to 0x01 in every command reply, and the status block names the fixed string ECCECCAHH where a genuine controller reports its own loaded project (NOZOMI in the TRITON capture shipped with the project). The string is hard-coded and not a command-line option. Matched: tricotools 2f768c8 as tricotools-py3 4c91f19 + lab patch (2026-11)."
+  - name: tricotools-tristation-chassis-status-firstproj
+    id: 1351
+    port: 1502
+    proto: udp
+    steps:
+      - input_type: hex
+        input: 05000a000000180900002b000a008bf3
+        output_match_type: hex
+        output: 010077090000
+        invert_match: false
+      - input_type: hex
+        input: 05000a000000180900002b000a008bf3
+        output_match_type: hex
+        output: 464952535450524f4a00
+        invert_match: false
+      - input_type: hex
+        input: 05000a000000180900002b000a008bf3
+        output_match_type: hex
+        output: 56020000df447f0030ea7d001b00000032000000
+        invert_match: false
+    confidence: High
+    comment: "Get chassis status (function 0x18) is answered with a reply (function 0x77) whose project segment always names FIRSTPROJ and whose memory segment always reports the same figures (8340703 and 8251952 bytes), whatever modules are configured on the command line; the project name is a code default the program never overrides. Matched: tricotools 2f768c8 as tricotools-py3 4c91f19 + lab patch (2026-11)."
+  - name: tricotools-tristation-attach-sequence-ignored
+    id: 1352
+    port: 1502
+    proto: udp
+    steps:
+      - input_type: hex
+        input: 05000a0000000d2a000041000a0045da
+        output_match_type: hex
+        output: 0500100001006a000000cf0010000300330a04007adf
+        invert_match: false
+    confidence: High
+    comment: "An attach request (function 0x0d) with sequence number 0x2a gets the same 22-byte 'Tricon attached' reply (function 0x6a) every time, with sequence 0 instead of the request's sequence number and 0x00 in the reply-flag byte. A genuine Tricon echoes the request's sequence number in every reply (446 of 446 command replies in the TRITON capture) and sets that byte to 0x01. Matched: tricotools 2f768c8 as tricotools-py3 4c91f19 + lab patch (2026-11)."
+  - name: tricotools-tristation-connect-malformed-accepted
+    id: 1353
+    port: 1502
+    proto: udp
+    steps:
+      - input_type: hex
+        input: 0100ffff0000
+        output_match_type: hex
+        output: 0200000001b8
+        invert_match: false
+    confidence: Medium
+    comment: "A six-byte connect request that claims 65535 bytes of data and carries a zero CRC-16 is accepted with the standard connect reply (02 00 00 00 01 b8): the honeypot looks only at the first byte of a datagram and replays the reply recorded from a real controller. The TriStation frame carries a length field and a CRC-16 that genuine equipment can check; how a Tricon answers this frame was not tested in the lab, hence Medium. Matched: tricotools 2f768c8 as tricotools-py3 4c91f19 + lab patch (2026-11)."
