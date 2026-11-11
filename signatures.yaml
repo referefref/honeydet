@@ -558,8 +558,7 @@ signatures:
         output: 354 go ahead
         invert_match: false
     confidence: High
-    comment: "Uncommon response to DATA, no NOOP or STARTTLS. Ref:
-      https://sourceforge.net/projects/spamhole"
+    comment: "Uncommon response to DATA, no NOOP or STARTTLS. Ref: https://sourceforge.net/projects/spamhole. Matched: spamhole-ng 0.6 cfe771b (2026-11)."
   - name: Medpot
     id: 32
     port: 2575
@@ -12464,3 +12463,186 @@ signatures:
       invert_match: false
     confidence: Medium
     comment: 'The greeting is the shipped default banner "220 SMTP Corp Server", with no host name and no ESMTP keyword. Configurable ($banner in spampot-ng.conf), hence Medium. Matched: SpamHAT commit 836c04f (2026-11).'
+  - name: spamhole-greeting-without-host-name
+    id: 1420
+    port: 25
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^220 ESMTP$'
+      invert_match: false
+    confidence: High
+    comment: 'The greeting is "220 ESMTP" with no host name (fixed in the source). RFC 5321 requires the server''s domain in the greeting; qmail sends "220 <host> ESMTP" and Postfix, Exim, OpenSMTPD, Sendmail, aiosmtpd, maddy, Mailpit and MailHog all name a host. Matched: spamhole-ng cfe771b (2026-11).'
+  - name: spamhole-ehlo-empty-host-bare-lf
+    id: 1421
+    port: 25
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^220 '
+      invert_match: false
+    - input_type: string
+      input: "EHLO probe.example\r"
+      output_match_type: regex
+      output: '^250-\n250-PIPELINING\n250 8BITMIME$'
+      invert_match: false
+    confidence: High
+    comment: 'EHLO is answered with qmail''s extension list (PIPELINING, 8BITMIME) but with an empty first line ("250-" without the host name) and bare LF line endings. qmail sends "250-<host>" with CRLF; other genuine servers name the host and use CRLF. Matched: spamhole-ng cfe771b (2026-11).'
+  - name: spamhole-noop-unimplemented
+    id: 1422
+    port: 25
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^220 '
+      invert_match: false
+    - input_type: string
+      input: "NOOP\r"
+      output_match_type: regex
+      output: '^502 unimplemented \(#5\.5\.1\)$'
+      invert_match: false
+    confidence: High
+    comment: 'NOOP, which RFC 5321 requires every server to implement, is refused with qmail''s "502 unimplemented (#5.5.1)". qmail itself answers NOOP with "250 ok", as do Postfix, Exim, OpenSMTPD, Sendmail, aiosmtpd, maddy, Mailpit and MailHog. Matched: spamhole-ng cfe771b (2026-11).'
+  - name: spamhole-command-prefix-accepted
+    id: 1423
+    port: 25
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^220 '
+      invert_match: false
+    - input_type: string
+      input: "MAILX\r"
+      output_match_type: regex
+      output: '^250 ok$'
+      invert_match: false
+    confidence: High
+    comment: 'Commands are recognised by their first four characters only, so the non-command "MAILX" (sent before any HELO) is accepted with "250 ok". qmail answers "502 unimplemented (#5.5.1)"; Postfix, Exim, OpenSMTPD, Sendmail, aiosmtpd, maddy, Mailpit and MailHog refuse it with a 5xx code. Matched: spamhole-ng cfe771b (2026-11).'
+  - name: spamhole-saml-accepted
+    id: 1424
+    port: 25
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^220 '
+      invert_match: false
+    - input_type: string
+      input: "HELO probe.example\r"
+      output_match_type: regex
+      output: '^250'
+      invert_match: false
+    - input_type: string
+      input: "SAML FROM:<probe@example.org>\r"
+      output_match_type: regex
+      output: '^250 ok$'
+      invert_match: false
+    confidence: High
+    comment: 'The obsolete RFC 821 command SAML (also SEND and SOML) is accepted with "250 ok". qmail refuses all three with "502 unimplemented (#5.5.1)", and none of the other genuine servers tested accepts them. Matched: spamhole-ng cfe771b (2026-11).'
+  - name: spamhole-data-without-recipient
+    id: 1425
+    port: 25
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^220 '
+      invert_match: false
+    - input_type: string
+      input: "HELO probe.example\r"
+      output_match_type: regex
+      output: '^250'
+      invert_match: false
+    - input_type: string
+      input: "MAIL FROM:<probe@example.org>\r"
+      output_match_type: regex
+      output: '^250'
+      invert_match: false
+    - input_type: string
+      input: "DATA\r"
+      output_match_type: regex
+      output: '^354 go ahead$'
+      invert_match: false
+    confidence: High
+    comment: 'DATA straight after MAIL, with no recipient, is accepted with qmail''s "354 go ahead". qmail answers "503 RCPT first (#5.5.1)" and the other genuine servers also refuse DATA without a recipient (503 or 554). Matched: spamhole-ng cfe771b (2026-11).'
+  - name: spamhole-open-relay-plain-250-ok
+    id: 1426
+    port: 25
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^220 '
+      invert_match: false
+    - input_type: string
+      input: "HELO probe.example\r"
+      output_match_type: regex
+      output: '^250'
+      invert_match: false
+    - input_type: string
+      input: "MAIL FROM:<probe@example.org>\r"
+      output_match_type: regex
+      output: '^250'
+      invert_match: false
+    - input_type: string
+      input: "RCPT TO:<probe@elsewhere.example>\r"
+      output_match_type: regex
+      output: '^250 ok$'
+      invert_match: false
+    - input_type: string
+      input: "DATA\r"
+      output_match_type: regex
+      output: '^354 '
+      invert_match: false
+    - input_type: string
+      input: "Subject: probe\r\n\r\nprobe\r\n.\r"
+      output_match_type: regex
+      output: '^250 ok$'
+      invert_match: false
+    confidence: High
+    comment: 'A recipient in an outside domain is accepted without authentication (open relay) and the message is acknowledged with a bare "250 ok". qmail refuses outside recipients unless relaying is allowed, and when it accepts a message it answers "250 ok <time> qp <id>"; Postfix, Exim, OpenSMTPD, maddy and Sendmail refuse the recipient, and aiosmtpd, Mailpit and MailHog acknowledge with other text. Spamhole drops the message. Matched: spamhole-ng cfe771b (2026-11).'
+  - name: spamhole-quit-bare-221
+    id: 1427
+    port: 25
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^220 '
+      invert_match: false
+    - input_type: string
+      input: "QUIT\r"
+      output_match_type: regex
+      output: '^221$'
+      invert_match: false
+    confidence: High
+    comment: 'QUIT is answered with "221" and nothing else. qmail answers "221 <host>"; the other genuine servers add the host name or a text such as "Bye". Matched: spamhole-ng cfe771b (2026-11).'
+  - name: spamhole-pipelined-bare-lf
+    id: 1428
+    port: 25
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^220 '
+      invert_match: false
+    - input_type: string
+      input: "RSET\r\nRSET\r"
+      output_match_type: regex
+      output: '^250 flushed\n250 flushed$'
+      invert_match: false
+    confidence: High
+    comment: 'Two pipelined RSET commands are answered with qmail''s "250 flushed" text, but separated by a bare LF instead of CRLF. qmail sends the same text with CRLF; the other genuine servers use different text (250 2.0.0 Ok, 250 Reset state and so on) with CRLF. Matched: spamhole-ng cfe771b (2026-11).'
