@@ -11409,3 +11409,46 @@ signatures:
         invert_match: false
     confidence: High
     comment: "Older GasPot (v1): I20100 returns the report without SOH or ETX, with bare line feeds, a numeric MM/DD/YYYY HH:MM date and the station name indented by four spaces; Conpot's guardian_ast template, derived from it, does not indent the name. Genuine consoles use the SOH/ETX envelope and CR LF. Matched: GasPot v1 38defc4 (2026-11); not GasPot 2.2.0."
+  - name: dnp3pot-dnp3-frame-for-non-dnp3-input
+    id: 1310
+    port: 20000
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "474554202f20485454502f312e300d0a0d0a"
+        output_match_type: hex
+        output: "05640a00010005003971c0f48200006fba"
+        invert_match: false
+    confidence: High
+    comment: "An HTTP request (not DNP3 at all) on TCP 20000 is answered with DNP3Pot's fixed 17-byte DNP3 frame. A genuine outstation discards data that does not start with a valid DNP3 link header (opendnp3 sends only its own start-up unsolicited message, from its own address, with control byte 0x44 and the restart IIN bit set). Matched: DNP3Pot (dnp3pot-python3 5df1399 with reply patch) (2026-11)."
+  - name: dnp3pot-any-station-address-ack-with-user-data
+    id: 1311
+    port: 20000
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "056405c9570403005eed"
+        output_match_type: hex
+        output: "05640a00010005003971"
+        invert_match: false
+    confidence: High
+    comment: "A DNP3 Request Link Status addressed to station 1111 (0x0457), an address chosen at random, is answered from station 5 to station 1 with a link frame whose control byte 0x00 marks a secondary-station ACK but which carries user data (an unsolicited response). A genuine outstation answers only frames addressed to its own station address, replies to a Request Link Status with a 10-byte LINK_STATUS frame to the requesting master, and never sends user data in an ACK. Matched: DNP3Pot (dnp3pot-python3 5df1399 with reply patch) (2026-11)."
+  - name: dnp3pot-closes-after-one-reply
+    id: 1312
+    port: 20000
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "05640bc4010003002735c0c0013c0106ff50"
+        output_match_type: hex
+        output: "05640a0001000500"
+        invert_match: false
+      - input_type: hex
+        input: ""
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+        min_response_ms: 300
+        max_response_ms: 3000
+    confidence: Medium
+    comment: "A Class 0 read to station 1 gets the fixed unsolicited-response frame (function 0x82, no objects, not a READ response), and DNP3Pot then closes the TCP connection about one second later without further data. A genuine outstation keeps the TCP session open for the master's next request. Matched: DNP3Pot (dnp3pot-python3 5df1399 with reply patch) (2026-11)."
