@@ -570,9 +570,7 @@ signatures:
         output: 00007FFF1751E851
         invert_match: false
     confidence: High
-    comment: "Hardcoded error message in template dummyerror.xml.
-      Ref:  https://github.com/schmalle/medpot/blob/master/template/dummyerror.\
-      xml"
+    comment: "Hardcoded error message in template dummyerror.xml. Ref:  https://github.com/schmalle/medpot/blob/master/template/dummyerror.xml. Matched: Medpot 3ec8740 and T-Pot 75a2e61 (2026-11)."
   - name: honeyprint-raw-ipp-reply-to-http
     id: 570
     port: 9100
@@ -11926,3 +11924,65 @@ signatures:
         invert_match: false
     confidence: High
     comment: "Port 104 version of signature 1371. An A-ASSOCIATE-RQ proposing an invented abstract syntax (1.2.3.4.5.6.7.8.9) with an invented transfer syntax (1.2.3.4) is accepted: the presentation context comes back with result 0 (acceptance) and transfer syntax 1.2.3.4. Dicompot accepts every proposed presentation context and picks the first transfer syntax offered; DCMTK storescp, Orthanc and pynetdicom answer result 3 (abstract syntax not supported), and dcmqrscp rejects unknown called AE titles outright. The match also requires Dicompot's user information item (maximum length 4194304 only) straight after the presentation context, because Glutton's DICOM handler accepts invented syntaxes too but answers with a DCMTK-style user information item. Configuration independent. Matched: dicompot 7351dbe (2026-11)."
+  - name: medpot-mllp-message-answered-with-fhir-xml
+    id: 1380
+    port: 2575
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "0b4d53487c5e7e5c267c4c41424144547c4e4f525448574152447c455049437c53544a414d45537c32303236313131313039333030307c7c4144545e4130317c4354524c343731317c507c322e350d45564e7c4130317c32303236313131313039333030300d5049447c317c7c504154303030315e5e5e4e575e4d527c7c444f455e4a414e457c7c31393830303130317c460d5056317c317c497c57315e3130315e310d1c0d"
+        output_match_type: regex
+        output: '^<\?xml[^>]*>\s*<OperationOutcome xmlns="http://hl7\.org/fhir">'
+        invert_match: false
+    confidence: High
+    comment: "Medpot answers only data that begins with 'MSH|', so a correctly MLLP-framed HL7 v2 ADT^A01 (start block 0x0B, end block 0x1C 0x0D) gets its fixed FHIR XML OperationOutcome error document, unframed, instead of an MLLP-framed ACK echoing the message control id. Genuine MLLP receivers (python-hl7, hl7apy, HAPI) return a framed ACK with MSA|AA|<control id>. Matched: Medpot master 3ec8740 (2022-06) and T-Pot's pinned commit 75a2e61 (2019-04) (2026-11)."
+  - name: medpot-static-hl7-ack
+    id: 1381
+    port: 2575
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "MSH|^~\\&|HD|HD|HD|HD|20261111093000||ADT^A01|{{rand}}|P|2.5\rPID|1\r"
+        output_match_type: string
+        output: "|20110614075841||ACK|1407511|P|2.3"
+        invert_match: false
+    confidence: High
+    comment: "Any data beginning with 'MSH|' gets the same template acknowledgement (dummyok.xml): timestamp 20110614075841, control id 1407511 and version 2.3, whatever the message's own control id and version. A genuine receiver builds the ACK from the incoming message, and does not answer unframed data at all. Matched: Medpot master 3ec8740 (2022-06) and T-Pot's pinned commit 75a2e61 (2019-04) (2026-11)."
+  - name: medpot-unframed-ack-with-lf-indented-msa
+    id: 1382
+    port: 2575
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "MSH|^~\\&|HD|HD|HD|HD|20261111093000||ADT^A01|{{rand}}|P|2.5\rPID|1\r"
+        output_match_type: regex
+        output: '^MSH\|[^\r\n]*\n[ \t]+MSA\|'
+        invert_match: false
+    confidence: Medium
+    comment: "An unframed HL7 message gets an unframed reply that starts with MSH| (no MLLP start block) and separates the MSH and MSA segments with a line feed and indentation instead of the HL7 segment terminator (carriage return). Genuine MLLP receivers ignore or drop unframed data. Survives edits to the template's field values while its layout is kept, so Medium. Matched: Medpot master 3ec8740 (2022-06) and T-Pot's pinned commit 75a2e61 (2019-04) (2026-11)."
+  - name: medpot-http-answered-with-raw-fhir-xml
+    id: 1383
+    port: 2575
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /metadata HTTP/1.1\r\nHost: fhir\r\nAccept: application/fhir+xml\r\n\r"
+        output_match_type: regex
+        output: '^<\?xml[^>]*>\s*<OperationOutcome xmlns="http://hl7\.org/fhir">'
+        invert_match: false
+    confidence: High
+    comment: "A FHIR request (GET /metadata, the capability statement) gets a FHIR OperationOutcome XML document with no HTTP status line or headers. FHIR is a REST API over HTTP, so a genuine FHIR server answers with an HTTP response, and MLLP receivers do not answer HTTP at all. Matched: Medpot master 3ec8740 (2022-06) and T-Pot's pinned commit 75a2e61 (2019-04) (2026-11)."
+  - name: medpot-idle-connection-closed-after-3s
+    id: 1384
+    port: 2575
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+        min_response_ms: 2500
+        max_response_ms: 3700
+    confidence: Medium
+    comment: "A connection that sends nothing is closed after 3 seconds (a fixed read deadline) without any data. The genuine MLLP receivers tested kept idle connections open for longer (python-hl7 and HAPI indefinitely, hl7apy for its configured time-out); idle time-outs are configurable on real interface engines, so Medium. Needs honeydet -timeout 4 or more. Matched: Medpot master 3ec8740 (2022-06) and T-Pot's pinned commit 75a2e61 (2019-04) (2026-11)."
