@@ -351,7 +351,7 @@ signatures:
         output: ""
         invert_match: false
     confidence: High
-    comment: "OpenCanary logs SNMP requests but never replies. A closed port (ICMP unreachable) does not match; a firewall that silently drops 161/udp will."
+    comment: "OpenCanary logs SNMP requests but never replies. A closed port (ICMP unreachable) does not match; a firewall that silently drops 161/udp will. Also fires on the silent port 161 of the lab AMP-Research honeypot (2026-11)."
   - name: AMTHoneypot
     id: 19
     port: 16992
@@ -12878,3 +12878,123 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: "As 1442, on the traditional DICOM port 104. Matched: dicom_lure ac3031f (with the companion patch) served by dicompot 7351dbe (2026-11)."
+  - name: amp-research-memcached-stats-settings-error
+    id: 1710
+    port: 11211
+    proto: udp
+    steps:
+      - input_type: hex
+        input: 000100000001000073746174732073657474696e67730d0a
+        output_match_type: hex
+        output: '00010000000100004552524f52'
+        invert_match: false
+    confidence: High
+    comment: "memcached over UDP: 'stats settings' (one datagram with the 8-byte UDP frame header) is answered with ERROR in a single frame (frame header 0001 0000 0001 0000, then ERROR). Genuine memcached 1.6.18 answers with the settings list (STAT maxbytes, STAT maxconns ... END, two frames). The honeypot implements the commands in AMP-Research's memcached probes (stats, stats items, get, gets, version, set) and answers anything else with ERROR. Matched: AMP-Research honeypot 1.0.0 (AMP-Research 2c78c06) (2026-11)."
+  - name: amp-research-memcached-meta-get-error
+    id: 1711
+    port: 11211
+    proto: udp
+    steps:
+      - input_type: hex
+        input: 00010000000100006d67206120760d0a
+        output_match_type: hex
+        output: '00010000000100004552524f52'
+        invert_match: false
+    confidence: High
+    comment: "memcached over UDP: the meta get command 'mg a v' is answered with ERROR. memcached 1.6 and later support the meta protocol and answer EN (miss) or VA <size> with the value (lab: memcached 1.6.18 answered VA 800). Matched: AMP-Research honeypot 1.0.0 (AMP-Research 2c78c06) (2026-11)."
+  - name: amp-research-coap-ignores-critical-option
+    id: 1712
+    port: 5683
+    proto: udp
+    steps:
+      - input_type: hex
+        input: 40017d70bb2e77656c6c2d6b6e6f776e04636f7265e0071d
+        output_match_type: hex
+        output: '60457d70'
+        invert_match: false
+    confidence: High
+    comment: "CoAP: a confirmable GET /.well-known/core carrying an unrecognised critical option (number 2101, odd) is answered 2.05 Content (ACK 0x60 0x45 with the request's message ID). RFC 7252 section 5.4.1 requires a server to reject unrecognised critical options with 4.02 Bad Option; libcoap 4.3.1 answers 0x60 0x82 'Bad Option'. Matched: AMP-Research honeypot 1.0.0 (AMP-Research 2c78c06) (2026-11)."
+  - name: amp-research-coap-default-resources
+    id: 1713
+    port: 5683
+    proto: udp
+    steps:
+      - input_type: hex
+        input: 40017d70bb2e77656c6c2d6b6e6f776e04636f7265
+        output_match_type: string
+        output: '</sensors/temp>;rt="temp";ct=0;if="sensor",</sensors/humidity>;rt="humidity"'
+        invert_match: false
+    confidence: Medium
+    comment: "CoAP: the AMP-Research probe GET /.well-known/core (coap_5683.pkt) returns the honeypot's built-in resource list (/sensors/temp, /sensors/humidity, /sensors/light, /config/firmware, /lights/1, each with if=\"sensor\"). Default content, so Medium; libcoap's example server lists /, /time, /async and /example_data. Matched: AMP-Research honeypot 1.0.0 (AMP-Research 2c78c06) (2026-11)."
+  - name: amp-research-cldap-default-dc
+    id: 1714
+    port: 389
+    proto: udp
+    steps:
+      - input_type: hex
+        input: 3025020101632004000a01000a0100020100020100010100870b6f626a656374636c6173733000
+        output_match_type: string
+        output: 'CN=NTDS Settings,CN=MEDIA-GW01,CN=Servers,CN=Default-First-Site-Name,CN=Sites,CN=Configuration,DC=corp,DC=local'
+        invert_match: false
+    confidence: Medium
+    comment: "cLDAP: the AMP-Research rootDSE probe (ldap_389.pkt) is answered with a domain controller rootDSE for the default persona: dsServiceName for server MEDIA-GW01 in corp.local (AMP_HOSTNAME, AMP_DOMAIN). Default values, so Medium. Matched: AMP-Research honeypot 1.0.0 (AMP-Research 2c78c06) (2026-11)."
+  - name: amp-research-mssql-browser-default
+    id: 1715
+    port: 1434
+    proto: udp
+    steps:
+      - input_type: hex
+        input: '02'
+        output_match_type: string
+        output: 'ServerName;MEDIA-GW01;InstanceName;MSSQLSERVER;IsClustered;No;Version;15.0.2000.5;tcp;1433;;'
+        invert_match: false
+    confidence: Medium
+    comment: "SQL Server Browser: the one-byte CLNT_BCAST_EX probe (mssql_1434.pkt) returns the default persona, server MEDIA-GW01, default instance, version 15.0.2000.5, TCP 1433. Default values (AMP_HOSTNAME, AMP_MSSQL_VERSION), so Medium. Matched: AMP-Research honeypot 1.0.0 (AMP-Research 2c78c06) (2026-11)."
+  - name: amp-research-jenkins-default-server-id
+    id: 1716
+    port: 33848
+    proto: udp
+    steps:
+      - input_type: hex
+        input: 0a
+        output_match_type: string
+        output: '<server-id>52b518478ddb1a4e0251af42a5929ef2</server-id>'
+        invert_match: false
+    confidence: Medium
+    comment: "Jenkins UDP discovery (CVE-2020-2100): any datagram returns a <hudson> record whose server-id is derived from the default AMP_SEED; a genuine Jenkins server-id is unique per installation. Medium. Matched: AMP-Research honeypot 1.0.0 (AMP-Research 2c78c06) (2026-11)."
+  - name: amp-research-plex-default-identifier
+    id: 1717
+    port: 32414
+    proto: udp
+    steps:
+      - input_type: hex
+        input: 4d
+        output_match_type: string
+        output: 'Resource-Identifier: a6c497dce4a9367e71be9336a0d76f2167a8dbd7'
+        invert_match: false
+    confidence: Medium
+    comment: "Plex GDM: the one-byte AMP-Research probe 'M' (plexmedia_32414.pkt) returns an HTTP/1.0 200 GDM record whose Resource-Identifier (and plex.direct host) derive from the default AMP_SEED; genuine Plex servers have unique identifiers. Medium. Matched: AMP-Research honeypot 1.0.0 (AMP-Research 2c78c06) (2026-11)."
+  - name: amp-research-dahua-default-mac
+    id: 1718
+    port: 37810
+    proto: udp
+    steps:
+      - input_type: hex
+        input: '44484950'
+        output_match_type: string
+        output: '"mac" : "4c:11:bf:9b:24:36", "method" : "client.notifyDevInfo"'
+        invert_match: false
+    confidence: Medium
+    comment: "Dahua DHIP device search: the AMP-Research probe (dvr_37810.pkt, 'DHIP') returns a client.notifyDevInfo record with the MAC address derived from the default AMP_SEED. Medium. Matched: AMP-Research honeypot 1.0.0 (AMP-Research 2c78c06) (2026-11)."
+  - name: amp-research-ubiquiti-default-mac
+    id: 1719
+    port: 10001
+    proto: udp
+    steps:
+      - input_type: hex
+        input: '01000000'
+        output_match_type: hex
+        output: '010006788a20dd0805'
+        invert_match: false
+    confidence: Medium
+    comment: "Ubiquiti discovery: the AMP-Research probe (ubiquiti_10001.pkt) returns a version 1 discovery record whose MAC address TLV (type 0x01) carries 78:8a:20:dd:08:05, derived from the default AMP_SEED. Medium. Matched: AMP-Research honeypot 1.0.0 (AMP-Research 2c78c06) (2026-11)."
