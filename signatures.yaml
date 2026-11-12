@@ -13349,3 +13349,71 @@ signatures:
     - *id001
     confidence: High
     comment: 'Port 2222 form (the README example listens on 2222). A Dropbear identification string (with or without a version) followed, after the client''s identification and KEXINIT, by libssh''s key exchange order: curve25519-sha256, curve25519-sha256@libssh.org, the three ECDH curves from nistp256 up, then diffie-hellman-group18-sha512 and group16-sha512. Dropbear lists nistp521 first and never offers group16 or group18; OpenSSH puts sntrup761 or mlkem768 first and group-exchange after the curves. Survives editing the banner to a versioned Dropbear string. Matched: potd 11bebb9 (2020-07-12; libssh 0.10.6, Debian 12) (2026-11).'
+  - name: honeypot-go-gocrypto-2013-zero-cookie-kexinit
+    id: 1520
+    port: 2022
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^SSH-2\.0-Go\s*$'
+        invert_match: false
+      - input_type: string
+        input: "SSH-2.0-OpenSSH_9.2p1 Debian-2+deb12u3\r"
+        output_match_type: regex
+        output: '(?s)^\x00\x00\x01\x5c.\x14\x00{16}\x00\x00\x00\x6fecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521,diffie-hellman-group14-sha1,diffie-hellman-group1-sha1\x00\x00\x00\x07ssh-rsa\x00\x00\x00\x36aes128-ctr,aes192-ctr,aes256-ctr,arcfour256,arcfour128\x00\x00\x00\x36aes128-ctr,aes192-ctr,aes256-ctr,arcfour256,arcfour128\x00\x00\x00\x16hmac-sha1,hmac-sha1-96\x00\x00\x00\x16hmac-sha1,hmac-sha1-96\x00'
+        invert_match: false
+    confidence: High
+    comment: 'honeypot.go has no option for the SSH identification string or the algorithms: it sends the go.crypto default ''SSH-2.0-Go'' and, once the client has sent its identification, a KEXINIT whose 16-byte cookie is all zeros. RFC 4253 requires a random cookie; go.crypto filled it only from April 2014 (fa50e74), so OpenSSH, current Go servers (Gitea, Soft Serve) and the Go SSH honeypots built on golang.org/x/crypto send random bytes. The rest of the packet is the library''s late-2013 offer: ECDH on the three NIST curves, group14 and group1 SHA-1 key exchanges (no curve25519), the host key algorithm ssh-rsa only (the README''s ssh-keygen step makes one RSA key), AES-CTR and RC4 ciphers without AES-GCM or ChaCha20, and the MACs hmac-sha1 and hmac-sha1-96 only. Any SSH server built on go.crypto before April 2014 with one RSA key would match; none of the genuine servers or other honeypots in the lab did. Matched: honeypot.go ad480e6 (2013-12-20) built with Go 1.27.3 and go.crypto 08da9c6 of 2013-12-20 (2026-11).'
+  - name: honeypot-go-gocrypto-2013-zero-cookie-kexinit-port22
+    id: 1521
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^SSH-2\.0-Go\s*$'
+        invert_match: false
+      - input_type: string
+        input: "SSH-2.0-OpenSSH_9.2p1 Debian-2+deb12u3\r"
+        output_match_type: regex
+        output: '(?s)^\x00\x00\x01\x5c.\x14\x00{16}\x00\x00\x00\x6fecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521,diffie-hellman-group14-sha1,diffie-hellman-group1-sha1\x00\x00\x00\x07ssh-rsa\x00\x00\x00\x36aes128-ctr,aes192-ctr,aes256-ctr,arcfour256,arcfour128\x00\x00\x00\x36aes128-ctr,aes192-ctr,aes256-ctr,arcfour256,arcfour128\x00\x00\x00\x16hmac-sha1,hmac-sha1-96\x00\x00\x00\x16hmac-sha1,hmac-sha1-96\x00'
+        invert_match: false
+    confidence: High
+    comment: 'Port 22 form: honeypot.go always listens on 2022 and its README publishes it as port 22 (docker run -p 22:2022); the companion scripts redirect 22 to it. honeypot.go has no option for the SSH identification string or the algorithms: it sends the go.crypto default ''SSH-2.0-Go'' and, once the client has sent its identification, a KEXINIT whose 16-byte cookie is all zeros. RFC 4253 requires a random cookie; go.crypto filled it only from April 2014 (fa50e74), so OpenSSH, current Go servers (Gitea, Soft Serve) and the Go SSH honeypots built on golang.org/x/crypto send random bytes. The rest of the packet is the library''s late-2013 offer: ECDH on the three NIST curves, group14 and group1 SHA-1 key exchanges (no curve25519), the host key algorithm ssh-rsa only (the README''s ssh-keygen step makes one RSA key), AES-CTR and RC4 ciphers without AES-GCM or ChaCha20, and the MACs hmac-sha1 and hmac-sha1-96 only. Any SSH server built on go.crypto before April 2014 with one RSA key would match; none of the genuine servers or other honeypots in the lab did. Matched: honeypot.go ad480e6 (2013-12-20) built with Go 1.27.3 and go.crypto 08da9c6 of 2013-12-20 (2026-11).'
+  - name: honeypot-go-non-ssh-identification-accepted
+    id: 1522
+    port: 2022
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^SSH-2\.0-Go\s*$'
+        invert_match: false
+      - input_type: string
+        input: "GET / HTTP/1.0\r"
+        output_match_type: regex
+        output: '(?s)^\x00\x00\x01\x5c.\x14\x00{16}\x00\x00\x00\x6fecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521,diffie-hellman-group14-sha1,diffie-hellman-group1-sha1\x00\x00\x00\x07ssh-rsa\x00'
+        invert_match: false
+    confidence: High
+    comment: 'go.crypto of 2013 does not check the client''s identification line (''we do not ignore lines that don''t start with SSH-2.0-'', transport.go), so honeypot.go answers an HTTP request line sent in its place with its key exchange offer (KEXINIT with the all-zero cookie of go.crypto before April 2014, NIST ECDH, group14 and group1 key exchanges and the ssh-rsa host key only). OpenSSH replies ''Invalid SSH identification string.'' and closes; Gitea and Soft Serve, on current golang.org/x/crypto, close without a key exchange offer. Matched: honeypot.go ad480e6 (2013-12-20) built with Go 1.27.3 and go.crypto 08da9c6 of 2013-12-20 (2026-11).'
+  - name: honeypot-go-non-ssh-identification-accepted-port22
+    id: 1523
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^SSH-2\.0-Go\s*$'
+        invert_match: false
+      - input_type: string
+        input: "GET / HTTP/1.0\r"
+        output_match_type: regex
+        output: '(?s)^\x00\x00\x01\x5c.\x14\x00{16}\x00\x00\x00\x6fecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521,diffie-hellman-group14-sha1,diffie-hellman-group1-sha1\x00\x00\x00\x07ssh-rsa\x00'
+        invert_match: false
+    confidence: High
+    comment: 'Port 22 form: honeypot.go always listens on 2022 and its README publishes it as port 22 (docker run -p 22:2022); the companion scripts redirect 22 to it. go.crypto of 2013 does not check the client''s identification line (''we do not ignore lines that don''t start with SSH-2.0-'', transport.go), so honeypot.go answers an HTTP request line sent in its place with its key exchange offer (KEXINIT with the all-zero cookie of go.crypto before April 2014, NIST ECDH, group14 and group1 key exchanges and the ssh-rsa host key only). OpenSSH replies ''Invalid SSH identification string.'' and closes; Gitea and Soft Serve, on current golang.org/x/crypto, close without a key exchange offer. Matched: honeypot.go ad480e6 (2013-12-20) built with Go 1.27.3 and go.crypto 08da9c6 of 2013-12-20 (2026-11).'
