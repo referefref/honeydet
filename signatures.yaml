@@ -9632,7 +9632,7 @@ signatures:
         invert_match: false
         max_response_ms: 2000
     confidence: Medium
-    comment: "The SSH port sends no identification string, and when the client sends its own (SSH-2.0-OpenSSH_9.2p1) the server closes the connection at once without a byte: go-HoneyPot's TCP listener waits for the first data, records it and closes. A genuine SSH server (OpenSSH, Dropbear, Go x/crypto servers) sends its SSH-2.0 identification first. Any listener that closes a connection without replying (a port forwarder with no backend, TCP wrappers, a server shedding load) gives the same result, hence Medium. Matched: go-HoneyPot d98cff6 (2026-11)."
+    comment: "The SSH port sends no identification string, and when the client sends its own (SSH-2.0-OpenSSH_9.2p1) the server closes the connection at once without a byte: go-HoneyPot's TCP listener waits for the first data, records it and closes. A genuine SSH server (OpenSSH, Dropbear, Go x/crypto servers) sends its SSH-2.0 identification first. Any listener that closes a connection without replying (a port forwarder with no backend, TCP wrappers, a server shedding load) gives the same result, hence Medium. Matched: go-HoneyPot d98cff6 (2026-11). Also fires on potd 11bebb9, which closes extra scan connections (2026-11)."
   - name: go-honeypot-ssh-alt-port-silent-close-after-data
     id: 1141
     port: 2222
@@ -9645,7 +9645,7 @@ signatures:
         invert_match: false
         max_response_ms: 2000
     confidence: Medium
-    comment: "As 1140 on the alternative SSH port 2222: no SSH identification, and the connection is closed without a reply as soon as the client sends its own. Genuine SSH servers on 2222 (and Cowrie, which listens there by default) send an SSH-2.0 identification first. Matched: go-HoneyPot d98cff6 (2026-11)."
+    comment: "As 1140 on the alternative SSH port 2222: no SSH identification, and the connection is closed without a reply as soon as the client sends its own. Genuine SSH servers on 2222 (and Cowrie, which listens there by default) send an SSH-2.0 identification first. Matched: go-HoneyPot d98cff6 (2026-11). Also fires on potd 11bebb9, which closes extra scan connections (2026-11)."
   - name: go-honeypot-readme-port-1220-silent-close
     id: 1142
     port: 1220
@@ -13294,3 +13294,58 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: "memcached UDP datagram with four lines (empty, junk, empty, empty; one of AmpFuzz's own amplifying inputs, request id 'hg'). Genuine memcached answers every line, here with four 'ERROR' datagrams; AmpFuzz's gen_reply() returns only the first reply recorded for a path, so the honeypot sends one datagram. The second step ('stats\\n', request id 'hv', answered 'ERROR' as in 1460) separates it from other emulations that answer only the first line (the lab's AMP-Research honeypot). Medium: relies on the handler having learnt this input's path. Matched: AmpFuzz 12a5557 memcached_11211 handler (lab fuzzing run, 2026-11) served by ampfuzz-hp."
+  - name: potd-bare-dropbear-banner
+    id: 1510
+    port: 22
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: ^SSH-2\.0-dropbear\r?\n?$
+      invert_match: false
+    confidence: High
+    comment: 'potd sets libssh''s server banner to the bare word dropbear, so it announces SSH-2.0-dropbear with no version, and waits for the client before sending its KEXINIT. Genuine Dropbear always appends its version (SSH-2.0-dropbear_2022.83, dropbear_2025.88) and sends its KEXINIT straight after the identification line. Matched: potd 11bebb9 (2020-07-12; libssh 0.10.6, Debian 12) (2026-11).'
+  - name: potd-dropbear-banner-libssh-kex
+    id: 1511
+    port: 22
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: ^SSH-2\.0-dropbear(?:_[0-9.]+)?\r?\n?$
+      invert_match: false
+    - &id001
+      input_type: hex
+      input: 5353482d322e302d4f70656e5353485f392e3270312044656269616e2d322b646562313275330d0a000000a40814111111111111111111111111111111110000001b6469666669652d68656c6c6d616e2d67726f757031342d73686131000000147273612d736861322d3235362c7373682d7273610000000a6165733132382d6374720000000a6165733132382d63747200000009686d61632d7368613100000009686d61632d73686131000000046e6f6e65000000046e6f6e65000000000000000000000000000000000000000000
+      output_match_type: regex
+      output: curve25519-sha256,curve25519-sha256@libssh\.org,ecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521,diffie-hellman-group18-sha512,diffie-hellman-group16-sha512
+      invert_match: false
+    confidence: High
+    comment: 'A Dropbear identification string (with or without a version) followed, after the client''s identification and KEXINIT, by libssh''s key exchange order: curve25519-sha256, curve25519-sha256@libssh.org, the three ECDH curves from nistp256 up, then diffie-hellman-group18-sha512 and group16-sha512. Dropbear lists nistp521 first and never offers group16 or group18; OpenSSH puts sntrup761 or mlkem768 first and group-exchange after the curves. Survives editing the banner to a versioned Dropbear string. Matched: potd 11bebb9 (2020-07-12; libssh 0.10.6, Debian 12) (2026-11).'
+  - name: potd-bare-dropbear-banner-alt-port
+    id: 1512
+    port: 2222
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: ^SSH-2\.0-dropbear\r?\n?$
+      invert_match: false
+    confidence: High
+    comment: 'Port 2222 form (the README example listens on 2222). potd sets libssh''s server banner to the bare word dropbear, so it announces SSH-2.0-dropbear with no version, and waits for the client before sending its KEXINIT. Genuine Dropbear always appends its version (SSH-2.0-dropbear_2022.83, dropbear_2025.88) and sends its KEXINIT straight after the identification line. Matched: potd 11bebb9 (2020-07-12; libssh 0.10.6, Debian 12) (2026-11).'
+  - name: potd-dropbear-banner-libssh-kex-alt-port
+    id: 1513
+    port: 2222
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: ^SSH-2\.0-dropbear(?:_[0-9.]+)?\r?\n?$
+      invert_match: false
+    - *id001
+    confidence: High
+    comment: 'Port 2222 form (the README example listens on 2222). A Dropbear identification string (with or without a version) followed, after the client''s identification and KEXINIT, by libssh''s key exchange order: curve25519-sha256, curve25519-sha256@libssh.org, the three ECDH curves from nistp256 up, then diffie-hellman-group18-sha512 and group16-sha512. Dropbear lists nistp521 first and never offers group16 or group18; OpenSSH puts sntrup761 or mlkem768 first and group-exchange after the curves. Survives editing the banner to a versioned Dropbear string. Matched: potd 11bebb9 (2020-07-12; libssh 0.10.6, Debian 12) (2026-11).'
