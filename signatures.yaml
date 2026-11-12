@@ -13165,3 +13165,74 @@ signatures:
       invert_match: false
     confidence: High
     comment: 'Commands are matched case-sensitively, so a lower-case "ehlo" is refused with "502 5.5.2 Error: command not recognized" and the connection is closed. SMTP verbs are case-insensitive (RFC 5321); Postfix, Exim, OpenSMTPD, Sendmail, aiosmtpd, maddy, Mailpit and MailHog accept "ehlo". Matched: imap-honey a2feb31 (2026-11).'
+  - name: honeyntp-epoch-transmit-timestamp
+    id: 1490
+    port: 123
+    proto: udp
+    steps:
+      - input_type: hex
+        input: "230006ec000000000000000000000000000000000000000000000000000000000000000000000000e8f1b2a3686f6e79"
+        output_match_type: hex
+        output: "83aa7e8000000000"
+        invert_match: false
+    confidence: High
+    comment: "An NTPv4 client request is answered with a transmit timestamp of 83aa7e80.00000000, that is 1 January 1970 00:00:00 UTC (Unix time 0 converted to NTP time), on every reply. A genuine server (chrony, NTPsec, ntpd) sends its current time as the transmit timestamp. Matched: Honeyntp 0c9d938 on Python 2.7 and with the Python 3 port (2026-11)."
+  - name: honeyntp-origin-not-echoed
+    id: 1491
+    port: 123
+    proto: udp
+    steps:
+      - input_type: hex
+        input: "230006ec000000000000000000000000000000000000000000000000000000000000000000000000e8f1b2a3686f6e79"
+        output_match_type: hex
+        output: "e8f1b2a3686f6e79"
+        invert_match: true
+      - input_type: hex
+        input: "230006ec000000000000000000000000000000000000000000000000000000000000000000000000e8f1b2a3686f6e79"
+        output_match_type: hex
+        output: "1c020a00000000000000000000000000"
+        invert_match: false
+    confidence: High
+    comment: "A client request's transmit timestamp is not copied into the reply's origin timestamp (always zero), and the reply header is fixed: version 3 whatever the request's version, mode 4, stratum 2, poll 10, precision 0, root delay, root dispersion and reference ID zero. RFC 5905 requires the origin timestamp to echo the client's transmit timestamp, as chrony, NTPsec and ntpd do (clients discard replies that do not), and a stratum 2 server always reports a non-zero reference ID. The second step waits for Honeyntp's two-second pause. Matched: Honeyntp 0c9d938 on Python 2.7 and with the Python 3 port (2026-11)."
+  - name: honeyntp-monlist-answered-as-server
+    id: 1492
+    port: 123
+    proto: udp
+    steps:
+      - input_type: hex
+        input: "1700032a0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+        output_match_type: hex
+        output: "83aa7e8000000000"
+        invert_match: false
+    confidence: High
+    comment: "An NTP mode 7 MON_GETLIST_1 (monlist) request is answered with a 48-byte mode 4 server packet carrying the 1970 transmit timestamp. ntpd answers mode 7 with a mode 7 reply or not at all (4.2.7 and later by default), and chrony and NTPsec do not answer mode 7. Matched: Honeyntp 0c9d938 on Python 2.7 and with the Python 3 port (2026-11)."
+  - name: honeyntp-non-ntp-datagram-answered
+    id: 1493
+    port: 123
+    proto: udp
+    steps:
+      - input_type: hex
+        input: "68640a"
+        output_match_type: hex
+        output: "83aa7e8000000000"
+        invert_match: false
+    confidence: High
+    comment: "A three-byte datagram that is not NTP at all ('hd' and a newline) is answered with a full 48-byte NTP server packet carrying the 1970 transmit timestamp. Genuine NTP servers ignore datagrams shorter than the 48-byte NTP header. Matched: Honeyntp 0c9d938 on Python 2.7 and with the Python 3 port (2026-11)."
+  - name: honeyntp-two-second-reply-pacing
+    id: 1494
+    port: 123
+    proto: udp
+    steps:
+      - input_type: hex
+        input: "230006ec000000000000000000000000000000000000000000000000000000000000000000000000e8f1b2a3686f6e79"
+        output_match_type: hex
+        output: "1c020a00"
+        invert_match: false
+      - input_type: hex
+        input: "230006ec000000000000000000000000000000000000000000000000000000000000000000000000e8f1b2a3686f6e79"
+        output_match_type: hex
+        output: "83aa7e8000000000"
+        invert_match: false
+        min_response_ms: 1500
+    confidence: Medium
+    comment: "Replies come from a single worker that pauses two seconds after each one, so a second request sent straight after the first is answered about 2000 ms later (lab: 2003 ms). chrony, NTPsec and ntpd answer both at once. Timing-based, so Medium: a slow or busy network path can delay a genuine reply, although the 1970 transmit timestamp is also required. Matched: Honeyntp 0c9d938 on Python 2.7 and with the Python 3 port (2026-11)."
