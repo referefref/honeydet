@@ -13236,3 +13236,61 @@ signatures:
         min_response_ms: 1500
     confidence: Medium
     comment: "Replies come from a single worker that pauses two seconds after each one, so a second request sent straight after the first is answered about 2000 ms later (lab: 2003 ms). chrony, NTPsec and ntpd answer both at once. Timing-based, so Medium: a slow or busy network path can delay a genuine reply, although the 1970 transmit timestamp is also required. Matched: Honeyntp 0c9d938 on Python 2.7 and with the Python 3 port (2026-11)."
+  - name: ampfuzz-memcached-udp-stats-answered-error
+    id: 1460
+    port: 11211
+    proto: udp
+    steps:
+      - input_type: hex
+        input: "686400000001000073746174730a"
+        output_match_type: regex
+        output: '(?s)^hd\x00\x00\x00\x01\x00\x00ERROR$'
+        invert_match: false
+    confidence: High
+    comment: "memcached UDP request 'stats\\n' (request id 'hd'). The AmpFuzz-synthesised memcached handler answers with a single 'ERROR' datagram, because the path it learnt for short junk lines constrains the first byte and the line length but not the command word (the word comparison is not part of the recorded path constraints). Genuine memcached (1.6.9 Debian 11, 1.6.18 Debian 12) returns the statistics block in two or more datagrams. Read-only request. Matched: AmpFuzz 12a5557 memcached_11211 handler (lab fuzzing run, 2026-11) served by ampfuzz-hp."
+  - name: ampfuzz-memcached-udp-get-answered-error
+    id: 1461
+    port: 11211
+    proto: udp
+    steps:
+      - input_type: hex
+        input: "6865000000010000676574206a0a"
+        output_match_type: regex
+        output: '(?s)^he\x00\x00\x00\x01\x00\x00ERROR$'
+        invert_match: false
+    confidence: High
+    comment: "memcached UDP request 'get j\\n' (request id 'he'). The AmpFuzz-synthesised handler answers 'ERROR' (same over-general path as 1460); genuine memcached answers 'END' for a missing key or 'VALUE ... END' for a present one, never ERROR. Read-only request. Matched: AmpFuzz 12a5557 memcached_11211 handler (lab fuzzing run, 2026-11) served by ampfuzz-hp."
+  - name: ampfuzz-memcached-udp-incomplete-line-answered
+    id: 1462
+    port: 11211
+    proto: udp
+    steps:
+      - input_type: hex
+        input: "686600000001000063"
+        output_match_type: regex
+        output: '(?s)^hf\x00\x00\x00\x01\x00\x00ERROR$'
+        invert_match: false
+      - input_type: hex
+        input: "6875000000010000676574206a0a"
+        output_match_type: regex
+        output: '(?s)^hu\x00\x00\x00\x01\x00\x00ERROR$'
+        invert_match: false
+    confidence: High
+    comment: "memcached UDP datagram whose body is one byte ('c') with no line ending (request id 'hf'). Genuine memcached waits for a complete command line and sends nothing for an incomplete UDP request; the AmpFuzz-synthesised handler answers 'ERROR'. The second step ('get j\\n', request id 'hu', answered 'ERROR' as in 1461) separates it from other memcached emulations that also answer an incomplete line with ERROR (the lab's AMP-Research honeypot does). Matched: AmpFuzz 12a5557 memcached_11211 handler (lab fuzzing run, 2026-11) served by ampfuzz-hp."
+  - name: ampfuzz-memcached-udp-single-datagram-for-several-lines
+    id: 1463
+    port: 11211
+    proto: udp
+    steps:
+      - input_type: hex
+        input: "68670000000100000a8fcb232a85ed25ce0a0a0a"
+        output_match_type: regex
+        output: '(?s)^hg\x00\x00\x00\x01\x00\x00ERROR$'
+        invert_match: false
+      - input_type: hex
+        input: "687600000001000073746174730a"
+        output_match_type: regex
+        output: '(?s)^hv\x00\x00\x00\x01\x00\x00ERROR$'
+        invert_match: false
+    confidence: Medium
+    comment: "memcached UDP datagram with four lines (empty, junk, empty, empty; one of AmpFuzz's own amplifying inputs, request id 'hg'). Genuine memcached answers every line, here with four 'ERROR' datagrams; AmpFuzz's gen_reply() returns only the first reply recorded for a path, so the honeypot sends one datagram. The second step ('stats\\n', request id 'hv', answered 'ERROR' as in 1460) separates it from other emulations that answer only the first line (the lab's AMP-Research honeypot). Medium: relies on the handler having learnt this input's path. Matched: AmpFuzz 12a5557 memcached_11211 handler (lab fuzzing run, 2026-11) served by ampfuzz-hp."
