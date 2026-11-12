@@ -13417,3 +13417,27 @@ signatures:
         invert_match: false
     confidence: High
     comment: 'Port 22 form: honeypot.go always listens on 2022 and its README publishes it as port 22 (docker run -p 22:2022); the companion scripts redirect 22 to it. go.crypto of 2013 does not check the client''s identification line (''we do not ignore lines that don''t start with SSH-2.0-'', transport.go), so honeypot.go answers an HTTP request line sent in its place with its key exchange offer (KEXINIT with the all-zero cookie of go.crypto before April 2014, NIST ECDH, group14 and group1 key exchanges and the ssh-rsa host key only). OpenSSH replies ''Invalid SSH identification string.'' and closes; Gitea and Soft Serve, on current golang.org/x/crypto, close without a key exchange offer. Matched: honeypot.go ad480e6 (2013-12-20) built with Go 1.27.3 and go.crypto 08da9c6 of 2013-12-20 (2026-11).'
+  - name: artemisa-pjsip-claiming-twinkle
+    id: 1500
+    port: 5060
+    proto: udp
+    steps:
+      - input_type: string
+        input: "OPTIONS sip:3000@192.0.2.10 SIP/2.0\r\nVia: SIP/2.0/UDP 127.0.0.1:5060;rport;branch=z9hG4bK-hd1500{{rand}}\r\nMax-Forwards: 70\r\nFrom: <sip:hd@127.0.0.1>;tag=hd1500{{rand}}\r\nTo: <sip:3000@192.0.2.10>\r\nCall-ID: hd1500-{{rand}}@127.0.0.1\r\nCSeq: 7 OPTIONS\r\nContact: <sip:hd@127.0.0.1:5060>\r\nAccept: application/sdp\r\nContent-Length: 0\r\n\r"
+        output_match_type: regex
+        output: '(?s)\ASIP/2\.0 200 OK\r\n.*\r\nAllow: PRACK, INVITE, ACK, BYE, CANCEL, UPDATE, INFO, SUBSCRIBE, NOTIFY, REFER, MESSAGE, OPTIONS\r\nAccept: application/sdp, application/pidf\+xml, .*application/im-iscomposing\+xml, text/plain\r\nSupported: replaces, 100rel, timer, norefersub.*\r\nAllow-Events: presence, dialog, message-summary, refer\r\nUser-Agent: Twinkle/'
+        invert_match: false
+    confidence: High
+    comment: 'An anonymous OPTIONS is answered 200 OK with the capability headers of the PJSIP user agent library (Allow list starting PRACK, INVITE, Accept list ending in im-iscomposing+xml and text/plain, Supported replaces, 100rel, timer, norefersub, Allow-Events presence, dialog, message-summary, refer) together with ''User-Agent: Twinkle/...'', Artemisa''s default (Twinkle/1.4.2). Twinkle has its own SIP stack: it answers with a Server header (not User-Agent), ''Allow: INVITE,ACK,BYE,...'' without spaces and ''Supported: replaces,norefersub,100rel''. Kamailio (403) and Asterisk (401) refuse or challenge; the PJSUA softphone names itself PJSUA. Depends on the configured user_agent. The probe uses a new Call-ID and branch for each run ({{rand}}): PJSIP sends the reply to a repeated identical request to the address of the first one. Matched: Artemisa 1.0.91 (artemisa-nx, PJSIP 2.17) (2026-11).'
+  - name: artemisa-auto-answer-pjmedia
+    id: 1501
+    port: 5060
+    proto: udp
+    steps:
+      - input_type: string
+        input: "INVITE sip:0046812118532@192.0.2.10 SIP/2.0\r\nVia: SIP/2.0/UDP 127.0.0.1:5060;rport;branch=z9hG4bK-hd1501{{rand}}\r\nMax-Forwards: 70\r\nFrom: <sip:hd@127.0.0.1>;tag=hd1501{{rand}}\r\nTo: <sip:0046812118532@192.0.2.10>\r\nCall-ID: hd1501-{{rand}}@127.0.0.1\r\nCSeq: 1 INVITE\r\nContact: <sip:hd@127.0.0.1:5060>\r\nContent-Type: application/sdp\r\nContent-Length: 186\r\n\r\nv=0\r\no=hd 1 1 IN IP4 127.0.0.1\r\ns=-\r\nc=IN IP4 127.0.0.1\r\nt=0 0\r\nm=audio 40000 RTP/AVP 0 8 101\r\na=rtpmap:0 PCMU/8000\r\na=rtpmap:8 PCMA/8000\r\na=rtpmap:101 telephone-event/8000\r\na=sendrecv\r"
+        output_match_type: regex
+        output: '(?s)\ASIP/2\.0 100 Trying\r\n.*SIP/2\.0 180 Ringing\r\n.*SIP/2\.0 200 OK\r\n.*CSeq: 1 INVITE\r\n.*Content-Type: application/sdp\r\n.*\r\no=- \d+ \d+ IN IP4 [0-9.]+\r\ns=pjmedia\r\n'
+        invert_match: false
+    confidence: High
+    comment: 'An unauthenticated INVITE from an unknown caller to an international number is answered at once: 100 Trying, 180 Ringing and 200 OK with a PJSIP media offer (''s=pjmedia''), within milliseconds and without any challenge. Artemisa answers every call (behaviour mode active: send_180, send_200) to collect it. A PBX or proxy challenges (Asterisk 401) or refuses (Kamailio 403), Twinkle refuses a call for a number that is not its own (404) and the PJSUA softphone rings and waits for the user. With max_calls 1 an unacknowledged call keeps Artemisa busy (486 Busy Here) for 64 seconds (SIP timer H), so repeat scans need a pause; the probe uses a new Call-ID and branch for each run because PJSIP treats a repeated identical INVITE as a retransmission. Matched: Artemisa 1.0.91 (artemisa-nx, PJSIP 2.17) (2026-11).'
