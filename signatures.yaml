@@ -109,7 +109,7 @@ signatures:
         output: 334 UGFzc3dvcmQ6
         invert_match: false
     confidence: Medium
-    comment: https://github.com/yvesago/imap-honey
+    comment: "https://github.com/yvesago/imap-honey. Not imap-honey a2feb31 (2026-11)."
   - name: twisted-conch-ssh-bad-version (opencanary, cowrie before 3.x)
     id: 8
     port: 22
@@ -12998,3 +12998,170 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: "Ubiquiti discovery: the AMP-Research probe (ubiquiti_10001.pkt) returns a version 1 discovery record whose MAC address TLV (type 0x01) carries 78:8a:20:dd:08:05, derived from the default AMP_SEED. Medium. Matched: AMP-Research honeypot 1.0.0 (AMP-Research 2c78c06) (2026-11)."
+  - name: imap-honey-greeting-without-untagged-star
+    id: 1480
+    port: 143
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '\AOK IMAP4\z'
+      invert_match: false
+    confidence: High
+    comment: 'imaphoney greets with "OK IMAP4" (fixed in the source), without the "* " that marks an untagged response. An IMAP greeting is an untagged "* OK", "* PREAUTH" or "* BYE" line (RFC 9051); Dovecot, Courier-IMAP and maddy send "* OK [CAPABILITY ...] ... ready". Matched: imap-honey a2feb31 (2026-11).'
+  - name: imap-honey-capability-bare-ok
+    id: 1481
+    port: 143
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '\AOK IMAP4'
+      invert_match: false
+    - input_type: string
+      input: "a1 CAPABILITY\r"
+      output_match_type: regex
+      output: '\A\* CAPABILITY [^\r\n]*\r\na1 OK CAPABILITY\z'
+      invert_match: false
+    confidence: High
+    comment: 'CAPABILITY is completed with the bare text "a1 OK CAPABILITY" whatever capability list is configured (-cap; default "ACL ID IDLE IMAP4rev1 AUTH=PLAIN", with no STARTTLS or LOGINDISABLED). Dovecot answers "OK Pre-login capabilities listed, post-login capabilities have more.", Courier-IMAP and maddy "OK CAPABILITY completed". Matched: imap-honey a2feb31 (2026-11).'
+  - name: imap-honey-advertised-id-is-invalid-command
+    id: 1482
+    port: 143
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '\AOK IMAP4'
+      invert_match: false
+    - input_type: string
+      input: "a1 ID NIL\r"
+      output_match_type: regex
+      output: '\Aa1 BAD invalid command\z'
+      invert_match: false
+    confidence: High
+    comment: 'Every command other than CAPABILITY, NOOP, AUTHENTICATE, LOGIN and LOGOUT gets "BAD invalid command", including ID, which the default capability list advertises, and STARTTLS and SELECT. Dovecot answers ID with "* ID (...)", maddy with "BAD Unknown command", Courier-IMAP with "NO Error in IMAP command received by server.". Matched: imap-honey a2feb31 (2026-11).'
+  - name: imap-honey-noop-bare-ok
+    id: 1483
+    port: 143
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '\AOK IMAP4'
+      invert_match: false
+    - input_type: string
+      input: "a1 NOOP\r"
+      output_match_type: regex
+      output: '\Aa1 OK\z'
+      invert_match: false
+    confidence: High
+    comment: 'NOOP is answered "a1 OK" with no response text (fixed in the source). RFC 9051 requires text after the status; Dovecot, Courier-IMAP and maddy send "OK NOOP completed". Matched: imap-honey a2feb31 (2026-11).'
+  - name: imap-honey-login-delayed-refusal-and-close
+    id: 1484
+    port: 143
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '\AOK IMAP4'
+      invert_match: false
+    - input_type: string
+      input: "a1 LOGIN u{{rand}} p{{rand}}\r"
+      output_match_type: regex
+      output: '\Aa1 NO LOGIN failed\z'
+      invert_match: false
+      min_response_ms: 2500
+    confidence: High
+    comment: 'Every LOGIN is logged, held for three seconds and refused with "a1 NO LOGIN failed", and the connection is closed. Dovecot refuses plaintext LOGIN at once with "NO [PRIVACYREQUIRED] ...", maddy with "NO Authentication disabled", Courier-IMAP after a delay with "NO Login failed." and keeps the connection open. Run with -timeout 6 or more. Matched: imap-honey a2feb31 (2026-11).'
+  - name: imap-honey-untagged-base64-login
+    id: 1485
+    port: 143
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '\AOK IMAP4'
+      invert_match: false
+    - input_type: string
+      input: "dXNlcgB1c2VyAHBhc3M=\r"
+      output_match_type: regex
+      output: '\ANO LOGIN failed\z'
+      invert_match: false
+      min_response_ms: 2500
+    confidence: High
+    comment: 'A line holding only base64 text (the AUTHENTICATE PLAIN continuation) is accepted at any time as a login, logged, and refused after three seconds with an untagged " NO LOGIN failed". A genuine server treats the word as a tag without a command: Dovecot and Courier-IMAP reply "<word> BAD/NO Error in IMAP command received by server.", maddy "* BAD ... cannot parse command". Run with -timeout 6 or more. Matched: imap-honey a2feb31 (2026-11).'
+  - name: smtp-honey-ehlo-two-final-lines
+    id: 1486
+    port: 25
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '\A220 [^\r\n]+ ESMTP ready\z'
+      invert_match: false
+    - input_type: string
+      input: "EHLO probe.example.org\r"
+      output_match_type: regex
+      output: '\A250-localhost\r\n250-PIPELINING\r\n250-SIZE 5242880\r\n250-ETRN\r\n250 8BITMIME\r\n250 DSN\z'
+      invert_match: false
+    confidence: Medium
+    comment: 'smtphoney greets "220 <hostname> ESMTP ready" and its default EHLO reply (-cap) names "localhost" whatever -hostname is set to and has two final lines, "250 8BITMIME" followed by "250 DSN", where a multiline reply has exactly one line without the hyphen (RFC 5321). The list is configurable, hence Medium. Postfix, Exim, OpenSMTPD, Sendmail, aiosmtpd, maddy, Mailpit and MailHog name their host and end with one final line. Matched: imap-honey a2feb31 (2026-11).'
+  - name: smtp-honey-noop-password-prompt
+    id: 1487
+    port: 25
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '\A220 '
+      invert_match: false
+    - input_type: string
+      input: "NOOP\r"
+      output_match_type: regex
+      output: '\A334 UGFzc3dvcmQ6\z'
+      invert_match: false
+    confidence: High
+    comment: 'smtphoney treats any line it does not recognise and that decodes as base64 as an AUTH LOGIN answer, so NOOP (and HELP) receive the "334 UGFzc3dvcmQ6" (Password:) prompt, with or without -la. Postfix, Exim, OpenSMTPD, Sendmail, aiosmtpd, maddy, Mailpit and MailHog answer NOOP with 250. Matched: imap-honey a2feb31 (2026-11).'
+  - name: smtp-honey-mail-from-recipient-ok
+    id: 1488
+    port: 25
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '\A220 '
+      invert_match: false
+    - input_type: string
+      input: "MAIL FROM:<{{rand}}@example.org>\r"
+      output_match_type: regex
+      output: '\A250 Recipient ok\z'
+      invert_match: false
+    confidence: High
+    comment: 'MAIL FROM is accepted with "250 Recipient ok" (the sender is called the recipient; with -ld RCPT TO answers "250 Sender ok"), even before EHLO. Genuine servers either refuse MAIL before HELO or EHLO with 503 or accept it with their own 250 text. Matched: imap-honey a2feb31 (2026-11).'
+  - name: smtp-honey-lower-case-ehlo-rejected
+    id: 1489
+    port: 25
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '\A220 '
+      invert_match: false
+    - input_type: string
+      input: "ehlo probe.example.org\r"
+      output_match_type: regex
+      output: '\A502 5\.5\.2 Error: command not recognized\z'
+      invert_match: false
+    confidence: High
+    comment: 'Commands are matched case-sensitively, so a lower-case "ehlo" is refused with "502 5.5.2 Error: command not recognized" and the connection is closed. SMTP verbs are case-insensitive (RFC 5321); Postfix, Exim, OpenSMTPD, Sendmail, aiosmtpd, maddy, Mailpit and MailHog accept "ehlo". Matched: imap-honey a2feb31 (2026-11).'
