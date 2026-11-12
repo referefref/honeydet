@@ -13519,3 +13519,100 @@ signatures:
       invert_match: false
     confidence: Medium
     comment: 'Port 2222 form (sshlowpot''s default listen port). sshlowpot generates its own host key on first start (slp_id_rsa) with rsa.GenerateKey(rand.Reader, 4096) and loads no other key, so it offers only RSA host key algorithms, in Go''s KEXINIT, and presents a 4096-bit key (512-byte modulus). OpenSSH, Dropbear and libssh servers offer Ed25519 or ECDSA keys alongside RSA and list their own cipher orders. This holds when the version string is changed to another OpenSSH or Dropbear release. Gitea''s built-in Go SSH server also makes a 4096-bit RSA key but announces SSH-2.0-Go and, in current releases, adds ECDSA and Ed25519 keys. Steps: an OpenSSH or Dropbear version string; a client identification and KEXINIT offering diffie-hellman-group14-sha1, answered by Go''s RSA-only lists; a KEXDH_INIT, answered by a KEXDH_REPLY whose host key is ssh-rsa with exponent 65537 and a 513-byte modulus field (hex match). An operator who supplies an existing key file of another size removes the last step, hence Medium. Matched: sshlowpot commit 67717d9 (2020-02-02, HEAD) built with golang.org/x/crypto v0.58.0 and with the x/crypto of its era (69ecbb4, 2020-01-28), Go 1.27.3 (2026-11).'
+  - name: telnethoney-nsa-banner-prompt
+    id: 1540
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^Welcome to the National Security Agency Remote Terminal\r\n\r\nroot@nsa\.gov:/\$$'
+        invert_match: false
+    confidence: High
+    comment: "Without negotiation or login, the server sends its hard-coded greeting 'Welcome to the National Security Agency Remote Terminal' followed at once by the root shell prompt 'root@nsa.gov:/$ '. Genuine Telnet servers negotiate options (IAC) and ask for a login first. Matched: TelnetHoney dba64a2 (2026-11)."
+  - name: telnethoney-access-denied-log-updated
+    id: 1541
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '(?s).*'
+        invert_match: false
+      - input_type: string
+        input: "cd\r"
+        output_match_type: regex
+        output: '^root Access Denied, Access log updated\r\n\S+:/[$#]$'
+        invert_match: false
+    confidence: High
+    comment: "Sending 'cd' at the first prompt returns 'root Access Denied, Access log updated' and the prompt again (passwd gives the same text). No genuine shell prints this; it holds even if the greeting and prompt are edited. Matched: TelnetHoney dba64a2 (2026-11)."
+  - name: telnethoney-lf-line-truncation
+    id: 1542
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '(?s).*'
+        invert_match: false
+      - input_type: hex
+        input: "686470726f626531353432310a"
+        output_match_type: regex
+        output: '^-sh: hdprobe1542: not found\r\n\S+:/[$#]$'
+        invert_match: false
+    confidence: High
+    comment: "A command line ended with a bare line feed loses its last character: 'hdprobe15421' + LF is answered '-sh: hdprobe1542: not found', because the server always strips two characters (CR LF) from the line. A real shell reports the full command name. Independent of the greeting and prompt text. Matched: TelnetHoney dba64a2 (2026-11)."
+  - name: telnethoney-silent-sudo-root-prompt
+    id: 1543
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '\S+:/\$$'
+        invert_match: false
+      - input_type: string
+        input: "sudo\r"
+        output_match_type: regex
+        output: '^\S+:/#$'
+        invert_match: false
+    confidence: High
+    comment: "Before any login the prompt ends in '$'; 'sudo' with no arguments prints nothing and the prompt switches to '#'. Real sudo prints its usage text when given no command, and a pre-login Telnet session has no shell at all. Matched: TelnetHoney dba64a2 (2026-11)."
+  - name: telnethoney-w-day-of-month-uptime
+    id: 1544
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '(?s).*'
+        invert_match: false
+      - input_type: string
+        input: "w\r"
+        output_match_type: regex
+        output: '(?s)^\d\d:\d\d:\d\d up \d{1,2} days, 1 users, load average: 1\.\d{1,2}, 0\.\d{1,2}, 0\.\d{1,2}\r\nUSER     TTY      FROM             LOGIN@   IDLE   JCPU   PCPU WHAT \r\nroot     :0       :0               \d\d:\d\d    \d{1,2}\.00s \d{1,2}\.00s \d{1,2}\.00s w\r\n\S+:/[$#]$'
+        invert_match: false
+    confidence: High
+    comment: "'w' returns a fixed template: uptime equal to the day of the month, '1 users', a first load average always starting '1.', a root login on display ':0' from ':0', and whole-second IDLE/JCPU/PCPU values with '.00s'. procps w writes '1 user' and reports real values. Matched: TelnetHoney dba64a2 (2026-11)."
+  - name: telnethoney-date-cet-template
+    id: 1545
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '(?s).*'
+        invert_match: false
+      - input_type: string
+        input: "date\r"
+        output_match_type: regex
+        output: '^[A-Z][a-z]{2} [A-Z][a-z]{2} \d\d \d\d:\d\d:\d\d CET \d{4}\r\n\r\n\S+:/[$#]$'
+        invert_match: false
+    confidence: Medium
+    comment: "'date' always reports the CET zone with a zero-padded day and is followed by an empty line before the prompt; the time is the host clock shifted by a random offset of up to about 12 hours per session. GNU and BusyBox date pad the day with a space and follow the host's zone. Medium: a real shell set to CET in a locale with padded days could look similar. Matched: TelnetHoney dba64a2 (2026-11)."
