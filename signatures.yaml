@@ -5899,7 +5899,7 @@ signatures:
         output: '(?s)rsa-sha2-256,rsa-sha2-512,ssh-rsa.{4}aes128-gcm@openssh\.com,aes256-gcm@openssh\.com,chacha20-poly1305@openssh\.com,aes128-ctr,aes192-ctr,aes256-ctr.{4}aes128-gcm@openssh\.com'
         invert_match: false
     confidence: High
-    comment: "A server that announces itself as OpenSSH but whose KEXINIT is that of Go's golang.org/x/crypto/ssh (via gliderlabs/ssh): a single RSA host key offered as rsa-sha2-256,rsa-sha2-512,ssh-rsa and Go's cipher order beginning aes128-gcm@openssh.com,aes256-gcm@openssh.com,chacha20-poly1305@openssh.com. OpenSSH puts chacha20-poly1305 first, offers ed25519 and ECDSA host keys and zlib@openssh.com. Holds whatever serverVersion is set to, as long as it claims OpenSSH. Matched: Beelzebub v3.10.0 (2026-11). Also matches ssh-auth-logger f53dddc (2026-11). Also matches sshForShits 4a2bef3 built with x/crypto v0.58.0 (2026-11). Also matches sshhipot master 089cad6 built with x/crypto v0.58.0 (2026-11)."
+    comment: "A server that announces itself as OpenSSH but whose KEXINIT is that of Go's golang.org/x/crypto/ssh (via gliderlabs/ssh): a single RSA host key offered as rsa-sha2-256,rsa-sha2-512,ssh-rsa and Go's cipher order beginning aes128-gcm@openssh.com,aes256-gcm@openssh.com,chacha20-poly1305@openssh.com. OpenSSH puts chacha20-poly1305 first, offers ed25519 and ECDSA host keys and zlib@openssh.com. Holds whatever serverVersion is set to, as long as it claims OpenSSH. Matched: Beelzebub v3.10.0 (2026-11). Also matches ssh-auth-logger f53dddc (2026-11). Also matches sshForShits 4a2bef3 built with x/crypto v0.58.0 (2026-11). Also matches sshhipot master 089cad6 built with x/crypto v0.58.0 (2026-11). Also matches sshlowpot 67717d9 built with x/crypto v0.58.0 (2026-11)."
   - name: beelzebub-telnet-login-without-negotiation
     id: 752
     port: 23
@@ -6474,7 +6474,7 @@ signatures:
         output: '(?s)curve25519-sha256@libssh\.org,ecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521,diffie-hellman-group14-sha1\x00\x00\x00\x07ssh-rsa\x00\x00\x00.aes128-gcm@openssh\.com,chacha20-poly1305@openssh\.com,aes128-ctr,aes192-ctr,aes256-ctr\x00'
         invert_match: false
     confidence: High
-    comment: "Banner claims OpenSSH, but the server KEXINIT is that of the Go golang.org/x/crypto/ssh server of early 2020 (five key exchanges ending in diffie-hellman-group14-sha1, a single ssh-rsa host key, AES-GCM/ChaCha20/AES-CTR ciphers). OpenSSH always offers its own, longer lists (and ssh-ed25519 or ECDSA host keys). Matched: honeytrap 05965fc (2026-11). Also matches sshForShits 4a2bef3 built with its April 2020 x/crypto (2026-11)."
+    comment: "Banner claims OpenSSH, but the server KEXINIT is that of the Go golang.org/x/crypto/ssh server of early 2020 (five key exchanges ending in diffie-hellman-group14-sha1, a single ssh-rsa host key, AES-GCM/ChaCha20/AES-CTR ciphers). OpenSSH always offers its own, longer lists (and ssh-ed25519 or ECDSA host keys). Matched: honeytrap 05965fc (2026-11). Also matches sshForShits 4a2bef3 built with its April 2020 x/crypto (2026-11). Also matches sshlowpot 67717d9 built with x/crypto of January 2020 (2026-11)."
   - name: honeytrap-ssh-exec-ls-not-found
     id: 792
     port: 22
@@ -8224,7 +8224,7 @@ signatures:
         output: '(?s)rsa-sha2-256,rsa-sha2-512,ssh-rsa.{4}aes128-gcm@openssh\.com,aes256-gcm@openssh\.com,chacha20-poly1305@openssh\.com,aes128-ctr,aes192-ctr,aes256-ctr.{4}aes128-gcm@openssh\.com'
         invert_match: false
     confidence: High
-    comment: "Port 2222 form of signature 751 for Beelzebub's LLM SSH example (ssh-2222), which listens there: the identification string claims OpenSSH but the key exchange is Go's golang.org/x/crypto/ssh (a single RSA host key offered as rsa-sha2-256,rsa-sha2-512,ssh-rsa, AES-GCM before ChaCha20-Poly1305). Protocol behaviour, independent of the model; no model call is made before login. Matched: Beelzebub v3.10.0 with claude-haiku-5-5 via an OpenAI-compatible endpoint (2026-11). Also matches ssh-auth-logger f53dddc (2026-11). Also matches sshForShits 4a2bef3 built with x/crypto v0.58.0 (2026-11). Also matches sshhipot master 089cad6 built with x/crypto v0.58.0 (2026-11)."
+    comment: "Port 2222 form of signature 751 for Beelzebub's LLM SSH example (ssh-2222), which listens there: the identification string claims OpenSSH but the key exchange is Go's golang.org/x/crypto/ssh (a single RSA host key offered as rsa-sha2-256,rsa-sha2-512,ssh-rsa, AES-GCM before ChaCha20-Poly1305). Protocol behaviour, independent of the model; no model call is made before login. Matched: Beelzebub v3.10.0 with claude-haiku-5-5 via an OpenAI-compatible endpoint (2026-11). Also matches ssh-auth-logger f53dddc (2026-11). Also matches sshForShits 4a2bef3 built with x/crypto v0.58.0 (2026-11). Also matches sshhipot master 089cad6 built with x/crypto v0.58.0 (2026-11). Also matches sshlowpot 67717d9 built with x/crypto v0.58.0 (2026-11)."
   - name: pyrdp-mcs-maxpdusize-short-integer
     id: 940
     port: 3389
@@ -13441,3 +13441,81 @@ signatures:
         invert_match: false
     confidence: High
     comment: 'An unauthenticated INVITE from an unknown caller to an international number is answered at once: 100 Trying, 180 Ringing and 200 OK with a PJSIP media offer (''s=pjmedia''), within milliseconds and without any challenge. Artemisa answers every call (behaviour mode active: send_180, send_200) to collect it. A PBX or proxy challenges (Asterisk 401) or refuses (Kamailio 403), Twinkle refuses a call for a number that is not its own (404) and the PJSUA softphone rings and waits for the user. With max_calls 1 an unacknowledged call keeps Artemisa busy (486 Busy Here) for 64 seconds (SIP timer H), so repeat scans need a pause; the probe uses a new Call-ID and branch for each run because PJSIP treats a repeated identical INVITE as a retransmission. Matched: Artemisa 1.0.91 (artemisa-nx, PJSIP 2.17) (2026-11).'
+  - name: sshlowpot-openssh-7-0-banner-go-kex
+    id: 1530
+    port: 22
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^SSH-2\.0-OpenSSH_7\.0$'
+      invert_match: false
+    - input_type: hex
+      input: '5353482d322e302d4f70656e5353485f392e3270312044656269616e2d322b646562313275330d0a000000a40814111111111111111111111111111111110000001b6469666669652d68656c6c6d616e2d67726f757031342d73686131000000147273612d736861322d3235362c7373682d7273610000000a6165733132382d6374720000000a6165733132382d63747200000009686d61632d7368613100000009686d61632d73686131000000046e6f6e65000000046e6f6e65000000000000000000000000000000000000000000'
+      output_match_type: regex
+      output: '(?s)\x00\x00\x00.(?:rsa-sha2-256,rsa-sha2-512,)?ssh-rsa\x00\x00\x00.aes128-gcm@openssh\.com,(?:aes256-gcm@openssh\.com,)?chacha20-poly1305@openssh\.com,aes128-ctr,aes192-ctr,aes256-ctr\x00'
+      invert_match: false
+    confidence: Medium
+    comment: 'sshlowpot is a low-interaction SSH honeypot in Go (golang.org/x/crypto/ssh) that logs every password, keyboard-interactive answer and public key and refuses them all. By default it announces ''SSH-2.0-OpenSSH_7.0'' (-ver flag) while the key exchange is that of x/crypto with its default lists: RSA host key algorithms only ((rsa-sha2-256,rsa-sha2-512,)ssh-rsa) and the cipher order aes128-gcm@openssh.com,(aes256-gcm@openssh.com,)chacha20-poly1305@openssh.com,aes128-ctr,aes192-ctr,aes256-ctr. Genuine OpenSSH 7.0 lists chacha20-poly1305 first and also offers ECDSA and Ed25519 host keys. Steps: the version string; a client identification and KEXINIT (no authentication), answered by the Go lists. The banner is a flag, hence Medium. Matched: sshlowpot commit 67717d9 (2020-02-02, HEAD) built with golang.org/x/crypto v0.58.0 and with the x/crypto of its era (69ecbb4, 2020-01-28), Go 1.27.3 (2026-11).'
+  - name: sshlowpot-openssh-7-0-banner-go-kex-default-port
+    id: 1531
+    port: 2222
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^SSH-2\.0-OpenSSH_7\.0$'
+      invert_match: false
+    - input_type: hex
+      input: '5353482d322e302d4f70656e5353485f392e3270312044656269616e2d322b646562313275330d0a000000a40814111111111111111111111111111111110000001b6469666669652d68656c6c6d616e2d67726f757031342d73686131000000147273612d736861322d3235362c7373682d7273610000000a6165733132382d6374720000000a6165733132382d63747200000009686d61632d7368613100000009686d61632d73686131000000046e6f6e65000000046e6f6e65000000000000000000000000000000000000000000'
+      output_match_type: regex
+      output: '(?s)\x00\x00\x00.(?:rsa-sha2-256,rsa-sha2-512,)?ssh-rsa\x00\x00\x00.aes128-gcm@openssh\.com,(?:aes256-gcm@openssh\.com,)?chacha20-poly1305@openssh\.com,aes128-ctr,aes192-ctr,aes256-ctr\x00'
+      invert_match: false
+    confidence: Medium
+    comment: 'Port 2222 form (sshlowpot''s default listen port). sshlowpot is a low-interaction SSH honeypot in Go (golang.org/x/crypto/ssh) that logs every password, keyboard-interactive answer and public key and refuses them all. By default it announces ''SSH-2.0-OpenSSH_7.0'' (-ver flag) while the key exchange is that of x/crypto with its default lists: RSA host key algorithms only ((rsa-sha2-256,rsa-sha2-512,)ssh-rsa) and the cipher order aes128-gcm@openssh.com,(aes256-gcm@openssh.com,)chacha20-poly1305@openssh.com,aes128-ctr,aes192-ctr,aes256-ctr. Genuine OpenSSH 7.0 lists chacha20-poly1305 first and also offers ECDSA and Ed25519 host keys. Steps: the version string; a client identification and KEXINIT (no authentication), answered by the Go lists. The banner is a flag, hence Medium. Matched: sshlowpot commit 67717d9 (2020-02-02, HEAD) built with golang.org/x/crypto v0.58.0 and with the x/crypto of its era (69ecbb4, 2020-01-28), Go 1.27.3 (2026-11).'
+  - name: sshlowpot-openssh-claim-go-kex-rsa-4096-only-host-key
+    id: 1532
+    port: 22
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^SSH-2\.0-(?:OpenSSH|dropbear)'
+      invert_match: false
+    - input_type: hex
+      input: '5353482d322e302d4f70656e5353485f392e3270312044656269616e2d322b646562313275330d0a000000a40814111111111111111111111111111111110000001b6469666669652d68656c6c6d616e2d67726f757031342d73686131000000147273612d736861322d3235362c7373682d7273610000000a6165733132382d6374720000000a6165733132382d63747200000009686d61632d7368613100000009686d61632d73686131000000046e6f6e65000000046e6f6e65000000000000000000000000000000000000000000'
+      output_match_type: regex
+      output: '(?s)\x00\x00\x00.(?:rsa-sha2-256,rsa-sha2-512,)?ssh-rsa\x00\x00\x00.aes128-gcm@openssh\.com,(?:aes256-gcm@openssh\.com,)?chacha20-poly1305@openssh\.com,aes128-ctr,aes192-ctr,aes256-ctr\x00'
+      invert_match: false
+    - input_type: hex
+      input: '0000000c051e00000001020000000000'
+      output_match_type: hex
+      output: '000000077373682d7273610000000301000100000201'
+      invert_match: false
+    confidence: Medium
+    comment: 'sshlowpot generates its own host key on first start (slp_id_rsa) with rsa.GenerateKey(rand.Reader, 4096) and loads no other key, so it offers only RSA host key algorithms, in Go''s KEXINIT, and presents a 4096-bit key (512-byte modulus). OpenSSH, Dropbear and libssh servers offer Ed25519 or ECDSA keys alongside RSA and list their own cipher orders. This holds when the version string is changed to another OpenSSH or Dropbear release. Gitea''s built-in Go SSH server also makes a 4096-bit RSA key but announces SSH-2.0-Go and, in current releases, adds ECDSA and Ed25519 keys. Steps: an OpenSSH or Dropbear version string; a client identification and KEXINIT offering diffie-hellman-group14-sha1, answered by Go''s RSA-only lists; a KEXDH_INIT, answered by a KEXDH_REPLY whose host key is ssh-rsa with exponent 65537 and a 513-byte modulus field (hex match). An operator who supplies an existing key file of another size removes the last step, hence Medium. Matched: sshlowpot commit 67717d9 (2020-02-02, HEAD) built with golang.org/x/crypto v0.58.0 and with the x/crypto of its era (69ecbb4, 2020-01-28), Go 1.27.3 (2026-11).'
+  - name: sshlowpot-openssh-claim-go-kex-rsa-4096-only-host-key-default-port
+    id: 1533
+    port: 2222
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^SSH-2\.0-(?:OpenSSH|dropbear)'
+      invert_match: false
+    - input_type: hex
+      input: '5353482d322e302d4f70656e5353485f392e3270312044656269616e2d322b646562313275330d0a000000a40814111111111111111111111111111111110000001b6469666669652d68656c6c6d616e2d67726f757031342d73686131000000147273612d736861322d3235362c7373682d7273610000000a6165733132382d6374720000000a6165733132382d63747200000009686d61632d7368613100000009686d61632d73686131000000046e6f6e65000000046e6f6e65000000000000000000000000000000000000000000'
+      output_match_type: regex
+      output: '(?s)\x00\x00\x00.(?:rsa-sha2-256,rsa-sha2-512,)?ssh-rsa\x00\x00\x00.aes128-gcm@openssh\.com,(?:aes256-gcm@openssh\.com,)?chacha20-poly1305@openssh\.com,aes128-ctr,aes192-ctr,aes256-ctr\x00'
+      invert_match: false
+    - input_type: hex
+      input: '0000000c051e00000001020000000000'
+      output_match_type: hex
+      output: '000000077373682d7273610000000301000100000201'
+      invert_match: false
+    confidence: Medium
+    comment: 'Port 2222 form (sshlowpot''s default listen port). sshlowpot generates its own host key on first start (slp_id_rsa) with rsa.GenerateKey(rand.Reader, 4096) and loads no other key, so it offers only RSA host key algorithms, in Go''s KEXINIT, and presents a 4096-bit key (512-byte modulus). OpenSSH, Dropbear and libssh servers offer Ed25519 or ECDSA keys alongside RSA and list their own cipher orders. This holds when the version string is changed to another OpenSSH or Dropbear release. Gitea''s built-in Go SSH server also makes a 4096-bit RSA key but announces SSH-2.0-Go and, in current releases, adds ECDSA and Ed25519 keys. Steps: an OpenSSH or Dropbear version string; a client identification and KEXINIT offering diffie-hellman-group14-sha1, answered by Go''s RSA-only lists; a KEXDH_INIT, answered by a KEXDH_REPLY whose host key is ssh-rsa with exponent 65537 and a 513-byte modulus field (hex match). An operator who supplies an existing key file of another size removes the last step, hence Medium. Matched: sshlowpot commit 67717d9 (2020-02-02, HEAD) built with golang.org/x/crypto v0.58.0 and with the x/crypto of its era (69ecbb4, 2020-01-28), Go 1.27.3 (2026-11).'
