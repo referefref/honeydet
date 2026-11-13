@@ -14886,3 +14886,27 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: "The default decoy customer export of the companion build can be read anonymously and is identical on every installation (Content-MD5 xQu/5VwD1BnRjMe+19tRKg==; invented rows C20401 Chen Patel, C20402 Lukas Nguyen, example.com addresses). Depends on the default decoy set, so Medium. Matched: Azure Object Storage Pot companion build (Azurite 3.37.0, asp_setup.py 1.0.0) (2026-11)."
+  - name: honeylambda-default-trap-page
+    id: 1670
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /dev/v1/get-pass HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 [^\r\n]*\r\n.*\r\n\r\n.*<title>honey\x{3bb}</title>.*<h1>You got trapped! >:D</h1>'
+        invert_match: false
+    confidence: Medium
+    comment: "The default trap path of the sample serverless.yml (/v1/get-pass, stage dev) answers any request with the sample default response static/poc.html: title 'honeyλ' and the heading 'You got trapped! >:D'. A genuine API Gateway / Lambda endpoint does not announce a trap; the page, path and stage are configurable. Matched: honeyLambda 55b4131 (honeylambda-nx 301445d) on serverless-offline 13.10.2 (2026-11)."
+  - name: honeylambda-sample-token-pixel
+    id: 1671
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /dev/v1/get-pass?user=jack HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 [^\r\n]*\r\n.*(?i:content-length): 68\r\n.*\r\n\r\n.PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x04\x00\x00\x00'
+        invert_match: false
+    confidence: Medium
+    comment: "The sample token user=jack on the default trap path returns the bundled 68-byte 1x1 greyscale-alpha PNG (static/pixel.png), the tracking-pixel response of the sample config.json. Depends on the sample token being left in place. Matched: honeyLambda 55b4131 (honeylambda-nx 301445d) on serverless-offline 13.10.2 (2026-11)."
