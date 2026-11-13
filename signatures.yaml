@@ -13712,3 +13712,249 @@ signatures:
         invert_match: false
     confidence: High
     comment: "An empty password closes the connection at once, with no 'Login incorrect' and no new prompt (and nothing is logged). Genuine login programs treat an empty password as a failed attempt and print 'Login incorrect'. Matched: telnetlogger 2b88261 (0.2) (2026-11)."
+  - name: telnet-iot-honeypot-repeat-connection-closed
+    id: 1550
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ''
+        output_match_type: hex
+        output: '4c6f67696e3a'
+        invert_match: false
+      - input_type: hex
+        input: ''
+        output_match_type: no-response
+        output: ''
+        invert_match: false
+        reconnect: true
+    confidence: Medium
+    comment: "telnet-iot-honeypot greets with 'Login: ', then closes a second connection from the same address at once, without a byte, if it arrives within 30 seconds of the last accepted one (IPFilter, telnet_ip_min_time_between_connections, default 30). A genuine telnetd answers every connection. Configurable, hence Medium; it also means only the first signature of a combined run sees the login prompt. Matched: telnet-iot-honeypot 5d32829 (Python 2.7 original and Python 3 patch) (2026-11)."
+  - name: telnet-iot-honeypot-do-echo-login-greeting
+    id: 1551
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ''
+        output_match_type: hex
+        output: 'fffd014c6f67696e3a'
+        invert_match: false
+    confidence: High
+    comment: "The whole greeting is IAC DO ECHO (ff fd 01) followed at once by 'Login: ' (hard-coded in telnet.py). A genuine telnetd opens with its own option negotiation (DO TERMINAL-TYPE, WILL ECHO and others) and BusyBox and inetutils prompt with '<host> login:' in lower case. Matched: telnet-iot-honeypot 5d32829 (Python 2.7 original and Python 3 patch) (2026-11)."
+  - name: telnet-iot-honeypot-any-login-emby-banner
+    id: 1552
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ''
+        output_match_type: regex
+        output: 'Login:$'
+        invert_match: false
+      - input_type: string
+        input: 'hd{{rand}}'
+        output_match_type: regex
+        output: '^Password:$'
+        invert_match: false
+      - input_type: string
+        input: '{{rand}}'
+        output_match_type: regex
+        output: '^Welcome to EmbyLinux 3\.13\.0-24-generic\r\n #$'
+        invert_match: false
+    confidence: High
+    comment: "Any user name and password are accepted at once, followed by the fixed banner 'Welcome to EmbyLinux 3.13.0-24-generic' and a ' # ' prompt (telnet.py). A genuine telnetd refuses a random password ('Login incorrect'). Matched: telnet-iot-honeypot 5d32829 (Python 2.7 original and Python 3 patch) (2026-11)."
+  - name: telnet-iot-honeypot-echo-segmention-fault
+    id: 1553
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ''
+        output_match_type: regex
+        output: 'Login:$'
+        invert_match: false
+      - input_type: string
+        input: 'hd{{rand}}'
+        output_match_type: regex
+        output: '^Password:$'
+        invert_match: false
+      - input_type: string
+        input: '{{rand}}'
+        output_match_type: regex
+        output: '#$'
+        invert_match: false
+      - input_type: string
+        input: 'echo'
+        output_match_type: regex
+        output: '^Segmention fault\n #$'
+        invert_match: false
+    confidence: High
+    comment: "'echo' (or 'cat') without arguments raises an exception in the emulated command, which the shell reports as 'Segmention fault' (sic), with a bare LF line ending. A genuine shell prints an empty line for echo. Matched: telnet-iot-honeypot 5d32829 (Python 2.7 original and Python 3 patch) (2026-11)."
+  - name: telnet-iot-honeypot-busybox-applet-list
+    id: 1554
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ''
+        output_match_type: regex
+        output: 'Login:$'
+        invert_match: false
+      - input_type: string
+        input: 'hd{{rand}}'
+        output_match_type: regex
+        output: '^Password:$'
+        invert_match: false
+      - input_type: string
+        input: '{{rand}}'
+        output_match_type: regex
+        output: '#$'
+        invert_match: false
+      - input_type: string
+        input: '/bin/busybox'
+        output_match_type: string
+        output: "BusyBox v1.27.2 (Ubuntu 1:1.27.2-2ubuntu3) multi-call binary.\nBusyBox is copyrighted by many authors between 1998-2015.\nLicensed under GPLv2. See source distribution for detailed\ncopyright notices.\n\nUsage: busybox [function [arguments]...]\n\nCurrently defined functions:\n    busybox : exec sh dd ps chmod echo cd uname cat ls wget rm cp true"
+        invert_match: false
+      - input_type: string
+        input: 'wget'
+        output_match_type: regex
+        output: '^BusyBox v1\.22\.1 \(Ubuntu 1:1\.22\.0-19ubuntu2\) multi-call binary\.\n'
+        invert_match: false
+    confidence: High
+    comment: "'/bin/busybox' prints the BusyBox 1.27.2 (Ubuntu 18.04) banner with the honeypot's own sixteen commands, including ':' and 'exec', as 'Currently defined functions'; 'wget' on its own then prints the usage text of a different BusyBox, 1.22.1 (Ubuntu 14.04), all with bare LF line endings. A genuine BusyBox has one version and lists hundreds of applets. Matched: telnet-iot-honeypot 5d32829 (Python 2.7 original and Python 3 patch) (2026-11)."
+  - name: telnet-iot-honeypot-unknown-command-lf
+    id: 1555
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ''
+        output_match_type: regex
+        output: 'Login:$'
+        invert_match: false
+      - input_type: string
+        input: 'hd{{rand}}'
+        output_match_type: regex
+        output: '^Password:$'
+        invert_match: false
+      - input_type: string
+        input: '{{rand}}'
+        output_match_type: regex
+        output: '#$'
+        invert_match: false
+      - input_type: string
+        input: 'hd{{rand}}'
+        output_match_type: regex
+        output: '^hd{{rand}}: command not found\n #$'
+        invert_match: false
+    confidence: Medium
+    comment: "An unknown command gets '<command>: command not found' with a bare LF and the ' # ' prompt, and the input is not echoed. BusyBox ash says '-sh: <command>: not found' and a terminal session ends lines with CR LF. Matched: telnet-iot-honeypot 5d32829 (Python 2.7 original and Python 3 patch) (2026-11)."
+  - name: telnet-iot-honeypot-dd-fixed-output
+    id: 1556
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ''
+        output_match_type: regex
+        output: 'Login:$'
+        invert_match: false
+      - input_type: string
+        input: 'hd{{rand}}'
+        output_match_type: regex
+        output: '^Password:$'
+        invert_match: false
+      - input_type: string
+        input: '{{rand}}'
+        output_match_type: regex
+        output: '#$'
+        invert_match: false
+      - input_type: string
+        input: 'dd if=/proc/mounts bs=1 count=1'
+        output_match_type: regex
+        output: '^/0\+0 records in\n0\+0 records out\n0 bytes copied, 0 s, 0,0 kB/s\n #$'
+        invert_match: false
+    confidence: High
+    comment: "dd copies the requested byte but always reports '0+0 records in', '0+0 records out' and '0 bytes copied, 0 s, 0,0 kB/s' (a decimal comma), whatever was copied. A genuine dd reports '1+0 records in/out' and '1 byte copied'. Matched: telnet-iot-honeypot 5d32829 (Python 2.7 original and Python 3 patch) (2026-11)."
+  - name: telnet-iot-honeypot-syntax-error-text
+    id: 1557
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ''
+        output_match_type: regex
+        output: 'Login:$'
+        invert_match: false
+      - input_type: string
+        input: 'hd{{rand}}'
+        output_match_type: regex
+        output: '^Password:$'
+        invert_match: false
+      - input_type: string
+        input: '{{rand}}'
+        output_match_type: regex
+        output: '#$'
+        invert_match: false
+      - input_type: string
+        input: '('
+        output_match_type: regex
+        output: "^sh: syntax error near unexpected token ` '\\n #$"
+        invert_match: false
+    confidence: High
+    comment: "A line the shell grammar cannot parse gets the fixed message \"sh: syntax error near unexpected token ` '\" (an empty token in the quotes). BusyBox ash and bash name the actual token or report an unexpected end of file. Matched: telnet-iot-honeypot 5d32829 (Python 2.7 original and Python 3 patch) (2026-11)."
+  - name: telnet-iot-honeypot-ps-fixed
+    id: 1558
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ''
+        output_match_type: regex
+        output: 'Login:$'
+        invert_match: false
+      - input_type: string
+        input: 'hd{{rand}}'
+        output_match_type: regex
+        output: '^Password:$'
+        invert_match: false
+      - input_type: string
+        input: '{{rand}}'
+        output_match_type: regex
+        output: '#$'
+        invert_match: false
+      - input_type: string
+        input: 'ps'
+        output_match_type: string
+        output: "PID TTY          TIME CMD\n 6467 pts/0    00:00:00 sh\n12013 pts/0    00:00:00 ps"
+        invert_match: false
+    confidence: Medium
+    comment: "ps always prints the same two processes, sh as PID 6467 and ps as PID 12013, in procps format, on a system that claims to be BusyBox. Matched: telnet-iot-honeypot 5d32829 (Python 2.7 original and Python 3 patch) (2026-11)."
+  - name: telnet-iot-honeypot-uname-empty
+    id: 1559
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ''
+        output_match_type: regex
+        output: 'Login:$'
+        invert_match: false
+      - input_type: string
+        input: 'hd{{rand}}'
+        output_match_type: regex
+        output: '^Password:$'
+        invert_match: false
+      - input_type: string
+        input: '{{rand}}'
+        output_match_type: regex
+        output: '#$'
+        invert_match: false
+      - input_type: string
+        input: 'uname -a'
+        output_match_type: regex
+        output: '^#$'
+        invert_match: false
+    confidence: Medium
+    comment: "'uname -a' returns nothing, only a new ' # ' prompt (uname is registered as a silent command). Every genuine Linux system prints its kernel name and version. Matched: telnet-iot-honeypot 5d32829 (Python 2.7 original and Python 3 patch) (2026-11)."
