@@ -14766,3 +14766,87 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: "The default decoy customer export of the companion build can be read anonymously and holds the same invented, deterministic rows on every installation (C10401 Sam Nguyen, C10402 Jordan Kowalski, example.com addresses). Depends on the default decoy set, so Medium. Matched: S3 Honeybuckets companion build (MinIO RELEASE.2025-10-15T17-29-55Z, hb_setup.py 1.0.0) (2026-11)."
+  - name: "meeceepeesee-default-serverinfo"
+    id: 1580
+    port: 8000
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST /mcp HTTP/1.1\r\nHost: mcp\r\nContent-Type: application/json\r\nAccept: application/json, text/event-stream\r\nMCP-Protocol-Version: 2026-07-28\r\nMcp-Method: server/discover\r\nContent-Length: 248\r\nConnection: close\r\n\r\n{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"server/discover\",\"params\":{\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\",\"io.modelcontextprotocol/clientInfo\":{\"name\":\"honeydet\",\"version\":\"1.6\"},\"io.modelcontextprotocol/clientCapabilities\":{}}}}"
+        output_match_type: regex
+        output: "\"io\\.modelcontextprotocol/serverInfo\":\\{\"name\":\"acme-devtools\",\"version\":\"2\\.4\\.1\"\\}"
+        invert_match: false
+    confidence: "Medium"
+    comment: "MeeCeePeeSee default persona: a server/discover request (MCP 2026-07-28) is answered with serverInfo acme-devtools 2.4.1. The name and version come from the persona file and can be changed. Matched: MeeCeePeeSee 0.1.0 on MCP Python SDK 2.3.0 (2026-11)."
+  - name: "meeceepeesee-default-serverinfo-initialize"
+    id: 1581
+    port: 8000
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST /mcp HTTP/1.1\r\nHost: mcp\r\nContent-Type: application/json\r\nAccept: application/json, text/event-stream\r\nContent-Length: 155\r\nConnection: close\r\n\r\n{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{\"protocolVersion\":\"2025-06-18\",\"capabilities\":{},\"clientInfo\":{\"name\":\"honeydet\",\"version\":\"1.6\"}}}"
+        output_match_type: regex
+        output: "\"serverInfo\":\\{\"name\":\"acme-devtools\",\"version\":\"2\\.4\\.1\"\\}"
+        invert_match: false
+    confidence: "Medium"
+    comment: "MeeCeePeeSee default persona over the initialize handshake (MCP 2025-06-18 and earlier clients): serverInfo acme-devtools 2.4.1. Configurable in the persona file. Matched: MeeCeePeeSee 0.1.0 on MCP Python SDK 2.3.0 (2026-11)."
+  - name: "meeceepeesee-default-instructions"
+    id: 1582
+    port: 8000
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST /mcp HTTP/1.1\r\nHost: mcp\r\nContent-Type: application/json\r\nAccept: application/json, text/event-stream\r\nMCP-Protocol-Version: 2026-07-28\r\nMcp-Method: server/discover\r\nContent-Length: 248\r\nConnection: close\r\n\r\n{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"server/discover\",\"params\":{\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\",\"io.modelcontextprotocol/clientInfo\":{\"name\":\"honeydet\",\"version\":\"1.6\"},\"io.modelcontextprotocol/clientCapabilities\":{}}}}"
+        output_match_type: regex
+        output: "\"instructions\":\"Acme engineering tools\\. Use list_directory and read_file to browse the platform repository"
+        invert_match: false
+    confidence: "Medium"
+    comment: "MeeCeePeeSee default persona instructions text returned by server/discover. Configurable in the persona file. Matched: MeeCeePeeSee 0.1.0 on MCP Python SDK 2.3.0 (2026-11)."
+  - name: "meeceepeesee-default-toolset"
+    id: 1583
+    port: 8000
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST /mcp HTTP/1.1\r\nHost: mcp\r\nContent-Type: application/json\r\nAccept: application/json, text/event-stream\r\nMCP-Protocol-Version: 2026-07-28\r\nMcp-Method: tools/list\r\nContent-Length: 243\r\nConnection: close\r\n\r\n{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\",\"params\":{\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\",\"io.modelcontextprotocol/clientInfo\":{\"name\":\"honeydet\",\"version\":\"1.6\"},\"io.modelcontextprotocol/clientCapabilities\":{}}}}"
+        output_match_type: regex
+        output: "\"name\":\"list_directory\".*\"name\":\"read_file\".*\"name\":\"write_file\".*\"name\":\"web_search\".*\"name\":\"list_tables\".*\"name\":\"query_database\""
+        invert_match: false
+    confidence: "Medium"
+    comment: "MeeCeePeeSee default persona tool set: file system, web search and database tools offered by one server (list_directory, read_file, write_file, web_search, list_tables, query_database). Configurable in the persona file. Matched: MeeCeePeeSee 0.1.0 on MCP Python SDK 2.3.0 (2026-11)."
+  - name: "meeceepeesee-web-search-echo"
+    id: 1584
+    port: 8000
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST /mcp HTTP/1.1\r\nHost: mcp\r\nContent-Type: application/json\r\nAccept: application/json, text/event-stream\r\nMCP-Protocol-Version: 2026-07-28\r\nMcp-Method: tools/call\r\nMcp-Name: web_search\r\nContent-Length: 306\r\nConnection: close\r\n\r\n{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"name\":\"web_search\",\"arguments\":{\"query\":\"hd{{rand}}\"},\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\",\"io.modelcontextprotocol/clientInfo\":{\"name\":\"honeydet\",\"version\":\"1.6\"},\"io.modelcontextprotocol/clientCapabilities\":{}}}}"
+        output_match_type: regex
+        output: "\"text\":\"1\\. hd{{rand}} - [^\"]*2\\. hd{{rand}} - [^\"]*3\\. hd{{rand}} - "
+        invert_match: false
+    confidence: "Medium"
+    comment: "MeeCeePeeSee web_search is a template: a random query string is echoed into three fixed results instead of returning no results. The template is in the persona file. Matched: MeeCeePeeSee 0.1.0 on MCP Python SDK 2.3.0 (2026-11)."
+  - name: "meeceepeesee-sql-version-template"
+    id: 1585
+    port: 8000
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST /mcp HTTP/1.1\r\nHost: mcp\r\nContent-Type: application/json\r\nAccept: application/json, text/event-stream\r\nMCP-Protocol-Version: 2026-07-28\r\nMcp-Method: tools/call\r\nMcp-Name: query_database\r\nContent-Length: 306\r\nConnection: close\r\n\r\n{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"name\":\"query_database\",\"arguments\":{\"sql\":\"SELECT version()\"},\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\",\"io.modelcontextprotocol/clientInfo\":{\"name\":\"honeydet\",\"version\":\"1.6\"},\"io.modelcontextprotocol/clientCapabilities\":{}}}}"
+        output_match_type: regex
+        output: "\"text\":\"\\?column\\?[^\"]{2}1[^\"]{2}\\(1 row\\)\""
+        invert_match: false
+    confidence: "High"
+    comment: "MeeCeePeeSee SQL tool answers any SELECT without a FROM clause with a single ?column? value 1, so SELECT version() does not return a PostgreSQL version string. Code behaviour (tool name query_database from the default persona). Matched: MeeCeePeeSee 0.1.0 on MCP Python SDK 2.3.0 (2026-11)."
+  - name: "meeceepeesee-sql-show-readonly"
+    id: 1586
+    port: 8000
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST /mcp HTTP/1.1\r\nHost: mcp\r\nContent-Type: application/json\r\nAccept: application/json, text/event-stream\r\nMCP-Protocol-Version: 2026-07-28\r\nMcp-Method: tools/call\r\nMcp-Name: query_database\r\nContent-Length: 309\r\nConnection: close\r\n\r\n{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"name\":\"query_database\",\"arguments\":{\"sql\":\"SHOW server_version\"},\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\",\"io.modelcontextprotocol/clientInfo\":{\"name\":\"honeydet\",\"version\":\"1.6\"},\"io.modelcontextprotocol/clientCapabilities\":{}}}}"
+        output_match_type: regex
+        output: "\"text\":\"ERROR:  cannot execute SHOW in a read-only transaction\""
+        invert_match: false
+    confidence: "High"
+    comment: "MeeCeePeeSee SQL tool rejects every statement that is not a SELECT as not allowed in a read-only transaction, including SHOW, which PostgreSQL permits in read-only transactions. Code behaviour (tool name query_database from the default persona). Matched: MeeCeePeeSee 0.1.0 on MCP Python SDK 2.3.0 (2026-11)."
