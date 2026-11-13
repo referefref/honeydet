@@ -13958,3 +13958,57 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: "'uname -a' returns nothing, only a new ' # ' prompt (uname is registered as a silent command). Every genuine Linux system prints its kernel name and version. Matched: telnet-iot-honeypot 5d32829 (Python 2.7 original and Python 3 patch) (2026-11)."
+  - name: openaipot-missing-key-error
+    id: 1570
+    port: web-ports
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST /v1/chat/completions HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nContent-Length: 67\r\nConnection: close\r\n\r\n{\"model\":\"gpt-4o-mini\",\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}]}"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 401 [^\r\n]*\r\n.*?\r\n\r\n\{"error":\{"message":"Missing API key","type":"invalid_request_error","code":"invalid_request_error"\}\}\s*$'
+        invert_match: false
+    confidence: High
+    comment: "A chat completion request with no Authorization header gets 401 and the compact error object {\"error\":{\"message\":\"Missing API key\",\"type\":\"invalid_request_error\",\"code\":\"invalid_request_error\"}} from OpenAIPot's returnError (the code repeats the type and there is no param field). The OpenAI API documents a different text (You didn't provide an API key ...) with param and code null; llama.cpp server answers 'Invalid API Key' (authentication_error, code 401) and LiteLLM 'Authentication Error, No api key passed in.' (auth_error). The message is fixed in the source code, not the configuration. Matched: OpenAIPot 762e59c (2025-03-17, latest commit), Go 1.27.3 build (2026-11)."
+  - name: openaipot-invalid-key-error
+    id: 1571
+    port: web-ports
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST /v1/chat/completions HTTP/1.1\r\nHost: x\r\nAuthorization: Bearer sk-honeydet-0000\r\nContent-Type: application/json\r\nContent-Length: 67\r\nConnection: close\r\n\r\n{\"model\":\"gpt-4o-mini\",\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}]}"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 401 [^\r\n]*\r\n.*?\r\n\r\n\{"error":\{"message":"Invalid API key provided","type":"invalid_request_error","code":"invalid_request_error"\}\}\s*$'
+        invert_match: false
+    confidence: High
+    comment: "A chat completion request with an unknown bearer key gets 401 and {\"error\":{\"message\":\"Invalid API key provided\",\"type\":\"invalid_request_error\",\"code\":\"invalid_request_error\"}}. The OpenAI API answers an unknown key with 'Incorrect API key provided: <masked key>. You can find your API key at ...', param null and code invalid_api_key; llama.cpp server and LiteLLM use their own wording and types. Fixed in the source code. Matched: OpenAIPot 762e59c (2025-03-17, latest commit), Go 1.27.3 build (2026-11)."
+  - name: openaipot-chat-completions-any-method
+    id: 1572
+    port: web-ports
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "HONEYDET /v1/chat/completions HTTP/1.1\r\nHost: x\r\nAuthorization: Bearer sk-honeydet-0000\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 401 [^\r\n]*\r\n.*?\r\n\r\n\{"error":\{"message":"Invalid API key provided"'
+        invert_match: false
+    confidence: High
+    comment: "An invented HTTP method on /v1/chat/completions is checked for an API key like a POST and answered with OpenAIPot's 401 'Invalid API key provided' JSON: the handler is registered for every method and never looks at it. Genuine OpenAI-compatible servers refuse the method first (LiteLLM 405 Method Not Allowed with Allow: POST, llama.cpp server 400 with an empty body). Matched: OpenAIPot 762e59c (2025-03-17, latest commit), Go 1.27.3 build (2026-11)."
+  - name: openaipot-chat-only-no-models
+    id: 1573
+    port: web-ports
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /v1/models HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 404 Not Found\r\nContent-Type: text/plain; charset=utf-8\r\nX-Content-Type-Options: nosniff\r\n.*?\r\n\r\n404 page not found\n?$'
+        invert_match: false
+      - input_type: string
+        input: "POST /v1/chat/completions HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nContent-Length: 67\r\nConnection: close\r\n\r\n{\"model\":\"gpt-4o-mini\",\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}]}"
+        reconnect: true
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 401 [^\r\n]*\r\nContent-Type: application/json\r\n.*?\r\n\r\n\{"error":\{"message":'
+        invert_match: false
+    confidence: Medium
+    comment: "OpenAIPot registers a single route, /v1/chat/completions, so the model list that OpenAI-compatible clients ask for first (GET /v1/models) returns Go net/http's plain-text '404 page not found', while the chat endpoint on the same port asks for a key with an OpenAI-style JSON error. The OpenAI API, llama.cpp server and LiteLLM answer /v1/models with 401 or a model list. Medium: it describes the structure rather than OpenAIPot's own text, so any small Go gateway that implements only chat completions would match. Matched: OpenAIPot 762e59c (2025-03-17, latest commit), Go 1.27.3 build (2026-11)."
