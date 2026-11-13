@@ -14133,3 +14133,150 @@ signatures:
         invert_match: false
     confidence: High
     comment: "HEAD is answered like GET, with the page body after a bare-LF header block, and the DOCTYPE has lost its quotation marks. HTTP forbids a body in a HEAD response and genuine servers send headers only. Matched: SCADA HoneyNet 0.3 (scadahoneynet-nx e3f922e) on Honeyd 1.6d (2026-11)."
+  - name: kako-telnet-dont-echo-default-login
+    id: 1600
+    port: 2323
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: hex
+        output: "fffe01fffe1f"
+        invert_match: false
+      - input_type: hex
+        input: ""
+        reconnect: true
+        output_match_type: regex
+        output: '(?s)\r\n\r\ndefault login:$'
+        invert_match: false
+    confidence: High
+    comment: "Kako's Telnet server opens with exactly two option commands, IAC DONT ECHO and IAC DONT NAWS (a real telnetd offers WILL ECHO and asks DO NAWS), then prints the banner, a blank line and a login prompt for the host name 'default', which is hard-coded in the Telnet server class rather than taken from the simulation. Matched: Kako 1.1.0 with kako-simulations 80f747e (2026-11)."
+  - name: kako-telnet-busybox-version-only
+    id: 1601
+    port: 2323
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: 'login:$'
+        invert_match: false
+      - input_type: string
+        input: "root"
+        output_match_type: regex
+        output: '^Password:$'
+        invert_match: false
+      - input_type: string
+        input: "hd{{rand}}"
+        output_match_type: regex
+        output: '#$'
+        invert_match: false
+      - input_type: string
+        input: "busybox"
+        output_match_type: regex
+        output: '^BusyBox v1\.19\.3 \(2013-11-01 10:10:26 CST\)\r\n#$'
+        invert_match: false
+    confidence: High
+    comment: "Kako accepts any password and answers 'busybox' with a single fixed version line, 'BusyBox v1.19.3 (2013-11-01 10:10:26 CST)', followed straight away by the prompt. A real BusyBox prints its version together with 'multi-call binary', the copyright notice and the list of applets. Matched: Kako 1.1.0 (2026-11)."
+  - name: kako-telnet-default-busybox-login-banner
+    id: 1602
+    port: 2323
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '(?s)Busybox Login\r\n\r\ndefault login:$'
+        invert_match: false
+    confidence: Medium
+    comment: "Banner of the default Telnet simulation (000-LinuxTelnet.yaml in kako-simulations): 'Busybox Login' (with a lower-case b) followed by the 'default login:' prompt. Medium: the banner is set in the simulation file. Matched: Kako 1.1.0 with kako-simulations 80f747e (2026-11)."
+  - name: kako-http-501-empty-error-7547
+    id: 1603
+    port: 7547
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "HD{{rand}} / HTTP/1.0\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.0 501 Unsupported method \(.HD[0-9a-f]+.\)\r\nDate: [^\r\n]+ GMT\r\n(Server: [^\r\n]*\r\n)?Connection: close\r\nContent-Type: text/html;charset=utf-8\r\nContent-Length: 0$'
+        invert_match: false
+    confidence: High
+    comment: "Kako's HTTP server (the TR-069 CPEServer simulation on port 7547) is Python's http.server with the error page set to an empty string and its own header order: a request with an unknown method gets 'HTTP/1.0 501 Unsupported method' with the Date header before Server and 'Content-Length: 0'. Plain Python http.server sends Server before Date and an HTML error page; embedded web servers answer 501 Not Implemented or 400 with a page. Matched: Kako 1.1.0 (2026-11)."
+  - name: kako-http-date-first-no-framing-7547
+    id: 1604
+    port: 7547
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: cpe\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.0 [1-5][0-9][0-9] [^\r\n]*\r\nDate: [A-Z][a-z]{2}, [0-9]{2} [A-Z][a-z]{2} [0-9]{4} [0-9:]{8} GMT\r\nServer: '
+        invert_match: false
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: cpe\r\n\r"
+        reconnect: true
+        output_match_type: regex
+        output: '(?i)\r\n(content-length|transfer-encoding|connection|content-type):'
+        invert_match: true
+    confidence: Medium
+    comment: "Responses from Kako's HTTP simulations start with an HTTP/1.0 status line (also to HTTP/1.1 requests) followed by Date and then Server, and the default TR-069 simulation sends no Content-Length, Content-Type or Connection header, ending the reply by closing the connection. Medium: depends on the headers configured in the simulation. Matched: Kako 1.1.0 with kako-simulations 80f747e (2026-11)."
+  - name: kako-http-501-empty-error-37215
+    id: 1605
+    port: 37215
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "HD{{rand}} / HTTP/1.0\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.0 501 Unsupported method \(.HD[0-9a-f]+.\)\r\nDate: [^\r\n]+ GMT\r\n(Server: [^\r\n]*\r\n)?Connection: close\r\nContent-Type: text/html;charset=utf-8\r\nContent-Length: 0$'
+        invert_match: false
+    confidence: High
+    comment: "Kako's HTTP server (the Huawei UPnP simulation on port 37215) is Python's http.server with the error page set to an empty string and its own header order: a request with an unknown method gets 'HTTP/1.0 501 Unsupported method' with the Date header before Server and 'Content-Length: 0'. Plain Python http.server sends Server before Date and an HTML error page; embedded web servers answer 501 Not Implemented or 400 with a page. Matched: Kako 1.1.0 (2026-11)."
+  - name: kako-http-501-empty-error-52869
+    id: 1606
+    port: 52869
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "HD{{rand}} / HTTP/1.0\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.0 501 Unsupported method \(.HD[0-9a-f]+.\)\r\nDate: [^\r\n]+ GMT\r\n(Server: [^\r\n]*\r\n)?Connection: close\r\nContent-Type: text/html;charset=utf-8\r\nContent-Length: 0$'
+        invert_match: false
+    confidence: High
+    comment: "Kako's HTTP server (the Realtek UPnP simulation on port 52869) is Python's http.server with the error page set to an empty string and its own header order: a request with an unknown method gets 'HTTP/1.0 501 Unsupported method' with the Date header before Server and 'Content-Length: 0'. Plain Python http.server sends Server before Date and an HTML error page; embedded web servers answer 501 Not Implemented or 400 with a page. Matched: Kako 1.1.0 (2026-11)."
+  - name: kako-http-501-empty-error-8080
+    id: 1607
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "HD{{rand}} / HTTP/1.0\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.0 501 Unsupported method \(.HD[0-9a-f]+.\)\r\nDate: [^\r\n]+ GMT\r\n(Server: [^\r\n]*\r\n)?Connection: close\r\nContent-Type: text/html;charset=utf-8\r\nContent-Length: 0$'
+        invert_match: false
+    confidence: High
+    comment: "Kako's HTTP server (the D-Link simulation on port 8080) is Python's http.server with the error page set to an empty string and its own header order: a request with an unknown method gets 'HTTP/1.0 501 Unsupported method' with the Date header before Server and 'Content-Length: 0'. Plain Python http.server sends Server before Date and an HTML error page; embedded web servers answer 501 Not Implemented or 400 with a page. Matched: Kako 1.1.0 (2026-11)."
+  - name: kako-default-huawei-upnp-usn-37215
+    id: 1608
+    port: 37215
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.0\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.0 200 OK\r\n.*\r\nLOCATION: http://192\.168\.1\.1:37215/gatedesc\.xml\r\n.*USN: uuid:e7ca24dc-d9de-4264-a134-0169ab3448ce::upnp:rootdevice'
+        invert_match: false
+    confidence: Medium
+    comment: "The default Huawei simulation (005-Huawei-uPnP.yaml) answers every HTTP request on port 37215 with SSDP discovery headers: LOCATION pointing at 192.168.1.1 whatever the real address, ST, and a fixed USN uuid:e7ca24dc-... SSDP headers belong to UDP discovery replies, not to HTTP responses. Medium: set in the simulation file. Matched: Kako 1.1.0 with kako-simulations 80f747e (2026-11)."
+  - name: kako-default-realtek-upnp-usn-52869
+    id: 1609
+    port: 52869
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.0\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.0 200 OK\r\n.*\r\nLocation: http://192\.168\.1\.1:52869/picsdesc\.xml\r\nUSN: uuid:c89d5979-b027-469b-a639-52f535bde6c0::upnp:rootdevice'
+        invert_match: false
+    confidence: Medium
+    comment: "The default Realtek SDK simulation (006-Realtek-uPnP.yaml) answers every HTTP request on port 52869 with a 200 carrying a Location header for 192.168.1.1 and a fixed USN uuid:c89d5979-..., where a genuine miniupnpd serves its description only at the listed path and answers 404 elsewhere. Medium: set in the simulation file. Matched: Kako 1.1.0 with kako-simulations 80f747e (2026-11)."
