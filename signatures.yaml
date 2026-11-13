@@ -14012,3 +14012,124 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: "OpenAIPot registers a single route, /v1/chat/completions, so the model list that OpenAI-compatible clients ask for first (GET /v1/models) returns Go net/http's plain-text '404 page not found', while the chat endpoint on the same port asks for a key with an OpenAI-style JSON error. The OpenAI API, llama.cpp server and LiteLLM answer /v1/models with 401 or a model list. Medium: it describes the structure rather than OpenAIPot's own text, so any small Go gateway that implements only chat completions would match. Matched: OpenAIPot 762e59c (2025-03-17, latest commit), Go 1.27.3 build (2026-11)."
+  - name: scada-honeynet-ftp-blahworks-syst
+    id: 1590
+    port: 21
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^220 FTP server \(VxWorks version 2\.6\) ready\.$'
+        invert_match: false
+      - input_type: string
+        input: "USER honeydet\r"
+        output_match_type: regex
+        output: '^331 Guest login ok, send your complete e-mail address as a password\.$'
+        invert_match: false
+      - input_type: string
+        input: "SYST\r"
+        output_match_type: regex
+        output: '^215 UNIX Type: BlahWorks$'
+        invert_match: false
+    confidence: High
+    comment: "SCADA HoneyNet's FTP script greets as 'FTP server (VxWorks version 2.6)', accepts any user name with the anonymous-login text and answers SYST with the placeholder system type 'UNIX Type: BlahWorks'. No genuine FTP server reports BlahWorks; VxWorks FTP servers report their own banner and system type. Matched: SCADA HoneyNet 0.3 (scadahoneynet-nx e3f922e) on Honeyd 1.6d (2026-11)."
+  - name: scada-honeynet-ftp-noop-not-implemented
+    id: 1591
+    port: 21
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^220 FTP server \(VxWorks version 2\.6\) ready\.$'
+        invert_match: false
+      - input_type: string
+        input: "NOOP\r"
+        output_match_type: regex
+        output: '^502 command not implemented\.\r?$'
+        invert_match: false
+    confidence: High
+    comment: "NOOP, part of the minimum FTP implementation in RFC 959, gets '502 command not implemented.' ending in a bare carriage return, and the script then closes the connection; any command outside USER, PASS, HELP, LIST, CWD, PORT, QUIT and SYST does the same. A genuine server answers NOOP with 200 and keeps the session. Matched: SCADA HoneyNet 0.3 (scadahoneynet-nx e3f922e) on Honeyd 1.6d (2026-11)."
+  - name: scada-honeynet-ftp-pass-without-user
+    id: 1592
+    port: 21
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^220 FTP server \(VxWorks version 2\.6\) ready\.$'
+        invert_match: false
+      - input_type: string
+        input: "PASS honeydet\r"
+        output_match_type: regex
+        output: '^230 User Logged in$'
+        invert_match: false
+    confidence: High
+    comment: "A PASS command with no USER before it logs the client in ('230 User Logged in'). Genuine FTP servers answer 503 (log in with USER first) or 530. Matched: SCADA HoneyNet 0.3 (scadahoneynet-nx e3f922e) on Honeyd 1.6d (2026-11)."
+  - name: scada-honeynet-telnet-hostname-prompt
+    id: 1593
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^Hostname#$'
+        invert_match: false
+    confidence: High
+    comment: "The Telnet script sends the literal placeholder prompt 'Hostname#' at once: no Telnet option negotiation, no banner and no login. Genuine Telnet servers start with IAC option negotiation and normally a login prompt; a VxWorks target shell prompts '->'. Matched: SCADA HoneyNet 0.3 (scadahoneynet-nx e3f922e) on Honeyd 1.6d (2026-11)."
+  - name: scada-honeynet-telnet-ls-not-found
+    id: 1594
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^Hostname[^\r\n]*#$'
+        invert_match: false
+      - input_type: string
+        input: "ls\r"
+        output_match_type: regex
+        output: '^-rw-r--r--    1 root     root           33 Mar  5 18:06 gw\r\nShell: Command not found\r\nHostname[^\r\n]*#$'
+        invert_match: false
+    confidence: High
+    comment: "'ls' prints a fixed one-file listing (gw, 33 bytes, 5 March) and then 'Shell: Command not found' for the same command. A genuine shell either lists the directory or reports an unknown command, not both. Matched: SCADA HoneyNet 0.3 (scadahoneynet-nx e3f922e) on Honeyd 1.6d (2026-11)."
+  - name: scada-honeynet-http-fixed-2005-headers
+    id: 1595
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 200 OK\n Date: Thu, 14 Jul 2005 11:26:45 GMT\n Server: Apache/1\.3\.33 \(Debian GNU/Linux\)\n'
+        invert_match: false
+    confidence: High
+    comment: "The web script returns a fixed header block: lines separated by a bare LF and each starting with a space (which HTTP treats as continuation lines), the Date of 14 July 2005 on every response and Server: Apache/1.3.33 (Debian GNU/Linux). Genuine servers use CRLF, the current date and no leading whitespace. Matched: SCADA HoneyNet 0.3 (scadahoneynet-nx e3f922e) on Honeyd 1.6d (2026-11)."
+  - name: scada-honeynet-http-any-path-plc-page
+    id: 1596
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /honeydet-1596-no-such-page HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\n .*<TITLE>Placeholder page</TITLE>.*<H1>PLC Web Page</H1>'
+        invert_match: false
+    confidence: High
+    comment: "Any path that does not contain Diag, Prot or Stat returns 200 with the PLC Web Page under the title 'Placeholder page' (the title of Debian's old Apache default page). A genuine server answers 404 for a path that does not exist. Matched: SCADA HoneyNet 0.3 (scadahoneynet-nx e3f922e) on Honeyd 1.6d (2026-11)."
+  - name: scada-honeynet-http-head-with-body
+    id: 1597
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "HEAD / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\n .*\n\n <!DOCTYPE HTML PUBLIC -//W3C//DTD HTML 4\.01 Transitional//EN>\n<HTML>'
+        invert_match: false
+    confidence: High
+    comment: "HEAD is answered like GET, with the page body after a bare-LF header block, and the DOCTYPE has lost its quotation marks. HTTP forbids a body in a HEAD response and genuine servers send headers only. Matched: SCADA HoneyNet 0.3 (scadahoneynet-nx e3f922e) on Honeyd 1.6d (2026-11)."
