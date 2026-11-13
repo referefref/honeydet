@@ -13616,3 +13616,99 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: "'date' always reports the CET zone with a zero-padded day and is followed by an empty line before the prompt; the time is the host clock shifted by a random offset of up to about 12 hours per session. GNU and BusyBox date pad the day with a space and follow the host's zone. Medium: a real shell set to CET in a locale with padded days could look similar. Matched: TelnetHoney dba64a2 (2026-11)."
+  - name: telnetlogger-fixed-greeting
+    id: 1560
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: hex
+        output: "fffb03fffb01fffd1ffffd180d0a6c6f67696e3a"
+        invert_match: false
+    confidence: Medium
+    comment: "The first bytes are always IAC WILL SGA, IAC WILL ECHO, IAC DO NAWS, IAC DO TTYPE followed at once, without waiting for the client's answers, by CR LF and a bare 'login: ' prompt with no host name or banner. inetutils telnetd offers a longer option list and waits for answers before printing a banner and '<host> login:'; BusyBox telnetd sends DO ECHO, DO NAWS, WILL ECHO, WILL SGA and '<host> login:'. Medium: the byte string is hard-coded and short, and another emulator could copy it. Matched: telnetlogger 2b88261 (0.2) (2026-11)."
+  - name: telnetlogger-empty-login-closes
+    id: 1561
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: 'login:$'
+        invert_match: false
+      - input_type: hex
+        input: "0d"
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+    confidence: High
+    comment: "Pressing Enter on an empty line at the login prompt closes the connection at once with no output. A genuine login program asks again ('login:') or goes on to the password prompt. Matched: telnetlogger 2b88261 (0.2) (2026-11)."
+  - name: telnetlogger-lf-does-not-end-line
+    id: 1562
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: 'login:$'
+        invert_match: false
+      - input_type: hex
+        input: "726f6f740a"
+        output_match_type: regex
+        output: '^root$'
+        invert_match: false
+      - input_type: hex
+        input: "686470726f62650d"
+        output_match_type: regex
+        output: '^hdprobe\r\nPassword:$'
+        invert_match: false
+    confidence: High
+    comment: "Only a carriage return ends the user name: 'root' followed by a bare line feed is echoed but does not end the line, so the next text 'hdprobe' + CR is still echoed as part of the user name before 'Password:' appears. Genuine telnetd and login treat the line feed as end of line, ask for the password and do not echo it. Matched: telnetlogger 2b88261 (0.2) (2026-11)."
+  - name: telnetlogger-instant-login-incorrect
+    id: 1563
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: 'login:$'
+        invert_match: false
+      - input_type: string
+        input: "root\r"
+        output_match_type: regex
+        output: 'Password:$'
+        invert_match: false
+      - input_type: hex
+        input: "686470726f62650d"
+        output_match_type: regex
+        output: '^Login incorrect$'
+        invert_match: false
+        max_response_ms: 1000
+    confidence: High
+    comment: "Any password is refused with 'Login incorrect' within milliseconds, and the next 'login:' prompt follows two seconds later. Genuine login programs (util-linux/shadow login under inetutils telnetd, BusyBox login) first echo the line end and then wait 2.5 to 3 seconds before 'Login incorrect' (measured in the lab: inetutils/login 2.5 s, BusyBox 3.0 s). Matched: telnetlogger 2b88261 (0.2) (2026-11)."
+  - name: telnetlogger-empty-password-closes
+    id: 1564
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: 'login:$'
+        invert_match: false
+      - input_type: string
+        input: "root\r"
+        output_match_type: regex
+        output: 'Password:$'
+        invert_match: false
+      - input_type: hex
+        input: "0d"
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+    confidence: High
+    comment: "An empty password closes the connection at once, with no 'Login incorrect' and no new prompt (and nothing is logged). Genuine login programs treat an empty password as a failed attempt and print 'Login incorrect'. Matched: telnetlogger 2b88261 (0.2) (2026-11)."
