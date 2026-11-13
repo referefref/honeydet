@@ -14850,3 +14850,39 @@ signatures:
         invert_match: false
     confidence: "High"
     comment: "MeeCeePeeSee SQL tool rejects every statement that is not a SELECT as not allowed in a read-only transaction, including SHOW, which PostgreSQL permits in read-only transactions. Code behaviour (tool name query_database from the default persona). Matched: MeeCeePeeSee 0.1.0 on MCP Python SDK 2.3.0 (2026-11)."
+  - name: azure-storage-pot-default-decoy-container-listing
+    id: 1650
+    port: 10000
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /corpfinbackups/database-exports?restype=container&comp=list HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\nServer: Azurite-Blob/.*<EnumerationResults ServiceEndpoint="[^"]*/corpfinbackups" ContainerName="database-exports">.*<Name>backups/finance_prod_2026-10-31\.sql\.gz</Name>.*<Name>config/appsettings\.Production\.json</Name>.*<Name>exports/customers_2026Q3\.csv</Name>'
+        invert_match: false
+    confidence: Medium
+    comment: "An anonymous path-style List Blobs request for the companion build's default decoy container (account corpfinbackups, container database-exports) succeeds on an Azurite blob endpoint and lists its three default decoy blobs (backups/finance_prod_2026-10-31.sql.gz, config/appsettings.Production.json, exports/customers_2026Q3.csv). The endpoint is a genuine Azurite; one without this account answers 404 ResourceNotFound, and one with a public container of that name lists different blobs. Depends on the default ASP_ACCOUNT, ASP_CONTAINER and decoy set, so Medium. Matched: Azure Object Storage Pot companion build (Azurite 3.37.0, asp_setup.py 1.0.0) (2026-11)."
+  - name: azure-storage-pot-default-decoy-appsettings
+    id: 1651
+    port: 10000
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /corpfinbackups/database-exports/config/appsettings.Production.json HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\nServer: Azurite-Blob/.*\r\n\r\n\{\n  "_comment": "finance-api production settings - do not commit",\n  "ASPNETCORE_ENVIRONMENT": "Production",\n.*"FinanceDb": "Server=tcp:sql-fin-prod01\.corp\.internal,1433;Database=finance_prod;User ID=finance_app;Password=[A-Za-z0-9]{18};Encrypt=True;",\n    "ArchiveStorage": "DefaultEndpointsProtocol=https?;AccountName=corpfinarchive;AccountKey=[A-Za-z0-9+/]{86}==;BlobEndpoint='
+        invert_match: false
+    confidence: Medium
+    comment: "The default decoy settings file of the companion build can be read anonymously: fixed invented settings (finance-api, sql-fin-prod01.corp.internal, finance_prod) with a random database password, followed by a storage connection string for the honeytoken account corpfinarchive with its 64-byte key. That account exists only to raise an alert whenever it is named or used. Depends on the default decoy set, so Medium. Matched: Azure Object Storage Pot companion build (Azurite 3.37.0, asp_setup.py 1.0.0) (2026-11)."
+  - name: azure-storage-pot-default-decoy-customer-export
+    id: 1652
+    port: 10000
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /corpfinbackups/database-exports/exports/customers_2026Q3.csv HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\nServer: Azurite-Blob/.*content-md5: xQu/5VwD1BnRjMe\+19tRKg==\r\n.*\r\n\r\ncustomer_id,name,email,country,iban_last4\nC20401,Chen Patel,chen\.patel1@example\.com,NL,2192\nC20402,Lukas Nguyen,lukas\.nguyen2@example\.com,IE,5048\n'
+        invert_match: false
+    confidence: Medium
+    comment: "The default decoy customer export of the companion build can be read anonymously and is identical on every installation (Content-MD5 xQu/5VwD1BnRjMe+19tRKg==; invented rows C20401 Chen Patel, C20402 Lukas Nguyen, example.com addresses). Depends on the default decoy set, so Medium. Matched: Azure Object Storage Pot companion build (Azurite 3.37.0, asp_setup.py 1.0.0) (2026-11)."
