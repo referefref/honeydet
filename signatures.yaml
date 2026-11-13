@@ -14280,3 +14280,78 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: "The default Realtek SDK simulation (006-Realtek-uPnP.yaml) answers every HTTP request on port 52869 with a 200 carrying a Location header for 192.168.1.1 and a fixed USN uuid:c89d5979-..., where a genuine miniupnpd serves its description only at the listed path and answers 404 elsewhere. Medium: set in the simulation file. Matched: Kako 1.1.0 with kako-simulations 80f747e (2026-11)."
+  - name: pynetdicom-pacs-honeypot-qr-without-worklist
+    id: 1610
+    port: 11112
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: 01000000010e00010000414e592d534350202020202020202020484f4e45594445542020202020202020000000000000000000000000000000000000000000000000000000000000000010000015312e322e3834302e31303030382e332e312e312e3120000038010000003000001b312e322e3834302e31303030382e352e312e342e312e322e322e3140000011312e322e3834302e31303030382e312e32200000330300000030000016312e322e3834302e31303030382e352e312e342e333140000011312e322e3834302e31303030382e312e325000003a51000004000040005200001b312e322e3237362e302e373233303031302e332e302e332e362e375500000f4f464649535f44434d544b5f333637
+        output_match_type: hex
+        output: '210000190100000040000011312e322e3834302e31303030382e312e32210000190300030040000011312e322e3834302e31303030382e312e325000003e5100000400003ffe52000020312e322e3832362e302e312e333638303034332e392e33383131'
+        invert_match: false
+    confidence: Medium
+    comment: "An A-ASSOCIATE-RQ proposing Study Root Query/Retrieve FIND (context 1) and Modality Worklist FIND (context 3) is answered by a pynetdicom acceptor (Implementation Class UID under pynetdicom's root 1.2.826.0.1.3680043.9.3811) that accepts the Q/R FIND context and rejects the worklist one (result 3). Stock pynetdicom servers answer differently: qrscp accepts both, storescp and echoscp reject both; DCMTK and Orthanc carry their own UID. Medium: it reflects the wrapper's choice of supported contexts, and a custom genuine pynetdicom Q/R server without worklist support would answer the same. Matched: pacs_honeypot.py (lab reference build) with pynetdicom 3.0.4 and pydicom 3.0.2 (2026-11)."
+  - name: pynetdicom-pacs-honeypot-cfind-bogus-level-pending
+    id: 1611
+    port: 11112
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: 0100000000d700010000414e592d534350202020202020202020484f4e45594445542020202020202020000000000000000000000000000000000000000000000000000000000000000010000015312e322e3834302e31303030382e332e312e312e3120000038010000003000001b312e322e3834302e31303030382e352e312e342e312e322e322e3140000011312e322e3834302e31303030382e312e325000003a51000004000040005200001b312e322e3237362e302e373233303031302e332e302e332e362e375500000f4f464649535f44434d544b5f333637
+        output_match_type: hex
+        output: '312e322e3832362e302e312e333638303034332e392e33383131'
+        invert_match: false
+      - input_type: hex
+        input: 04000000007a0000005a010300000000040000004c000000000002001c000000312e322e3834302e31303030382e352e312e342e312e322e322e3100000000010200000020000000100102000000010000000007020000000000000000080200000002010000001801020800520006000000424f475553201000100000000000
+        output_match_type: hex
+        output: '000000090200000000ff'
+        invert_match: false
+    confidence: High
+    comment: "After an accepted association with a pynetdicom acceptor, a Study Root C-FIND-RQ with the invalid Query/Retrieve Level BOGUS gets a pending response (status 0xFF00) carrying matches. Genuine archives refuse it: pynetdicom 3.0.4 qrscp answers 0xA900, DCMTK dcmqrscp 0xC000 and Orthanc 0xC000. The honeypot's C-FIND handler does not validate the level. High against stock pynetdicom, DCMTK and Orthanc; a custom pynetdicom application with equally loose validation would answer the same. Matched: pacs_honeypot.py (lab reference build) with pynetdicom 3.0.4 and pydicom 3.0.2 (2026-11)."
+  - name: pynetdicom-pacs-honeypot-cfind-missing-level-pending
+    id: 1612
+    port: 11112
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: 0100000000d700010000414e592d534350202020202020202020484f4e45594445542020202020202020000000000000000000000000000000000000000000000000000000000000000010000015312e322e3834302e31303030382e332e312e312e3120000038010000003000001b312e322e3834302e31303030382e352e312e342e312e322e322e3140000011312e322e3834302e31303030382e312e325000003a51000004000040005200001b312e322e3237362e302e373233303031302e332e302e332e362e375500000f4f464649535f44434d544b5f333637
+        output_match_type: hex
+        output: '312e322e3832362e302e312e333638303034332e392e33383131'
+        invert_match: false
+      - input_type: hex
+        input: 04000000006c0000005a010300000000040000004c000000000002001c000000312e322e3834302e31303030382e352e312e342e312e322e322e3100000000010200000020000000100102000000010000000007020000000000000000080200000002010000000a01021000100000000000
+        output_match_type: hex
+        output: '000000090200000000ff'
+        invert_match: false
+    confidence: Medium
+    comment: "After an accepted association with a pynetdicom acceptor, a Study Root C-FIND-RQ without a Query/Retrieve Level element gets a pending response (0xFF00) carrying matches; pynetdicom qrscp and DCMTK dcmqrscp answer 0xA900 and Orthanc 0xC000. Medium: it depends on the wrapper treating a missing level as STUDY. Matched: pacs_honeypot.py (lab reference build) with pynetdicom 3.0.4 and pydicom 3.0.2 (2026-11)."
+  - name: pynetdicom-pacs-honeypot-qr-without-worklist-104
+    id: 1613
+    port: 104
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: 01000000010e00010000414e592d534350202020202020202020484f4e45594445542020202020202020000000000000000000000000000000000000000000000000000000000000000010000015312e322e3834302e31303030382e332e312e312e3120000038010000003000001b312e322e3834302e31303030382e352e312e342e312e322e322e3140000011312e322e3834302e31303030382e312e32200000330300000030000016312e322e3834302e31303030382e352e312e342e333140000011312e322e3834302e31303030382e312e325000003a51000004000040005200001b312e322e3237362e302e373233303031302e332e302e332e362e375500000f4f464649535f44434d544b5f333637
+        output_match_type: hex
+        output: '210000190100000040000011312e322e3834302e31303030382e312e32210000190300030040000011312e322e3834302e31303030382e312e325000003e5100000400003ffe52000020312e322e3832362e302e312e333638303034332e392e33383131'
+        invert_match: false
+    confidence: Medium
+    comment: "As 1610, on port 104. An A-ASSOCIATE-RQ proposing Study Root Query/Retrieve FIND (context 1) and Modality Worklist FIND (context 3) is answered by a pynetdicom acceptor (Implementation Class UID under pynetdicom's root 1.2.826.0.1.3680043.9.3811) that accepts the Q/R FIND context and rejects the worklist one (result 3). Stock pynetdicom servers answer differently: qrscp accepts both, storescp and echoscp reject both; DCMTK and Orthanc carry their own UID. Medium: it reflects the wrapper's choice of supported contexts, and a custom genuine pynetdicom Q/R server without worklist support would answer the same. Matched: pacs_honeypot.py (lab reference build) with pynetdicom 3.0.4 and pydicom 3.0.2 (2026-11)."
+  - name: pynetdicom-pacs-honeypot-cfind-bogus-level-pending-104
+    id: 1614
+    port: 104
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: 0100000000d700010000414e592d534350202020202020202020484f4e45594445542020202020202020000000000000000000000000000000000000000000000000000000000000000010000015312e322e3834302e31303030382e332e312e312e3120000038010000003000001b312e322e3834302e31303030382e352e312e342e312e322e322e3140000011312e322e3834302e31303030382e312e325000003a51000004000040005200001b312e322e3237362e302e373233303031302e332e302e332e362e375500000f4f464649535f44434d544b5f333637
+        output_match_type: hex
+        output: '312e322e3832362e302e312e333638303034332e392e33383131'
+        invert_match: false
+      - input_type: hex
+        input: 04000000007a0000005a010300000000040000004c000000000002001c000000312e322e3834302e31303030382e352e312e342e312e322e322e3100000000010200000020000000100102000000010000000007020000000000000000080200000002010000001801020800520006000000424f475553201000100000000000
+        output_match_type: hex
+        output: '000000090200000000ff'
+        invert_match: false
+    confidence: High
+    comment: "As 1611, on port 104. After an accepted association with a pynetdicom acceptor, a Study Root C-FIND-RQ with the invalid Query/Retrieve Level BOGUS gets a pending response (status 0xFF00) carrying matches. Genuine archives refuse it: pynetdicom 3.0.4 qrscp answers 0xA900, DCMTK dcmqrscp 0xC000 and Orthanc 0xC000. The honeypot's C-FIND handler does not validate the level. High against stock pynetdicom, DCMTK and Orthanc; a custom pynetdicom application with equally loose validation would answer the same. Matched: pacs_honeypot.py (lab reference build) with pynetdicom 3.0.4 and pydicom 3.0.2 (2026-11)."
