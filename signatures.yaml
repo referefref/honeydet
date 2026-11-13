@@ -14910,3 +14910,39 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: "The sample token user=jack on the default trap path returns the bundled 68-byte 1x1 greyscale-alpha PNG (static/pixel.png), the tracking-pixel response of the sample config.json. Depends on the sample token being left in place. Matched: honeyLambda 55b4131 (honeylambda-nx 301445d) on serverless-offline 13.10.2 (2026-11)."
+  - name: dcept-generation-server-empty-text-json
+    id: 1680
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.0 200 OK\r\nServer: BaseHTTP/[0-9.]+ Python/[0-9.]+\r\nDate: [^\r\n]+\r\nContent-type: text/json$'
+        invert_match: false
+    confidence: High
+    comment: "DCEPT's honeytoken generation server answers every GET, whatever the path, with an HTTP/1.0 200 from Python's BaseHTTPServer, the non-standard type 'Content-type: text/json' (lower-case t, as written in GenerationServer.py) and an empty body when the request carries no workstation parameter. Python's own http.server sends text/html directory listings, and web servers do not use text/json. Matched: DCEPT 834a523 on Python 2.7.18 and its Python 3 port dcept-nx d995bfa on Python 3.11 (2026-11)."
+  - name: dcept-generation-server-notify-500
+    id: 1681
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST /notify HTTP/1.1\r\nHost: x\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: 3\r\nConnection: close\r\n\r\na=1"
+        output_match_type: regex
+        output: '^HTTP/1\.0 500 Internal Server Error\r\nServer: BaseHTTP/[0-9.]+ Python/[0-9.]+\r\nDate: [^\r\n]+$'
+        invert_match: false
+    confidence: High
+    comment: "POST is DCEPT's master/slave channel (POST /notify with u, d and t fields from a slave sniffer). A form without those fields gets a bare '500 Internal Server Error' from BaseHTTPServer: status, Server and Date lines only, no body and no Content-Type. Python's http.server answers POST with a 501 HTML error page. The form is ignored, so no cracking job is queued. Matched: DCEPT 834a523 on Python 2.7.18 and its Python 3 port dcept-nx d995bfa on Python 3.11 (2026-11)."
+  - name: dcept-generation-server-honeytoken-reply
+    id: 1682
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /?machine=HD-PROBE HTTP/1.1\r\nHost: x\r\nAccept: application/json\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: "(?s)^HTTP/1\\.0 200 OK\r\n.*Content-type: text/json\r\n\r\n\\{'d':'[^']*','u':'[^']*',p:'[A-Za-z0-9]{10}'\\}$"
+        invert_match: false
+    confidence: Medium
+    comment: "A request with the agent's workstation parameter (default name 'machine', configurable as honeytoken_param_name) returns a honeytoken as DCEPT's pseudo-JSON {'d':'<domain>','u':'<user>',p:'<10 random letters and digits>'}: single quotes and an unquoted p key, which the .NET agent's JavaScriptSerializer accepts. Note that this probe is issued a honeytoken, recorded against the workstation name HD-PROBE. Medium because the parameter name is configurable. Matched: DCEPT 834a523 on Python 2.7.18 and its Python 3 port dcept-nx d995bfa on Python 3.11 (2026-11)."
