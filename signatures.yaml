@@ -520,8 +520,7 @@ signatures:
         output: 502 Nope we use cleartext
         invert_match: false
     confidence: High
-    comment: "Amusing but non-standard responses to SMTP commands. Ref:
-      https://git.dkia.at/dkia-oss/spamhole/-/blob/master/index.ts"
+    comment: "Amusing but non-standard responses to SMTP commands. Ref: https://git.dkia.at/dkia-oss/spamhole/-/blob/master/index.ts. Matched: Spamhole (node) d64a505 (2026-11)."
   - name: Spamhole-C
     id: 31
     port: 25
@@ -14355,3 +14354,199 @@ signatures:
         invert_match: false
     confidence: High
     comment: "As 1611, on port 104. After an accepted association with a pynetdicom acceptor, a Study Root C-FIND-RQ with the invalid Query/Retrieve Level BOGUS gets a pending response (status 0xFF00) carrying matches. Genuine archives refuse it: pynetdicom 3.0.4 qrscp answers 0xA900, DCMTK dcmqrscp 0xC000 and Orthanc 0xC000. The honeypot's C-FIND handler does not validate the level. High against stock pynetdicom, DCMTK and Orthanc; a custom pynetdicom application with equally loose validation would answer the same. Matched: pacs_honeypot.py (lab reference build) with pynetdicom 3.0.4 and pydicom 3.0.2 (2026-11)."
+  - name: spamhole-node-greeting-yawn
+    id: 1630
+    port: 25
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^220 Yawn why are you bothering me$'
+      invert_match: false
+    confidence: High
+    comment: 'The greeting is "220 Yawn why are you bothering me", fixed in index.ts, with no host name (RFC 5321 requires the server''s domain in the greeting). Genuine servers send "220 <host> ESMTP ...". Matched: Spamhole (node) d64a505 (2026-11).'
+  - name: spamhole-node-ehlo-invalidtld-double-auth
+    id: 1631
+    port: 25
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^220 '
+      invert_match: false
+    - input_type: string
+      input: "EHLO probe.example\r"
+      output_match_type: regex
+      output: '^250-whatever\.invalidtld\r?\n250-SIZE 20971520\r?\n250-AUTH PLAIN LOGIN\r?\n250-AUTH=PLAIN LOGIN\r?\n250 8BITMIME$'
+      invert_match: false
+    confidence: High
+    comment: 'EHLO names the server "whatever.invalidtld" and advertises SIZE 20971520 (twice the 10 MB limit it enforces), AUTH PLAIN LOGIN in both the standard and the old "AUTH=" form on a cleartext connection, and 8BITMIME, but not STARTTLS, PIPELINING or ENHANCEDSTATUSCODES. No genuine server tested sends this list. Matched: Spamhole (node) d64a505 (2026-11).'
+  - name: spamhole-node-helo-invalidtld
+    id: 1632
+    port: 25
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^220 '
+      invert_match: false
+    - input_type: string
+      input: "HELO probe.example\r"
+      output_match_type: regex
+      output: '^250 whatever\.invalidtld$'
+      invert_match: false
+    confidence: High
+    comment: 'HELO is answered "250 whatever.invalidtld", a host name in a top-level domain that does not exist; genuine servers answer with their own name. Matched: Spamhole (node) d64a505 (2026-11).'
+  - name: spamhole-node-noop-refused
+    id: 1633
+    port: 25
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^220 '
+      invert_match: false
+    - input_type: string
+      input: "NOOP\r"
+      output_match_type: regex
+      output: '^502 What\? Speak clearly!$'
+      invert_match: false
+    confidence: High
+    comment: 'NOOP, which RFC 5321 requires every server to implement, falls through to "502 What? Speak clearly!" (as do RSET, VRFY, EXPN and HELP). Postfix, Exim, OpenSMTPD, Sendmail, qmail, aiosmtpd, maddy, Mailpit, MailHog, Haraka and smtp-server answer NOOP with 250. Matched: Spamhole (node) d64a505 (2026-11).'
+  - name: spamhole-node-auth-any-mechanism
+    id: 1634
+    port: 25
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^220 '
+      invert_match: false
+    - input_type: string
+      input: "EHLO probe.example\r"
+      output_match_type: regex
+      output: '^250'
+      invert_match: false
+    - input_type: string
+      input: "AUTH XHD{{rand}}\r"
+      output_match_type: regex
+      output: '^235 2\.7\.0 Authentication successful$'
+      invert_match: false
+    confidence: High
+    comment: 'AUTH with a made-up mechanism name and no credentials succeeds at once ("235 2.7.0 Authentication successful"); a genuine server refuses an unknown mechanism (504) or does not offer AUTH on a cleartext connection (503). Matched: Spamhole (node) d64a505 (2026-11).'
+  - name: spamhole-node-data-without-envelope
+    id: 1635
+    port: 25
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^220 '
+      invert_match: false
+    - input_type: string
+      input: "DATA\r"
+      output_match_type: regex
+      output: '^354 Talk to the hand\. End data with <CR><LF>\.<CR><LF>$'
+      invert_match: false
+    - input_type: string
+      input: ".\r"
+      output_match_type: regex
+      output: '^250 '
+      invert_match: false
+    confidence: High
+    comment: 'DATA straight after the greeting, with no HELO, MAIL or RCPT, is accepted ("354 Talk to the hand. ..."); genuine servers answer 503 (bad sequence). The final empty message stores nothing. Matched: Spamhole (node) d64a505 (2026-11).'
+  - name: spamhole-node-empty-line
+    id: 1636
+    port: 25
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^220 '
+      invert_match: false
+    - input_type: string
+      input: "\r"
+      output_match_type: regex
+      output: '^500 Say something$'
+      invert_match: false
+    confidence: High
+    comment: 'An empty command line is answered "500 Say something". Matched: Spamhole (node) d64a505 (2026-11).'
+  - name: spamhole-node-quit
+    id: 1637
+    port: 25
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^220 '
+      invert_match: false
+    - input_type: string
+      input: "QUIT\r"
+      output_match_type: regex
+      output: '^221 Hope to never see you again$'
+      invert_match: false
+    confidence: High
+    comment: 'QUIT is answered "221 Hope to never see you again" without a host name. Matched: Spamhole (node) d64a505 (2026-11).'
+  - name: spamhole-node-open-relay-slow-end-of-data
+    id: 1638
+    port: 25
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^220 '
+      invert_match: false
+    - input_type: string
+      input: "HELO probe.example\r"
+      output_match_type: regex
+      output: '^250'
+      invert_match: false
+    - input_type: string
+      input: "MAIL FROM:<hd-{{rand}}@example.org>\r"
+      output_match_type: regex
+      output: '^250'
+      invert_match: false
+    - input_type: string
+      input: "RCPT TO:<hd-{{rand}}@elsewhere.example>\r"
+      output_match_type: regex
+      output: '^250'
+      invert_match: false
+    - input_type: string
+      input: "DATA\r"
+      output_match_type: regex
+      output: '^354'
+      invert_match: false
+    - input_type: string
+      input: ".\r"
+      output_match_type: regex
+      output: '^250'
+      invert_match: false
+      min_response_ms: 900
+    confidence: High
+    comment: 'Independent of the reply texts: a recipient in an outside domain is accepted (open relay) and the end of an (empty) message is acknowledged with 250 only after a fixed one-second delay (setTimeout 1000 in index.ts), while every other reply is immediate. Genuine servers refuse the relay recipient; development sinks that accept it (aiosmtpd, Mailpit, MailHog, smtp-server) acknowledge at once. Matched: Spamhole (node) d64a505 (2026-11).'
+  - name: spamhole-node-mail-from-without-address
+    id: 1639
+    port: 25
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^220 '
+      invert_match: false
+    - input_type: string
+      input: "MAIL FROM\r"
+      output_match_type: regex
+      output: '^250 Ok$'
+      invert_match: false
+    confidence: High
+    comment: 'MAIL FROM with no colon and no address, before HELO, is answered "250 Ok": the parser only checks the start of the line. Genuine servers answer 501 or 503. Matched: Spamhole (node) d64a505 (2026-11).'
