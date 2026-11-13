@@ -14946,3 +14946,51 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: "A request with the agent's workstation parameter (default name 'machine', configurable as honeytoken_param_name) returns a honeytoken as DCEPT's pseudo-JSON {'d':'<domain>','u':'<user>',p:'<10 random letters and digits>'}: single quotes and an unquoted p key, which the .NET agent's JavaScriptSerializer accepts. Note that this probe is issued a honeytoken, recorded against the workstation name HD-PROBE. Medium because the parameter name is configurable. Matched: DCEPT 834a523 on Python 2.7.18 and its Python 3 port dcept-nx d995bfa on Python 3.11 (2026-11)."
+  - name: honeyku-default-page
+    id: 1690
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*\r\n\r\n.*<title>honeyku</title>.*<h1>DEFAAAAAAAAULT \\o/</h1>\s*Please change me!'
+        invert_match: false
+    confidence: Medium
+    comment: "Every path that is not a configured trap returns the bundled templates/default.html: title 'honeyku', heading 'DEFAAAAAAAAULT \\o/' and 'Please change me!'. A genuine Flask site does not ship this placeholder; the template is meant to be replaced. Matched: Honeyku 2dc3091 on Flask 3.1.3 / gunicorn 27.0.1 (2026-11)."
+  - name: honeyku-sample-trap-browser-page
+    id: 1691
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /awesomeapp/v2/iam/creds HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*\r\n\r\n.*<h3>Your Browser is (?:Not )?Chrome!</h3>\s*User-Agent: Mozilla/5\.0\s*</body>'
+        invert_match: false
+    confidence: Medium
+    comment: "The sample trap /awesomeapp/v2/iam/creds of the bundled config.json answers with templates/custom.html: 'Your Browser is (Not) Chrome!' followed by the visitor's own User-Agent. Depends on the sample trap being left in place. Matched: Honeyku 2dc3091 on Flask 3.1.3 / gunicorn 27.0.1 (2026-11)."
+  - name: honeyku-sample-token-pixel
+    id: 1692
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /v1/get-pass?user=jack HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*Content-Disposition: inline; filename=pixel\.png\r\n.*Content-Length: 68\r\n.*\r\n\r\n.PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x04\x00\x00\x00'
+        invert_match: false
+    confidence: Medium
+    comment: "The sample token user=jack on the sample trap /v1/get-pass returns the bundled 68-byte 1x1 greyscale-alpha tracking pixel static/pixel.png through Flask's send_file (Content-Disposition inline; filename=pixel.png). The same pixel as HoneyLambda, at the path without an API Gateway stage. Depends on the sample token. Matched: Honeyku 2dc3091 on Flask 3.1.3 / gunicorn 27.0.1 (2026-11)."
+  - name: honeyku-bundled-sample-image
+    id: 1693
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /static/homer.jpg HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*Content-Disposition: inline; filename=homer\.jpg\r\n.*Content-Type: image/jpeg\r\n.*Content-Length: 121524\r\n.*\r\n\r\n.{4,8}JFIF\x00'
+        invert_match: false
+    confidence: Medium
+    comment: "Flask's static route serves the bundled sample image static/homer.jpg (121524 bytes, the response of the sample token page=2) to anyone, whatever traps are configured, until the file is removed. Matched: Honeyku 2dc3091 on Flask 3.1.3 / gunicorn 27.0.1 (2026-11)."
