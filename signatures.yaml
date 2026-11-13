@@ -14994,3 +14994,51 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: "Flask's static route serves the bundled sample image static/homer.jpg (121524 bytes, the response of the sample token page=2) to anyone, whatever traps are configured, until the file is removed. Matched: Honeyku 2dc3091 on Flask 3.1.3 / gunicorn 27.0.1 (2026-11)."
+  - name: honeypot-s3-bundled-edag-certificate
+    id: 1720
+    port: 443
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "1603010068010000640303000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f00000a002fc02fc030009c003501000031000a00080006001d00170018000b00020100000d000e000c0401050106010403050308040023000000170000ff01000100"
+        output_match_type: regex
+        output: '(?s)^\x16\x03\x03.*EDAG.*IT Operations.*130\.10\.222\.118.*alexander\.bredo@edag\.de'
+        invert_match: false
+    confidence: Medium
+    comment: "A TLS 1.2 ClientHello. The server presents the certificate bundled in the repository's keys/ directory, whose private key is published with it: subject CN=130.10.222.118, O=EDAG, OU=IT Operations, L=Fulda, e-mail address of the author, issued by the author's own CA with SHA-1 in August 2013 and expired in June 2016. Amazon S3 presents an Amazon-issued certificate for *.s3.amazonaws.com; MinIO and LocalStack present the operator's certificate or LocalStack's localhost certificate (O=LocalStack Org). Medium: an operator can replace keys/http.public.key and http.private.key (HS3_CERT_MODE=generate in the companion script). Matched: honeypot-s3 f90c21e with the companion patch, Tornado 6.6.1 (2026-11)."
+  - name: honeypot-s3-error-xml-question-marks
+    id: 1721
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 403 Forbidden\r\nServer: TornadoServer/[^\r]+\r\n.*\r\n\r\n<\?xml version="1\.0" encoding="UTF-8"\?>\n<Error>\n\t<Code>AccessDenied</Code>\n\t<Message>Access Denied</Message>\n\t<RequestId>\?</RequestId>\n\t<Resource>\?</Resource> \n\t<HostId>\?</HostId>\n</Error>'
+        invert_match: false
+    confidence: High
+    comment: "An anonymous GET / is refused by Tornado (Server: TornadoServer) with a tab-indented S3 error document whose RequestId, Resource and HostId are all a literal '?' (the template fills them from query parameters). Amazon S3, MinIO and LocalStack send a real request id (and a host id), their own Server header (AmazonS3, MinIO, TwistedWeb with x-localstack) and compact XML; MinIO says 'Access Denied.' with the resource path. Every refused request (any path, no or wrong credentials, signature version 4) gets the same document. Matched: honeypot-s3 f90c21e with the companion patch, Tornado 6.6.1, on the plain HTTP listener (2026-11); the HTTPS listener answers identically."
+  - name: honeypot-s3-tornado-debug-traceback
+    id: 1722
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST / HTTP/1.1\r\nHost: x\r\nContent-Length: 0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 405 Method Not Allowed\r\nServer: TornadoServer/[^\r]+\r\nContent-Type: text/plain\r\n.*\r\n\r\nTraceback \(most recent call last\):\n.*tornado/web\.py.*raise HTTPError\(405\)\ntornado\.web\.HTTPError: HTTP 405: Method Not Allowed'
+        invert_match: false
+    confidence: High
+    comment: "POST / (a method the root handler does not support) returns 405 with a plain-text Python traceback from tornado/web.py, because the application runs in Tornado debug mode (debug=True, which serves tracebacks). S3 services answer in XML (MinIO: 400 BadRequest 'An unsupported API call for method: POST'); LocalStack answers 200 with an empty body. High: upstream hard-codes debug mode (the companion patch adds HS3_DEBUG=false to turn it off). Matched: honeypot-s3 f90c21e with the companion patch, Tornado 6.6.1 (2026-11)."
+  - name: honeypot-s3-sigv2-default-secret-listing
+    id: 1723
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nDate: Thu, 01 Jan 2015 00:00:00 GMT\r\nAuthorization: AWS AKIAHS3LABPROBE001:40WiZHY3N4ShQmrzFtOec5atfs8=\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\nServer: TornadoServer/[^\r]+\r\n.*<ListAllMyBucketsResult xmlns="http://s3\.amazonaws\.com/doc/2006-03-01/">\n\t<Owner>\n\t\t<ID>F673467</ID>\n\t\t<DisplayName>alexander\.bredo@edag\.de</DisplayName>\n\t</Owner>'
+        invert_match: false
+    confidence: Medium
+    comment: "A ListBuckets request signed with AWS signature version 2 for an arbitrary access key id and the secret key 'secret', dated 1 January 2015. honeypot-s3 accepts any access key id with that secret, does not check the request time, and lists its buckets under a fixed owner (ID F673467, the author's e-mail address as display name). Amazon S3 and MinIO refuse the request (an unknown key; MinIO answers RequestTimeTooSkewed); LocalStack accepts any credentials but lists its own owner (webfile, 64-hex ID) in compact XML. Medium: the secret is configurable in the companion build (HS3_SECRET); the owner is hard-coded. Matched: honeypot-s3 f90c21e with the companion patch, Tornado 6.6.1 (2026-11)."
