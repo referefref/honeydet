@@ -14730,3 +14730,39 @@ signatures:
         invert_match: false
     confidence: High
     comment: "AUTH LOGIN is answered '500 5.5.1 Command unrecognized \"AUTH\"', quoting only the four-letter verb (commands are matched on their first four letters). Servers without authentication answer 502, 503 or 504 with the full command or mechanism. Every reply is held back by the configured delay (10 s by default, about 20 s per command in the lab), and honeydet's -timeout also bounds the whole signature, so run honeydet with -timeout 60 or more. Matched: Mail::SMTP::Honeypot 0.11 (2026-11)."
+  - name: s3-honeybuckets-default-decoy-bucket-listing
+    id: 1640
+    port: 9000
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /finance-db-backups/ HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*<ListBucketResult [^>]*><Name>finance-db-backups</Name>.*<Key>backups/finance_prod_2026-10-31\.sql\.gz</Key>.*<Key>config/\.env\.production</Key>.*<Key>exports/customers_2026Q3\.csv</Key>'
+        invert_match: false
+    confidence: Medium
+    comment: "An anonymous path-style ListObjects request for the companion build's default decoy bucket, finance-db-backups, succeeds and lists its three default decoy objects (backups/finance_prod_2026-10-31.sql.gz, config/.env.production, exports/customers_2026Q3.csv). The endpoint is a genuine MinIO server; a genuine MinIO without this bucket answers 403 AccessDenied, and one with a public bucket of its own lists different keys. Depends on the default HB_BUCKET and decoy set, so Medium. Matched: S3 Honeybuckets companion build (MinIO RELEASE.2025-10-15T17-29-55Z, hb_setup.py 1.0.0) (2026-11)."
+  - name: s3-honeybuckets-default-decoy-env-file
+    id: 1641
+    port: 9000
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /finance-db-backups/config/.env.production HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*\r\n\r\n# finance-api production settings - do not commit\nAPP_ENV=production\nDB_HOST=finance-db01\.corp\.internal\nDB_NAME=finance_prod\nDB_USER=finance_app\nDB_PASSWORD=[A-Za-z0-9]{18}\nAWS_ACCESS_KEY_ID=AKIA[A-Z0-9]{16}\nAWS_SECRET_ACCESS_KEY=[A-Za-z0-9/+]{40}\n'
+        invert_match: false
+    confidence: Medium
+    comment: "The default decoy .env file of the companion build can be read anonymously: fixed invented settings (finance-api, finance-db01.corp.internal, finance_prod) followed by a random database password and an AWS-style key pair. The key pair is the honeytoken: a MinIO user, read-only on the decoy bucket, whose every use raises an alert. Depends on the default decoy set, so Medium. Matched: S3 Honeybuckets companion build (MinIO RELEASE.2025-10-15T17-29-55Z, hb_setup.py 1.0.0) (2026-11)."
+  - name: s3-honeybuckets-default-decoy-customer-export
+    id: 1642
+    port: 9000
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /finance-db-backups/exports/customers_2026Q3.csv HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*\r\n\r\ncustomer_id,name,email,country,iban_last4\nC10401,Sam Nguyen,sam\.nguyen1@example\.com,GB,1037\nC10402,Jordan Kowalski,jordan\.kowalski2@example\.com,GB,1074\n'
+        invert_match: false
+    confidence: Medium
+    comment: "The default decoy customer export of the companion build can be read anonymously and holds the same invented, deterministic rows on every installation (C10401 Sam Nguyen, C10402 Jordan Kowalski, example.com addresses). Depends on the default decoy set, so Medium. Matched: S3 Honeybuckets companion build (MinIO RELEASE.2025-10-15T17-29-55Z, hb_setup.py 1.0.0) (2026-11)."
