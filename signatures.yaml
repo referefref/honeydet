@@ -507,8 +507,7 @@ signatures:
         output: 421 Service not available, closing transmission channel
         invert_match: false
     confidence: High
-    comment: "Deliberate 421 error when DATA command provided. Ref:
-      https://metacpan.org/pod/Mail::SMTP::Honeypot"
+    comment: "Deliberate 421 error when DATA command provided. Ref: https://metacpan.org/pod/Mail::SMTP::Honeypot. Not Mail::SMTP::Honeypot 0.11 (2026-11)."
   - name: Spamhole
     id: 30
     port: 25
@@ -14550,3 +14549,184 @@ signatures:
       invert_match: false
     confidence: High
     comment: 'MAIL FROM with no colon and no address, before HELO, is answered "250 Ok": the parser only checks the start of the line. Genuine servers answer 501 or 503. Matched: Spamhole (node) d64a505 (2026-11).'
+  - name: mail-smtp-honeypot-greeting-ehlo-help-only
+    id: 1620
+    port: 25
+    proto: TCP
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^220 \S+ service ready$'
+        invert_match: false
+      - input_type: string
+        input: "EHLO probe.example\r"
+        output_match_type: regex
+        output: '^250-\S+ ready for probe\.example \((\S+ )?\[[0-9.]+\]\)\r?\n250 HELP$'
+        invert_match: false
+    confidence: High
+    comment: "The greeting is '220 <host> service ready' (no ESMTP), and EHLO is answered with '250-<host> ready for <helo name> ([<client address>])' followed only by '250 HELP': no PIPELINING, SIZE, 8BITMIME, STARTTLS or other extension. Genuine ESMTP servers name the software or ESMTP in the greeting and list their extensions. Every reply is held back by the configured delay (10 s by default, about 20 s per command in the lab), and honeydet's -timeout also bounds the whole signature, so run honeydet with -timeout 60 or more. Matched: Mail::SMTP::Honeypot 0.11 (2026-11)."
+  - name: mail-smtp-honeypot-help-text
+    id: 1621
+    port: 25
+    proto: TCP
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^220 \S+ service ready$'
+        invert_match: false
+      - input_type: string
+        input: "HELP\r"
+        output_match_type: regex
+        output: '^214-2\.0\.0     Commands supported are\r?\n214-2\.0\.0    HELO EHLO MAIL RCPT DATA\r?\n214 2\.0\.0    RSET VRFY HELP NOOP QUIT$'
+        invert_match: false
+    confidence: High
+    comment: "HELP returns the module's fixed three-line text '214-2.0.0     Commands supported are' / 'HELO EHLO MAIL RCPT DATA' / 'RSET VRFY HELP NOOP QUIT' (with its irregular spacing). Sendmail, Postfix, Exim, OpenSMTPD and the other servers tested answer differently. Every reply is held back by the configured delay (10 s by default, about 20 s per command in the lab), and honeydet's -timeout also bounds the whole signature, so run honeydet with -timeout 60 or more. Matched: Mail::SMTP::Honeypot 0.11 (2026-11)."
+  - name: mail-smtp-honeypot-helo-without-name
+    id: 1622
+    port: 25
+    proto: TCP
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^220 \S+ service ready$'
+        invert_match: false
+      - input_type: string
+        input: "HELO\r"
+        output_match_type: regex
+        output: '^250 \S+ ready for nobody \((\S+ )?\[[0-9.]+\]\)$'
+        invert_match: false
+    confidence: High
+    comment: "HELO without a host name is accepted, and the reply names the client 'nobody': '250 <host> ready for nobody ([<client address>])'. RFC 5321 requires a domain or address literal, and genuine servers answer 501. Every reply is held back by the configured delay (10 s by default, about 20 s per command in the lab), and honeydet's -timeout also bounds the whole signature, so run honeydet with -timeout 60 or more. Matched: Mail::SMTP::Honeypot 0.11 (2026-11)."
+  - name: mail-smtp-honeypot-421-at-data
+    id: 1623
+    port: 25
+    proto: TCP
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^220 \S+ service ready$'
+        invert_match: false
+      - input_type: string
+        input: "MAIL FROM:<hd{{rand}}@example.org>\r"
+        output_match_type: regex
+        output: '^250 2\.1\.0 OK$'
+        invert_match: false
+      - input_type: string
+        input: "RCPT TO:<hd{{rand}}@elsewhere.example>\r"
+        output_match_type: regex
+        output: '^250 2\.1\.5 OK$'
+        invert_match: false
+      - input_type: string
+        input: "DATA\r"
+        output_match_type: regex
+        output: '^421 Service not available, closing transmission channel$'
+        invert_match: false
+    confidence: High
+    comment: "The module's purpose: MAIL is accepted before HELO, a recipient in an outside domain is accepted ('250 2.1.5 OK', as an open relay would), and DATA is answered with '421 Service not available, closing transmission channel' and the connection is closed, so no message is ever received. Genuine servers want HELO first, refuse to relay and answer DATA with 354. The 421 state is configurable (deny, DATA by default). Every reply is held back by the configured delay (10 s by default, about 20 s per command in the lab), and honeydet's -timeout also bounds the whole signature, so run honeydet with -timeout 90 or more for this four-step signature. Matched: Mail::SMTP::Honeypot 0.11 (2026-11)."
+  - name: mail-smtp-honeypot-pipelined-noop-one-reply
+    id: 1624
+    port: 25
+    proto: TCP
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^220 \S+ service ready$'
+        invert_match: false
+      - input_type: string
+        input: "NOOP\r\nNOOP\r"
+        output_match_type: regex
+        output: '\A250 2\.0\.0 OK\z'
+        invert_match: false
+    confidence: High
+    comment: "Two NOOP commands sent in one write get a single '250 2.0.0 OK': the module reads up to 2048 bytes and treats them as one command line. Genuine servers answer each pipelined command (or, like OpenSMTPD, refuse pipelining with a 500). Every reply is held back by the configured delay (10 s by default, about 20 s per command in the lab), and honeydet's -timeout also bounds the whole signature, so run honeydet with -timeout 60 or more. Matched: Mail::SMTP::Honeypot 0.11 (2026-11)."
+  - name: mail-smtp-honeypot-slow-noop
+    id: 1625
+    port: 25
+    proto: TCP
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^220 \S+ service ready$'
+        invert_match: false
+      - input_type: string
+        input: "NOOP\r"
+        output_match_type: regex
+        output: '^250 2\.0\.0 OK$'
+        invert_match: false
+        min_response_ms: 1500
+    confidence: Medium
+    comment: "NOOP is answered '250 2.0.0 OK' only after the configured delay (about 20 s with the default 10 s, about 2 s with the smallest setting): the module holds back every reply to slow spammers down. Genuine servers answer NOOP at once. Medium: the delay is configurable. Every reply is held back by the configured delay (10 s by default, about 20 s per command in the lab), and honeydet's -timeout also bounds the whole signature, so run honeydet with -timeout 60 or more. Matched: Mail::SMTP::Honeypot 0.11 (2026-11)."
+  - name: mail-smtp-honeypot-vrfy-domain-required
+    id: 1626
+    port: 25
+    proto: TCP
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^220 \S+ service ready$'
+        invert_match: false
+      - input_type: string
+        input: "VRFY hd{{rand}}\r"
+        output_match_type: regex
+        output: '^553 5\.5\.4 Domain name required for address "hd{{rand}}"$'
+        invert_match: false
+    confidence: High
+    comment: "VRFY of a bare user name is answered '553 5.5.4 Domain name required for address \"<name>\"' (the module's address parser), while any user@domain is answered '250 2.1.5 OK'. Genuine servers answer 250, 252 or 550 for a local name (Exim: 501 with different text). Every reply is held back by the configured delay (10 s by default, about 20 s per command in the lab), and honeydet's -timeout also bounds the whole signature, so run honeydet with -timeout 60 or more. Matched: Mail::SMTP::Honeypot 0.11 (2026-11)."
+  - name: mail-smtp-honeypot-mail-syntax-lowercase
+    id: 1627
+    port: 25
+    proto: TCP
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^220 \S+ service ready$'
+        invert_match: false
+      - input_type: string
+        input: "MAIL FROM hd{{rand}}@example.org\r"
+        output_match_type: regex
+        output: '^501 5\.5\.2 Syntax error in parameters scanning "from"$'
+        invert_match: false
+    confidence: High
+    comment: "MAIL without the colon is answered '501 5.5.2 Syntax error in parameters scanning \"from\"', a Sendmail-style text with the keyword in lower case because the module lower-cases arguments. Genuine Sendmail sends the same text with FROM in upper case (and wants HELO first); Postfix, Exim and the others answer with their own texts. Every reply is held back by the configured delay (10 s by default, about 20 s per command in the lab), and honeydet's -timeout also bounds the whole signature, so run honeydet with -timeout 60 or more. Matched: Mail::SMTP::Honeypot 0.11 (2026-11)."
+  - name: mail-smtp-honeypot-unrecognized-no-colon
+    id: 1628
+    port: 25
+    proto: TCP
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^220 \S+ service ready$'
+        invert_match: false
+      - input_type: string
+        input: "XHD{{rand}}\r"
+        output_match_type: regex
+        output: '^500 5\.5\.1 Command unrecognized "XHD{{rand}}"$'
+        invert_match: false
+    confidence: High
+    comment: "An unknown command is answered '500 5.5.1 Command unrecognized \"<command>\"', Sendmail's text without its colon (Sendmail: 'Command unrecognized: \"...\"'). Every reply is held back by the configured delay (10 s by default, about 20 s per command in the lab), and honeydet's -timeout also bounds the whole signature, so run honeydet with -timeout 60 or more. Matched: Mail::SMTP::Honeypot 0.11 (2026-11)."
+  - name: mail-smtp-honeypot-auth-verb-only
+    id: 1629
+    port: 25
+    proto: TCP
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^220 \S+ service ready$'
+        invert_match: false
+      - input_type: string
+        input: "AUTH LOGIN\r"
+        output_match_type: regex
+        output: '^500 5\.5\.1 Command unrecognized "AUTH"$'
+        invert_match: false
+    confidence: High
+    comment: "AUTH LOGIN is answered '500 5.5.1 Command unrecognized \"AUTH\"', quoting only the four-letter verb (commands are matched on their first four letters). Servers without authentication answer 502, 503 or 504 with the full command or mechanism. Every reply is held back by the configured delay (10 s by default, about 20 s per command in the lab), and honeydet's -timeout also bounds the whole signature, so run honeydet with -timeout 60 or more. Matched: Mail::SMTP::Honeypot 0.11 (2026-11)."
