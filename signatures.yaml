@@ -15315,3 +15315,88 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: "SSLRequest, then a TLS 1.2 ClientHello that lists ECDHE-RSA-AES256-GCM-SHA384 before ECDHE-RSA-AES128-GCM-SHA256. AcraServer with a certificate (Go crypto/tls) selects AES128-GCM (c02f) in its ServerHello; PostgreSQL with OpenSSL and its default ssl_ciphers selects AES256-GCM (c030). Medium: a PostgreSQL server with a custom ssl_ciphers list could make the same choice. Needs AcraServer with tls_cert/tls_key and TLS on the database behind it. Matched: Acra 0.96.0 (2026-11)."
+  - name: postgresql-honeypot-error-without-v-field
+    id: 1740
+    port: 5432
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "00000029000300007573657200706f73746772657300646174616261736500706f7374677265730000"
+        output_match_type: hex
+        output: "520000000800000003"
+        invert_match: false
+      - input_type: hex
+        input: "700000001157726f6e675061737331363400"
+        output_match_type: hex
+        output: "53464154414c00433238503031004d70617373776f72642061757468656e7469636174696f6e206661696c656420666f7220757365722022706f73746772657322000000"
+        invert_match: false
+    confidence: High
+    comment: "StartupMessage (3.0) for user postgres, then a wrong cleartext PasswordMessage. postgresql-honeypot asks for a cleartext password and answers with a hand-built ErrorResponse S=FATAL C=28P01 M='password authentication failed for user \"postgres\"' that has no V, F, L or R fields and ends in three zero bytes. Genuine PostgreSQL 9.6 to 18 in password mode sends S=FATAL V=FATAL C=28P01 with the same message followed by F=auth.c, L and R=auth_failed and a single terminator; in md5 or SCRAM mode it never asks for a cleartext password. Hard-coded. Matched: postgresql-honeypot 8290dfa (2026-11)."
+  - name: postgresql-honeypot-no-user-auth-failed
+    id: 1741
+    port: 5432
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "0000001b00030000646174616261736500706f7374677265730000"
+        output_match_type: hex
+        output: "433238503031004d70617373776f72642061757468656e7469636174696f6e206661696c656420666f7220757365722022756e6b6e6f776e22000000"
+        invert_match: false
+    confidence: High
+    comment: "StartupMessage (3.0) with a database but no user parameter. postgresql-honeypot answers at once with C=28P01 'password authentication failed for user \"unknown\"'. Genuine PostgreSQL 9.6 to 18 answers FATAL C=28000 'no PostgreSQL user name specified in startup packet' without any authentication exchange. Hard-coded. Matched: postgresql-honeypot 8290dfa (2026-11)."
+  - name: postgresql-honeypot-accepts-protocol-4
+    id: 1742
+    port: 5432
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "00000029000400007573657200706f73746772657300646174616261736500706f7374677265730000"
+        output_match_type: hex
+        output: "520000000800000003"
+        invert_match: false
+      - input_type: hex
+        input: "700000001157726f6e675061737331363400"
+        output_match_type: hex
+        output: "433238503031004d70617373776f72642061757468656e7469636174696f6e206661696c656420666f7220757365722022706f73746772657322000000"
+        invert_match: false
+    confidence: High
+    comment: "StartupMessage claiming protocol 4.0 for user postgres, then a wrong cleartext password. postgresql-honeypot ignores the version field, asks for a cleartext password and refuses it with its own C=28P01 ErrorResponse (no V, F, L or R fields, three closing zero bytes). Genuine PostgreSQL 9.6 to 18 rejects the startup packet with FATAL C=0A000 'unsupported frontend protocol 4.0: server supports 3.0 to 3.x' (2.0 to 3.0 on 12, 1.0 to 3.0 on 9.6) and closes the connection. The second step separates it from other honeypots that also ignore the version (sticky-elephant, oh-my-honeypot). Hard-coded. Matched: postgresql-honeypot 8290dfa (2026-11)."
+  - name: postgresql-honeypot-query-as-password
+    id: 1743
+    port: 5432
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "00000029000300007573657200706f73746772657300646174616261736500706f7374677265730000"
+        output_match_type: hex
+        output: "520000000800000003"
+        invert_match: false
+      - input_type: hex
+        input: "510000000d53454c454354203100"
+        output_match_type: hex
+        output: "433238503031004d70617373776f72642061757468656e7469636174696f6e206661696c6564"
+        invert_match: false
+    confidence: High
+    comment: "StartupMessage for user postgres, then a simple Query ('Q', SELECT 1) instead of a password. postgresql-honeypot treats any message as a failed password and sends C=28P01 'password authentication failed'. Genuine PostgreSQL 12 to 18 sends FATAL C=08P01 'expected password response, got message type 81' (or 'expected SASL response' under SCRAM); 9.6 closes without a reply. Hard-coded. Matched: postgresql-honeypot 8290dfa (2026-11)."
+  - name: postgresql-honeypot-repeated-encryption-refusals
+    id: 1744
+    port: 5432
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "0000000804d21630"
+        output_match_type: regex
+        output: '^N$'
+        invert_match: false
+      - input_type: hex
+        input: "0000000804d2162f"
+        output_match_type: regex
+        output: '^N$'
+        invert_match: false
+      - input_type: hex
+        input: "0000000804d2162f"
+        output_match_type: regex
+        output: '^N$'
+        invert_match: false
+    confidence: High
+    comment: "GSSENCRequest, then two SSLRequests on the same connection. postgresql-honeypot answers 'N' to every encryption request, however many arrive. Genuine PostgreSQL negotiates GSSAPI and SSL at most once each: the official 12 to 18 images answer 'G' to the GSSENCRequest, 9.6 rejects it as an unsupported protocol, and a server that has already declined SSL rejects a second SSLRequest with FATAL C=0A000 'unsupported frontend protocol 1234.5679'. Heralding and Chameleon close after the second request, oh-my-honeypot ignores the first and pghoney and sticky-elephant answer it differently. Hard-coded. Matched: postgresql-honeypot 8290dfa (2026-11)."
