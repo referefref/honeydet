@@ -3698,6 +3698,133 @@ signatures:
         invert_match: false
     confidence: High
     comment: "As 424, on port 24, where ftp/strong_password lands when the SSH modules are processed first (fresh CT 9242)."
+  # snare-tanner (ids 430-439)
+  - name: snare-tanner-sess-uuid-cookie
+    id: 430
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 [0-9]{3} [^\r\n]*\r\n.*(?i:set-cookie): sess_uuid=[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\r\n'
+        invert_match: false
+    confidence: High
+    comment: 'Every SNARE response sets a cookie named sess_uuid holding the TANNER session id, a version 4 UUID, whatever site was cloned. The cookie is how TANNER links requests into sessions, and SNARE has no option to rename it. Matched: SNARE b17fdfe + TANNER 3bc9ae2 (2026-11).'
+  - name: snare-aiohttp-behind-cloned-server-header
+    id: 431
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\n.*(?i:server): (?:Apache|nginx|Microsoft-IIS|LiteSpeed|openresty|Caddy|lighttpd)[^\r\n]*\r\n'
+        invert_match: false
+      - input_type: string
+        input: "GET / HTTP/1337\r\nHost: x\r\nConnection: close\r\n\r"
+        reconnect: true
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.0 400 Bad Request\r\n.*Server: Python/3\.[0-9]+ aiohttp/[0-9.]+\r\n.*Bad status line'
+        invert_match: false
+    confidence: High
+    comment: 'Normal pages carry the Server header the cloner recorded from the original site (Apache, nginx, IIS and so on), but a malformed request line is rejected by aiohttp''s own parser before SNARE sees it, with HTTP/1.0 400, a plain-text ''Bad status line'' explanation and Server: Python/3.x aiohttp/x. A genuine Apache, nginx or IIS server answers the same request with its own 400 or 505 page. Complements the older id 15, which checks the aiohttp error text alone. Matched: SNARE b17fdfe + TANNER 3bc9ae2 (2026-11).'
+  - name: tanner-sqli-emulator-error
+    id: 432
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /?hd{{rand}}=1%27%20OR%20%271%27%3D%271 HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\n.*<div>SQL ERROR: near hd{{rand}}: syntax error</div>\s*</body>'
+        invert_match: false
+    confidence: High
+    comment: 'A classic tautology in a parameter that matches no column of TANNER''s fake database (a random name) is answered by the SQLite emulator with ''SQL ERROR: near <parameter name>: syntax error'' inside a <div> appended to the last HTML page of the session, with status 200. SQLite''s own message quotes the offending token, not the parameter name, and a genuine site does not append errors to its home page. Default configuration (SQLITE emulator); the MySQL emulator gives a different text. Matched: SNARE b17fdfe + TANNER 3bc9ae2 (2026-11).'
+  - name: tanner-lfi-emulator-busybox-passwd
+    id: 433
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /?hd{{rand}}=../../../../etc/passwd HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\n.*Server: Python/3\.[0-9]+ aiohttp/[^\r\n]*\r\n.*\r\n\r\nroot:x:0:0:root:/root:/bin/sh\ndaemon:x:1:1:daemon:/usr/sbin:/bin/false\nbin:x:2:2:bin:/bin:/bin/false\n'
+        invert_match: false
+    confidence: High
+    comment: 'A path traversal to /etc/passwd in any parameter is answered by TANNER''s LFI emulator with the passwd file of the busybox Docker image (root with /bin/sh, every other account /bin/false, an operator account, no service accounts) as text/plain, without the cloned headers and with aiohttp''s Server header. Requires the LFI emulator, which needs Docker (enabled in the upstream configuration and the companion scripts; T-Pot disables it). Matched: SNARE b17fdfe + TANNER 3bc9ae2 (2026-11).'
+  - name: tanner-xss-emulator-div-reflection
+    id: 434
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /?hd{{rand}}=%3Ci%3Ehd{{rand}}%3C/i%3E HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\n.*<div><i>hd{{rand}}</i></div>\s*</body>'
+        invert_match: false
+    confidence: Medium
+    comment: 'Any parameter containing markup, even one the page has never heard of, is reflected by TANNER''s XSS emulator inside a <div> appended just before </body> of the cloned page. A static site ignores unknown parameters; a genuinely vulnerable application reflects into its own markup rather than a trailing div. Medium: an application could reflect a parameter in a similar place. Matched: SNARE b17fdfe + TANNER 3bc9ae2 (2026-11).'
+  - name: tanner-cmd-exec-emulator-busybox-shell
+    id: 435
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /?hd{{rand}}=x%3Bcat%20/tmp/hd{{rand}} HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\n.*<div>[^<]*cat: can''t open ''/tmp/hd{{rand}}'': No such file or directory\n</div>\s*</body>'
+        invert_match: false
+    confidence: High
+    comment: 'A parameter that looks like command injection is run by TANNER''s command execution emulator with sh -c in a fresh busybox container, and the output is appended in a <div> to the cloned page. Busybox''s cat says "can''t open ''<file>''"; GNU coreutils says ''cat: <file>: No such file or directory'', and a site that is not vulnerable shows neither. Requires the command execution emulator (Docker; enabled upstream and in the companion scripts, disabled in T-Pot). Matched: SNARE b17fdfe + TANNER 3bc9ae2 (2026-11).'
+  - name: tanner-php-injection-plain-text-answer
+    id: 436
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /?hd{{rand}}=print(%22hd%22.%22{{rand}}%22)%3B HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\nContent-Type: text/plain\r\n.*Server: Python/3\.[0-9]+ aiohttp/[^\r\n]*\r\n(?:[^\r\n]+\r\n)*\r\nhd{{rand}}$'
+        invert_match: false
+    confidence: High
+    comment: 'A PHP code injection attempt in any parameter is executed by TANNER in the phpox sandbox and the output alone is returned as text/plain, with aiohttp''s Server header instead of the cloned site''s headers. A genuine PHP site either ignores the parameter or, if truly vulnerable, returns its own page and headers. Matched: SNARE b17fdfe + TANNER 3bc9ae2 (2026-11).'
+  - name: snare-cloned-error-page-reserialised
+    id: 437
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /hd-{{rand}} HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 404 Not Found\r\n.*<hr/>\s*(?:<address>Apache/|<center>nginx)'
+        invert_match: false
+    confidence: Medium
+    comment: 'SNARE''s cloner saves the original server''s 404 page through BeautifulSoup, which writes void elements in XHTML form, so the served Apache or nginx error page contains <hr/> where Apache and nginx always send <hr>. The Apache page also keeps the host name and port of the cloned site whatever the request''s Host header. Medium: applies when the cloned site used a stock Apache or nginx error page. Matched: SNARE b17fdfe + TANNER 3bc9ae2 (2026-11).'
+  - name: snare-header-order-date-last
+    id: 438
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\nServer: (?:Apache|nginx)[^\r\n]*\r\n(?:[^\r\n]+\r\n)*?Content-Length: [0-9]+\r\nDate: [^\r\n]+\r\n'
+        invert_match: false
+    confidence: Medium
+    comment: 'SNARE replays the cloned headers first (starting with the original Server header) and aiohttp appends Content-Length and then Date at the end. Apache always sends Date first and nginx always sends Date immediately after Server, so an Apache or nginx Server header followed later by Content-Length and then Date does not occur on the genuine servers. Medium: depends on the original site sending a Server header. Matched: SNARE b17fdfe + TANNER 3bc9ae2 (2026-11).'
+  - name: tanner-template-injection-emulator
+    id: 439
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /?hd{{rand}}=%7B%7B191*7%7D%7D HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\n.*<div>1337</div>\s*</body>'
+        invert_match: false
+    confidence: Medium
+    comment: 'A Tornado-style template expression in any parameter is rendered by TANNER''s template injection emulator and the result appended in a <div> to the cloned page. A site that does not evaluate templates returns the page unchanged. Requires the template injection emulator (Docker; enabled upstream and in the companion scripts, disabled in T-Pot). Medium: a genuinely vulnerable application also evaluates the expression, though not into a trailing div. Matched: SNARE b17fdfe + TANNER 3bc9ae2 (2026-11).'
   # servletpot (ids 440-445)
   - name: servletpot-robots-txt-as-html
     id: 440
