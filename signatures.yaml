@@ -15490,3 +15490,141 @@ signatures:
         invert_match: false
     confidence: High
     comment: 'The default vulnerabilities/CVE-2024-24919 rule (Check Point Security Gateway file read) returns an /etc/passwd file to any POST to /clients/MyCRL, here one with an empty body, with Server: nginx/1.18.0. A vulnerable gateway discloses a file only when the request body carries a path traversal, so a passwd file for an empty request cannot come from a genuine gateway. Matched: Baitroute c453a67 (Go net/http and Python Flask integrations; 2026-11).'
+  - name: go-pot-http-post-200-empty-json
+    id: 1760
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST / HTTP/1.1\r\nHost: x\r\nContent-Length: 0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\nDate: [^\r]+\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: 2\r\nAllow: GET, HEAD\r\n(?:Connection: close\r\n)?\r\n\{\}$'
+        invert_match: false
+    confidence: High
+    comment: "A POST (or any method other than GET and HEAD) is refused by the Fiber router with an Allow: GET, HEAD header, but Go-pot's error handler turns every error into 200 OK with the body {} (Content-Length 2) and no Server header. Genuine servers answer a disallowed method with 405 Method Not Allowed (a plain Fiber application with the default error handler sends 405 and 'Method Not Allowed'). Matched: go-pot 1.1.2 (2026-11)."
+  - name: go-pot-http-post-200-empty-json-default-port
+    id: 1761
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST / HTTP/1.1\r\nHost: x\r\nContent-Length: 0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\nDate: [^\r]+\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: 2\r\nAllow: GET, HEAD\r\n(?:Connection: close\r\n)?\r\n\{\}$'
+        invert_match: false
+    confidence: High
+    comment: "Go-pot on its default HTTP port 8080: a POST gets 200 OK, Allow: GET, HEAD and the body {} from Go-pot's catch-all error handler instead of 405 Method Not Allowed. Matched: go-pot 1.1.2 (2026-11)."
+  - name: go-pot-http-malformed-request-200-empty-json
+    id: 1762
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GARBAGE\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 200 OK\r\nDate: [^\r]+\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: 2\r\nConnection: close\r\n\r\n\{\}$'
+        invert_match: false
+    confidence: High
+    comment: "A request line that is not HTTP at all is answered with 200 OK, Content-Length 2, Connection: close and the body {}: fasthttp reports the parse error and Go-pot's error handler answers every error with 200 and {}. Genuine servers answer 400 Bad Request or close the connection (plain Fiber and fasthttp send 400). Matched: go-pot 1.1.2 (2026-11)."
+  - name: go-pot-http-malformed-request-200-empty-json-default-port
+    id: 1763
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GARBAGE\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 200 OK\r\nDate: [^\r]+\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: 2\r\nConnection: close\r\n\r\n\{\}$'
+        invert_match: false
+    confidence: High
+    comment: "Go-pot on its default HTTP port 8080: a malformed request line gets 200 OK and the body {} instead of 400 Bad Request. Matched: go-pot 1.1.2 (2026-11)."
+  - name: go-pot-http-random-yaml-streamed
+    id: 1764
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "HEAD /{{rand}}.yaml HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 200 OK\r\nDate: [^\r]+\r\nContent-Type: application/x-yaml\r\nTransfer-Encoding: chunked\r\nConnection: close$'
+        invert_match: false
+    confidence: High
+    comment: "A HEAD request for a random, non-existent .yaml file returns 200 OK with Content-Type application/x-yaml and Transfer-Encoding: chunked, and no Server, Content-Length or Last-Modified header: Go-pot picks the format of its endless fake-secrets stream from the file extension of any path. Genuine servers return 404 for a random name, and a real static file is served with Content-Length and Last-Modified. HEAD is used so that the probe gets the headers at once without entering the stall. Matched: go-pot 1.1.2 (2026-11)."
+  - name: go-pot-http-random-yaml-streamed-default-port
+    id: 1765
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "HEAD /{{rand}}.yaml HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 200 OK\r\nDate: [^\r]+\r\nContent-Type: application/x-yaml\r\nTransfer-Encoding: chunked\r\nConnection: close$'
+        invert_match: false
+    confidence: High
+    comment: "Go-pot on its default HTTP port 8080: a HEAD request for a random .yaml file returns 200 OK, application/x-yaml and chunked encoding with no Server or Content-Length header, where a genuine server returns 404. Matched: go-pot 1.1.2 (2026-11)."
+  - name: go-pot-ftp-any-login-20mb-random-file
+    id: 1766
+    port: 21
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^220 Welcome to the FTP Server$'
+        invert_match: false
+      - input_type: string
+        input: "USER u{{rand}}\r"
+        output_match_type: regex
+        output: '^331 OK$'
+        invert_match: false
+      - input_type: string
+        input: "PASS p{{rand}}\r"
+        output_match_type: regex
+        output: '^230 Password ok, continue$'
+        invert_match: false
+      - input_type: string
+        input: "TYPE I
+"
+        output_match_type: regex
+        output: '^200 Type set to binary$'
+        invert_match: false
+      - input_type: string
+        input: "SIZE /{{rand}}.sql\r"
+        output_match_type: regex
+        output: '^213 20971520$'
+        invert_match: false
+    confidence: High
+    comment: "Go-pot's FTP tarpit greets with '220 Welcome to the FTP Server', accepts any user name and password ('331 OK', '230 Password ok, continue', the ftpserverlib replies) and, in binary mode, and reports every path, including a random one that cannot exist, as a 20971520-byte (20 MB) file, the default transfer file size it then sends one byte per second. Genuine FTP servers refuse unknown accounts and answer 550 for a missing file. Matched: go-pot 1.1.2 (2026-11)."
+  - name: go-pot-ftp-any-login-20mb-random-file-default-port
+    id: 1767
+    port: 2121
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^220 Welcome to the FTP Server$'
+        invert_match: false
+      - input_type: string
+        input: "USER u{{rand}}\r"
+        output_match_type: regex
+        output: '^331 OK$'
+        invert_match: false
+      - input_type: string
+        input: "PASS p{{rand}}\r"
+        output_match_type: regex
+        output: '^230 Password ok, continue$'
+        invert_match: false
+      - input_type: string
+        input: "TYPE I
+"
+        output_match_type: regex
+        output: '^200 Type set to binary$'
+        invert_match: false
+      - input_type: string
+        input: "SIZE /{{rand}}.sql\r"
+        output_match_type: regex
+        output: '^213 20971520$'
+        invert_match: false
+    confidence: High
+    comment: "Go-pot's FTP tarpit on its default port 2121: the fixed welcome text, any login accepted and a 20971520-byte size for a random path that cannot exist. Matched: go-pot 1.1.2 (2026-11)."
