@@ -15742,3 +15742,123 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: "Default profile's cgi-bin trap: /cgi-bin answers 500 with 'You are not allowed to access this folder' (genuine servers answer 403 or 404). Only in profiles generated from the default template; Medium. Matched: HASH dc8f0b5 default profile (2026-11)."
+  - name: hellpot-fasthttp-getonly-post
+    id: 1780
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST /wp-login.php HTTP/1.1\r\nHost: x\r\nUser-Agent: Cloudflare-Traffic-Manager/1.0 (honeydet)\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: 11\r\nConnection: close\r\n\r\nlog=a&pwd=b\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 400 Bad Request\r\nServer: nginx[^\r\n]*\r\nDate: [^\r\n]+\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: 26\r\n.*\r\n\r\nError when parsing request$'
+        invert_match: false
+    confidence: Medium
+    comment: "POST to the tarpit path returns fasthttp's '400 Bad Request' with the plain-text body 'Error when parsing request' (HellPot's server accepts only GET and HEAD) under a Server: nginx header; nginx answers a POST it cannot handle with an HTML 405 page and its own HTML 400 page for malformed requests. Survives catch-all mode and an nginx front end that proxies the path. Medium: shared by any fasthttp GET-only server that calls itself nginx. Matched: HellPot 0.5.4+build2 (commit 0ba62c9, 2026-11)."
+  - name: hellpot-robots-unslashed-disallow
+    id: 1781
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /robots.txt HTTP/1.1\r\nHost: x\r\nUser-Agent: Cloudflare-Traffic-Manager/1.0 (honeydet)\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\nServer: nginx[^\r\n]*\r\nDate: [^\r\n]+\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: \d+\r\n.*\r\n\r\nUser-agent: \*\r\n(?:Disallow: [^/\r\n][^\r\n]*\r\n)*Disallow: [^/\r\n][^\r\n]*$'
+        invert_match: false
+    confidence: High
+    comment: "HellPot's generated robots.txt: CRLF line endings, 'User-agent: *' and only Disallow lines whose paths have no leading slash (default 'Disallow: wp-login.php', 'Disallow: wp-login'), served as text/plain; charset=utf-8 without ETag or Last-Modified under Server: nginx. A static robots.txt from nginx is text/plain without a charset, carries ETag and Last-Modified, and uses /-rooted paths. Default (non catch-all) mode, directly or behind an nginx proxy. The probe's user agent keeps a catch-all instance from streaming. Matched: HellPot 0.5.4+build2 (commit 0ba62c9, 2026-11)."
+  - name: hellpot-router-head-405
+    id: 1782
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "HEAD /wp-login.php HTTP/1.1\r\nHost: x\r\nUser-Agent: Cloudflare-Traffic-Manager/1.0 (honeydet)\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 405 Method Not Allowed\r\nServer: nginx[^\r\n]*\r\nDate: [^\r\n]+\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: 18\r\n(?:.*\r\n)?Allow: GET, OPTIONS(?:\r\n|$)'
+        invert_match: false
+    confidence: Medium
+    comment: "HEAD on the tarpit path returns the fasthttp/router '405 Method Not Allowed' with 'Allow: GET, OPTIONS' (OPTIONS itself is then refused with a 400) under Server: nginx; nginx answers HEAD like GET. Default and catch-all modes, directly or behind an nginx proxy. Medium: shared by any fasthttp/router application that calls itself nginx. Matched: HellPot 0.5.4+build2 (commit 0ba62c9, 2026-11)."
+  - name: hellpot-ua-blacklist-not-found
+    id: 1783
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /wp-login.php HTTP/1.1\r\nHost: x\r\nUser-Agent: Cloudflare-Traffic-Manager/1.0 (honeydet)\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 404 Not Found\r\nServer: nginx[^\r\n]*\r\nDate: [^\r\n]+\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: 9\r\n.*\r\n\r\nNot found$'
+        invert_match: false
+    confidence: High
+    comment: "A client whose user agent contains 'Cloudflare-Traffic-Manager' (in HellPot's default user agent blacklist, in the generated, README and Docker configurations) gets 'Not found' (lower-case f) as text/plain from the tarpit path instead of the stream; nginx's 404 is an HTML page. Default and catch-all modes, directly or behind an nginx proxy; disappears if the operator empties the blacklist. Matched: HellPot 0.5.4+build2 (commit 0ba62c9, 2026-11)."
+  - name: hellpot-plaintext-404
+    id: 1784
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /hd-{{rand}}.php HTTP/1.1\r\nHost: x\r\nUser-Agent: Cloudflare-Traffic-Manager/1.0 (honeydet)\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 404 Not Found\r\nServer: nginx[^\r\n]*\r\nDate: [^\r\n]+\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: 9\r\n.*\r\n\r\nNot [Ff]ound$'
+        invert_match: false
+    confidence: Medium
+    comment: "Any other path returns a 9-byte plain-text 'Not Found' (fasthttp/router) or, in catch-all mode with the probe's blacklisted user agent, 'Not found', under Server: nginx; nginx's 404 is an HTML page naming nginx. Standalone HellPot only (behind a proxy the front end answers). Medium: shared by any fasthttp/router application that calls itself nginx. Matched: HellPot 0.5.4+build2 (commit 0ba62c9, 2026-11)."
+  - name: hellpot-fasthttp-getonly-post-8080
+    id: 1785
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST /wp-login.php HTTP/1.1\r\nHost: x\r\nUser-Agent: Cloudflare-Traffic-Manager/1.0 (honeydet)\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: 11\r\nConnection: close\r\n\r\nlog=a&pwd=b\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 400 Bad Request\r\nServer: nginx[^\r\n]*\r\nDate: [^\r\n]+\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: 26\r\n.*\r\n\r\nError when parsing request$'
+        invert_match: false
+    confidence: Medium
+    comment: "Port 8080 (upstream default bind_port and Docker image) variant of 1780. POST to the tarpit path returns fasthttp's '400 Bad Request' with the plain-text body 'Error when parsing request' (HellPot's server accepts only GET and HEAD) under a Server: nginx header; nginx answers a POST it cannot handle with an HTML 405 page and its own HTML 400 page for malformed requests. Survives catch-all mode and an nginx front end that proxies the path. Medium: shared by any fasthttp GET-only server that calls itself nginx. Matched: HellPot 0.5.4+build2 (commit 0ba62c9, 2026-11)."
+  - name: hellpot-robots-unslashed-disallow-8080
+    id: 1786
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /robots.txt HTTP/1.1\r\nHost: x\r\nUser-Agent: Cloudflare-Traffic-Manager/1.0 (honeydet)\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\nServer: nginx[^\r\n]*\r\nDate: [^\r\n]+\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: \d+\r\n.*\r\n\r\nUser-agent: \*\r\n(?:Disallow: [^/\r\n][^\r\n]*\r\n)*Disallow: [^/\r\n][^\r\n]*$'
+        invert_match: false
+    confidence: High
+    comment: "Port 8080 (upstream default bind_port and Docker image) variant of 1781. HellPot's generated robots.txt: CRLF line endings, 'User-agent: *' and only Disallow lines whose paths have no leading slash (default 'Disallow: wp-login.php', 'Disallow: wp-login'), served as text/plain; charset=utf-8 without ETag or Last-Modified under Server: nginx. A static robots.txt from nginx is text/plain without a charset, carries ETag and Last-Modified, and uses /-rooted paths. Default (non catch-all) mode, directly or behind an nginx proxy. The probe's user agent keeps a catch-all instance from streaming. Matched: HellPot 0.5.4+build2 (commit 0ba62c9, 2026-11)."
+  - name: hellpot-router-head-405-8080
+    id: 1787
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "HEAD /wp-login.php HTTP/1.1\r\nHost: x\r\nUser-Agent: Cloudflare-Traffic-Manager/1.0 (honeydet)\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 405 Method Not Allowed\r\nServer: nginx[^\r\n]*\r\nDate: [^\r\n]+\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: 18\r\n(?:.*\r\n)?Allow: GET, OPTIONS(?:\r\n|$)'
+        invert_match: false
+    confidence: Medium
+    comment: "Port 8080 (upstream default bind_port and Docker image) variant of 1782. HEAD on the tarpit path returns the fasthttp/router '405 Method Not Allowed' with 'Allow: GET, OPTIONS' (OPTIONS itself is then refused with a 400) under Server: nginx; nginx answers HEAD like GET. Default and catch-all modes, directly or behind an nginx proxy. Medium: shared by any fasthttp/router application that calls itself nginx. Matched: HellPot 0.5.4+build2 (commit 0ba62c9, 2026-11)."
+  - name: hellpot-ua-blacklist-not-found-8080
+    id: 1788
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /wp-login.php HTTP/1.1\r\nHost: x\r\nUser-Agent: Cloudflare-Traffic-Manager/1.0 (honeydet)\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 404 Not Found\r\nServer: nginx[^\r\n]*\r\nDate: [^\r\n]+\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: 9\r\n.*\r\n\r\nNot found$'
+        invert_match: false
+    confidence: High
+    comment: "Port 8080 (upstream default bind_port and Docker image) variant of 1783. A client whose user agent contains 'Cloudflare-Traffic-Manager' (in HellPot's default user agent blacklist, in the generated, README and Docker configurations) gets 'Not found' (lower-case f) as text/plain from the tarpit path instead of the stream; nginx's 404 is an HTML page. Default and catch-all modes, directly or behind an nginx proxy; disappears if the operator empties the blacklist. Matched: HellPot 0.5.4+build2 (commit 0ba62c9, 2026-11)."
+  - name: hellpot-plaintext-404-8080
+    id: 1789
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /hd-{{rand}}.php HTTP/1.1\r\nHost: x\r\nUser-Agent: Cloudflare-Traffic-Manager/1.0 (honeydet)\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 404 Not Found\r\nServer: nginx[^\r\n]*\r\nDate: [^\r\n]+\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: 9\r\n.*\r\n\r\nNot [Ff]ound$'
+        invert_match: false
+    confidence: Medium
+    comment: "Port 8080 (upstream default bind_port and Docker image) variant of 1784. Any other path returns a 9-byte plain-text 'Not Found' (fasthttp/router) or, in catch-all mode with the probe's blacklisted user agent, 'Not found', under Server: nginx; nginx's 404 is an HTML page naming nginx. Standalone HellPot only (behind a proxy the front end answers). Medium: shared by any fasthttp/router application that calls itself nginx. Matched: HellPot 0.5.4+build2 (commit 0ba62c9, 2026-11)."
