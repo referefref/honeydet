@@ -15117,3 +15117,73 @@ signatures:
         invert_match: false
     confidence: High
     comment: "T-Pot's Mailoney (the 1.x port t3chn0m4g3/mailoney, module schizo_open_relay) greets as 'server.<hostname>.com ESMTP Exim 4.97' with the start time of the container frozen into the banner and a fixed -0700 offset; under Docker the hostname is the 12-hex-digit container id. Lines end in a bare LF, the EHLO reply offers only SIZE and AUTH LOGIN PLAIN, and an unknown command gets Postfix's wording ('502 Error: command \"X\" not implemented'). Genuine Exim (4.96 in Docker, also named after the container id) ends lines with CRLF, prints the current time, lists 8BITMIME, PIPELINING, CHUNKING, STARTTLS and HELP, and answers '500 unrecognized command'. Matched: T-Pot 24.04.1 images (mailoney 06e54bd), tpotce 6792236 (2026-11)."
+  - name: acra-server-sslrequest-without-certificate
+    id: 1730
+    port: 9393
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "0000000804d2162f"
+        output_match_type: regex
+        output: '^S$'
+        invert_match: false
+      - input_type: hex
+        input: "16030100c2010000be0303d3271cadea84a2cfb926f50db16793e0a3abe08eb33398c424496d1e8c72ed23000038c02cc030009fcca9cca8ccaac02bc02f009ec024c028006bc023c0270067c00ac0140039c009c0130033009d009c003d003c0035002f00ff0100005d0000000700050000026462000b000403000102000a000c000a001d0017001e00190018002300000016000000170000000d002a0028040305030603080708080809080a080b080408050806040105010601030303010302040205020602"
+        output_match_type: hex
+        output: "15030300020270"
+        invert_match: false
+    confidence: High
+    comment: "PostgreSQL SSLRequest, then a TLS 1.2 ClientHello. AcraServer started without a TLS certificate (the plain-text setup of the quick-start guides) still answers the SSLRequest with 'S' (TLS accepted) and then aborts the handshake with a fatal unrecognized_name alert (Go crypto/tls: no certificates configured); libpq clients in the default sslmode=prefer silently retry in plain text, so applications keep working. Genuine PostgreSQL answers 'N' when ssl is off and completes the handshake when it is on; PgBouncer without TLS answers 'N'. AcraServer relays the database's answer to the SSLRequest, so this needs TLS enabled on the database behind it (the Debian default); does not match when AcraServer has tls_cert and tls_key configured. Matched: Acra 0.96.0 (2026-11)."
+  - name: acra-server-unsupported-protocol-silent-close
+    id: 1731
+    port: 9393
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "00000023000300007573657200686470726f6265006461746162617365006864700000"
+        output_match_type: regex
+        output: '^R\x00\x00\x00'
+        invert_match: false
+      - input_type: hex
+        input: "00000013000900097573657200686470720000"
+        reconnect: true
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+    confidence: High
+    comment: "A protocol 3.0 StartupMessage (answered with an authentication request, so the port speaks PostgreSQL), then on a new connection a StartupMessage for protocol 9.9. AcraServer closes the connection without a reply. Genuine PostgreSQL 15 to 18 send ErrorResponse FATAL 0A000 'unsupported frontend protocol 9.9' and PgBouncer FATAL 08P01 'bad packet header'. Independent of TLS settings. Matched: Acra 0.96.0 (2026-11)."
+  - name: acra-server-gssencrequest-silent-close
+    id: 1732
+    port: 9393
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "00000023000300007573657200686470726f6265006461746162617365006864700000"
+        output_match_type: regex
+        output: '^R\x00\x00\x00'
+        invert_match: false
+      - input_type: hex
+        input: "0000000804d216300000000000000000"
+        reconnect: true
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+    confidence: High
+    comment: "A protocol 3.0 StartupMessage (answered with an authentication request), then on a new connection a GSSENCRequest followed by eight zero bytes. AcraServer does not answer the GSSENCRequest and closes the connection without sending anything. Genuine PostgreSQL answers the request at once with one byte, 'G' when built with GSSAPI (Debian and Docker builds) or 'N', and PgBouncer answers 'N' and then reports a bad packet header; libpq sends GSSENCRequest first whenever a Kerberos credential cache exists. Independent of TLS settings. Matched: Acra 0.96.0 (2026-11)."
+  - name: acra-server-go-tls-cipher-choice
+    id: 1733
+    port: 9393
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "0000000804d2162f"
+        output_match_type: regex
+        output: '^S$'
+        invert_match: false
+      - input_type: hex
+        input: "16030100c2010000be0303d3271cadea84a2cfb926f50db16793e0a3abe08eb33398c424496d1e8c72ed23000038c02cc030009fcca9cca8ccaac02bc02f009ec024c028006bc023c0270067c00ac0140039c009c0130033009d009c003d003c0035002f00ff0100005d0000000700050000026462000b000403000102000a000c000a001d0017001e00190018002300000016000000170000000d002a0028040305030603080708080809080a080b080408050806040105010601030303010302040205020602"
+        output_match_type: hex
+        output: "444f574e4752440100c02f"
+        invert_match: false
+    confidence: Medium
+    comment: "SSLRequest, then a TLS 1.2 ClientHello that lists ECDHE-RSA-AES256-GCM-SHA384 before ECDHE-RSA-AES128-GCM-SHA256. AcraServer with a certificate (Go crypto/tls) selects AES128-GCM (c02f) in its ServerHello; PostgreSQL with OpenSSL and its default ssl_ciphers selects AES256-GCM (c030). Medium: a PostgreSQL server with a custom ssl_ciphers list could make the same choice. Needs AcraServer with tls_cert/tls_key and TLS on the database behind it. Matched: Acra 0.96.0 (2026-11)."
