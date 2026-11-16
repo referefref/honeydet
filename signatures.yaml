@@ -15628,3 +15628,117 @@ signatures:
         invert_match: false
     confidence: High
     comment: "Go-pot's FTP tarpit on its default port 2121: the fixed welcome text, any login accepted and a 20971520-byte size for a random path that cannot exist. Matched: go-pot 1.1.2 (2026-11)."
+  - name: hash-error-handler-double-bang
+    id: 1770
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST / HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nContent-Length: 5\r\nConnection: close\r\n\r\n{bad"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\n.*Content-Length: 2\r\n.*\r\n\r\n!!$'
+        invert_match: false
+    confidence: High
+    comment: "A malformed JSON body reaches HASH's catch-all Express error handler, which answers '200 OK' with the two-character body '!!' (and without the profile's global headers, which are added after the body parser). Genuine Express answers 400 Bad Request with an error page; nginx 405, Apache and other servers their own page. Independent of the profile. Matched: HASH dc8f0b5 (2026-11), patched and unpatched."
+  - name: hash-builtin-dotenv-trap
+    id: 1771
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /.env HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 500 Internal Server Error\r\n.*Content-Type: text/plain; charset=utf-8\r\n.*\r\n\r\nDATABASE_URL=\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\nDATABASE_USER=[^\n]+\nDATABASE_PASSWORD=[^\n]+\nDATABASE_PORT=(3306|5432|27017)(\n|$)'
+        invert_match: false
+    confidence: High
+    comment: "Built-in exposed-files trap: /.env returns a faker-generated file (DATABASE_URL with a bare IPv4 address, DATABASE_USER, DATABASE_PASSWORD, DATABASE_PORT 3306, 5432 or 27017) with status 500 and text/plain. A real exposed .env is served with 200 and a site without one answers 404. Present in every profile unless disableBuiltIn lists traps. Matched: HASH dc8f0b5 (2026-11)."
+  - name: hash-builtin-robots-trap
+    id: 1772
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /robots.txt HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\n.*\r\n\r\nUser-agent: baidu\ncrawl-delay: 1\n\nUser-agent: \*\nDisallow: /c/[a-z]+(-[a-z]+)*/\nDisallow: /c/[a-z]+(-[a-z]+)*/\nDisallow: /c/[a-z]+(-[a-z]+)*/\nDisallow: /d/'
+        invert_match: false
+    confidence: High
+    comment: "Built-in robots.txt trap: a crawl-delay for Baidu, then three Disallow lines under /c/ and one under /d/ with random Latin slugs (any request under /c/ or /d/ marks the session as malicious). Present in every profile unless disableBuiltIn lists traps. Matched: HASH dc8f0b5 (2026-11)."
+  - name: hash-builtin-changelog-500
+    id: 1773
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /changelog.txt HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 500 Internal Server Error\r\n.*Content-Type: text/plain; charset=utf-8\r\n.*\r\n\r\n[A-Z][a-z]+ [a-z]+[^\n]*\.\n'
+        invert_match: false
+    confidence: Medium
+    comment: "Built-in exposed-files trap: /changelog.txt (and /readme.txt) return paragraphs of faker lorem text with status 500 and text/plain. Genuine servers return such a file with 200 or answer 404. Present unless disableBuiltIn lists traps; Medium because the body is generic text. Matched: HASH dc8f0b5 (2026-11)."
+  - name: hash-builtin-cookie-pair
+    id: 1774
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 \d{3} [^\r\n]*\r\n.*Set-Cookie: [a-z]+-[a-z-]+=[0-9a-f]{40}; Path=/; HttpOnly\r\nSet-Cookie: [a-z]+-[a-z-]+=s%3A[A-Za-z0-9_-]{32}\.'
+        invert_match: false
+    confidence: Medium
+    comment: "Two cookies with random adjective-noun names (faker internet.domainWord): a tamper-check cookie whose value is a 40-hex-digit git commit hash, then an express-session cookie (s%3A<32-character id>.<signature>) under a random name instead of connect.sid. Built-in unless disableBuiltIn lists traps and cookies; Medium because each part alone is ordinary. Matched: HASH dc8f0b5 (2026-11)."
+  - name: hash-builtin-c-path-500
+    id: 1775
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /c/hd-{{rand}}/ HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 500 Internal Server Error\r\n.*Content-Length: 21\r\n.*\r\n\r\nInternal Server Error$'
+        invert_match: false
+    confidence: Medium
+    comment: "Any random path under /c/ (or /d/), the directories listed in HASH's robots.txt trap, answers 500 with the bare text 'Internal Server Error' instead of 404. Built-in unless disableBuiltIn lists traps; Medium because a plain 500 body is generic. Matched: HASH dc8f0b5 (2026-11)."
+  - name: hash-spring-whitelabel-iso-date
+    id: 1776
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /hd-{{rand}} HTTP/1.1\r\nHost: x\r\nAccept: application/json\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 404 Not Found\r\n.*\r\n\r\n<html><body><h1>Whitelabel Error Page</h1>.*<div id=.created.>\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z</div>'
+        invert_match: false
+    confidence: Medium
+    comment: "spring-boot-example profile: an unknown path returns Spring Boot's Whitelabel Error Page even to a client that asks for JSON, with an ISO 8601 timestamp (JavaScript toISOString). Genuine Spring Boot answers JSON clients with a JSON error body and prints the Whitelabel date as java.util.Date text (for example 'Mon Nov 16 11:53:59 UTC 2026'). Profile-specific (Medium). Matched: HASH dc8f0b5 spring-boot-example profile (2026-11)."
+  - name: hash-spring-express-cannot-post
+    id: 1777
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /hd-{{rand}} HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: string
+        output: "<h1>Whitelabel Error Page</h1>"
+        invert_match: false
+      - input_type: string
+        input: "POST /hd-{{rand}} HTTP/1.1\r\nHost: x\r\nContent-Length: 0\r\nConnection: close\r\n\r"
+        reconnect: true
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 404 Not Found\r\n.*<pre>Cannot POST /hd-[0-9a-f]{16}</pre>'
+        invert_match: false
+    confidence: High
+    comment: "A site that presents Spring Boot's Whitelabel Error Page for GET answers a POST to the same unknown path with Express's own 'Cannot POST' page: a Spring Boot application never produces the Express page, and an Express application does not serve the Spring page. Seen with HASH profiles that imitate Spring Boot (spring-boot-example). Matched: HASH dc8f0b5 spring-boot-example profile (2026-11)."
+  - name: hash-default-profile-cgi-bin
+    id: 1778
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /cgi-bin HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 500 Internal Server Error\r\n.*\r\n\r\nYou are not allowed to access this folder$'
+        invert_match: false
+    confidence: Medium
+    comment: "Default profile's cgi-bin trap: /cgi-bin answers 500 with 'You are not allowed to access this folder' (genuine servers answer 403 or 404). Only in profiles generated from the default template; Medium. Matched: HASH dc8f0b5 default profile (2026-11)."
