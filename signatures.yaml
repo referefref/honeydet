@@ -328,6 +328,7 @@ signatures:
         output: Bad status line
         invert_match: false
     confidence: High
+    comment: "Not matched: SNARE b17fdfe with aiohttp 3.14 or T-Pot 24.04.1 SNARE (2026-11); signature 431 covers this behaviour."
   - name: generic-snmp-honeypot
     id: 16
     port: "161"
