@@ -15400,3 +15400,93 @@ signatures:
         invert_match: false
     confidence: High
     comment: "GSSENCRequest, then two SSLRequests on the same connection. postgresql-honeypot answers 'N' to every encryption request, however many arrive. Genuine PostgreSQL negotiates GSSAPI and SSL at most once each: the official 12 to 18 images answer 'G' to the GSSENCRequest, 9.6 rejects it as an unsupported protocol, and a server that has already declined SSL rejects a second SSLRequest with FATAL C=0A000 'unsupported frontend protocol 1234.5679'. Heralding and Chameleon close after the second request, oh-my-honeypot ignores the first and pghoney and sticky-elephant answer it differently. Hard-coded. Matched: postgresql-honeypot 8290dfa (2026-11)."
+  - name: baitroute-default-aws-credentials-bait
+    id: 1750
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /.aws/credentials HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 .*\r\n\r\n\[default\]\naws_access_key_id = AKIAIOSFODNN7UTK\d\d\n'
+        invert_match: false
+    confidence: High
+    comment: 'The default exposures/aws-credentials rule answers /.aws/credentials with a fixed three-profile file whose first key is AWS''s documentation example key with its last seven characters changed to UTK13. A genuine exposed credentials file holds the owner''s own keys (or AWS''s unchanged example key in samples). Independent of the web framework; does not match when the operator rewrites the rule body. Matched: Baitroute c453a67 (Go net/http and Python Flask integrations; 2026-11).'
+  - name: baitroute-default-ibm-http-server-page
+    id: 1751
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /ibm HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 .*\r\nServer: IBM_HTTP_Server/8\.5\.5\r\n.*<p>Server Information: IBM HTTP Server 8\.5\.5</p>'
+        invert_match: false
+    confidence: High
+    comment: 'The default info/ibm-http-server rule serves a short ''IBM HTTP Server'' page at /ibm with Server: IBM_HTTP_Server/8.5.5 and X-Powered-By: WebSphere_Application_Server/8.5.5. IBM HTTP Server has no such page; with the default rule set the same port also claims to be nginx, Apache 2.4.49, an HP LaserJet and a Check Point gateway. Matched: Baitroute c453a67 (Go net/http and Python Flask integrations; 2026-11).'
+  - name: baitroute-default-hp-laserjet-on-nginx
+    id: 1752
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /SSI/index.htm HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 .*\r\nServer: nginx/1\.18\.0\r\n.*<TITLE>HP LaserJet Professional - Home</TITLE>'
+        invert_match: false
+    confidence: High
+    comment: 'The default info/hp-laserjet-detect rule returns an ''HP LaserJet Professional - Home'' status page from /SSI/index.htm with Server: nginx/1.18.0. HP printers'' embedded web servers do not identify as nginx, and the page carries fixed status text (Ready, Toner Level: 85%). Matched: Baitroute c453a67 (Go net/http and Python Flask integrations; 2026-11).'
+  - name: baitroute-nethttp-empty-405-on-bait
+    id: 1753
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /.aws/credentials HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 .*aws_access_key_id'
+        invert_match: false
+      - input_type: string
+        input: "POST /.aws/credentials HTTP/1.1\r\nHost: x\r\nContent-Length: 0\r\nConnection: close\r\n\r"
+        reconnect: true
+        output_match_type: regex
+        output: '^HTTP/1\.1 405 Method Not Allowed\r\nDate: [^\r\n]+\r\nContent-Length: 0(?:\r\nConnection: close)?$'
+        invert_match: false
+    confidence: Medium
+    comment: 'A bait path that serves a credentials file to GET answers POST, on a new connection, with a bare ''405 Method Not Allowed'': no Allow header, no Content-Type and an empty body. This is the library''s net/http handler; Go''s own method routing adds ''Allow: GET, HEAD'' and a ''Method Not Allowed'' body, nginx returns an HTML 405 page and Apache serves the file. Medium: specific to the net/http integration (the Flask, FastAPI and Gin integrations answer differently) and independent of the rule''s content. Matched: Baitroute c453a67 (net/http integration, Go 1.27.3; 2026-11).'
+  - name: baitroute-nethttp-nginx-header-order
+    id: 1754
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /.aws/credentials HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\nContent-Type: text/plain\r\nServer: nginx/[0-9.]+\r\nDate: [^\r\n]+\r\nContent-Length: [0-9]+\r\n.*\r\n\r\n.*aws_access_key_id'
+        invert_match: false
+    confidence: Medium
+    comment: 'The bait response claims ''Server: nginx/1.18.0'' but arrives in Go net/http''s header order: Content-Type, then Server, then Date and Content-Length, with no Accept-Ranges, ETag or Last-Modified. nginx always sends Server and Date first, and static files carry Last-Modified and ETag. Medium: specific to the net/http integration and to rules that set an nginx Server header (most default rules do), independent of the rule body. Matched: Baitroute c453a67 (net/http integration, Go 1.27.3; 2026-11).'
+  - name: baitroute-default-git-credentials-bait
+    id: 1755
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /.git-credentials HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 .*\r\n\r\nhttps://user1:ghp.ABCDEFGHIJKLMNOPQRSTUVWXYZabcd@github\.com\n'
+        invert_match: false
+    confidence: High
+    comment: 'The default exposures/git-credentials-disclosure rule answers /.git-credentials with four fixed GitHub URLs, the first with an alphabet token (the ghp prefix followed by A to Z and abcd, 30 characters after the prefix; genuine classic tokens have 36). A genuine exposed file holds the owner''s real tokens. Does not match when the operator rewrites the rule body. Matched: Baitroute c453a67 (Go net/http and Python Flask integrations; 2026-11).'
+  - name: baitroute-default-checkpoint-mycrl-passwd
+    id: 1756
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST /clients/MyCRL HTTP/1.1\r\nHost: x\r\nContent-Length: 0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 .*\r\nServer: nginx/1\.18\.0\r\n.*\r\n\r\nroot:x:0:0:root:/root:/bin/bash\n'
+        invert_match: false
+    confidence: High
+    comment: 'The default vulnerabilities/CVE-2024-24919 rule (Check Point Security Gateway file read) returns an /etc/passwd file to any POST to /clients/MyCRL, here one with an empty body, with Server: nginx/1.18.0. A vulnerable gateway discloses a file only when the request body carries a path traversal, so a passwd file for an empty request cannot come from a genuine gateway. Matched: Baitroute c453a67 (Go net/http and Python Flask integrations; 2026-11).'
