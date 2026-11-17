@@ -17344,3 +17344,27 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: 'Only when the operator shares the CUPS scheduler on the network (CUPSpot itself leaves cupsd on localhost). CUPS-Get-Printers lists the queue CUPSpot adds at every start: a random name ''Printer_'' plus eight upper-case letters or digits, device file:/dev/null, so jobs go nowhere (and one more such queue after each restart). Genuine shared queues carry administrator-chosen names and point at a real device (socket://, ipp://, usb://). Medium: a genuine CUPS server could, rarely, have a queue so named. Matched: CUPSpot 2fbdb6e (2026-11).'
+  - name: cve-2024-3400-pot-readme-placeholder-certificate
+    id: 1950
+    port: 443
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "1603010077010000730303000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f00000a002fc02fc030009c003501000040000a00080006001d00170018000b00020100000d000e000c0401050106010403050308040023000000170000ff010001000010000b000908687474702f312e31"
+        output_match_type: regex
+        output: '(?s)^\x16\x03\x03.*DOWNGRD\x01\x00.0\x00\x00\x15.\x01\x00\x01\x00\x00\x0b\x00\x04\x03\x00\x01\x02\x00\x23\x00\x00\x00\x17\x00\x00\x16\x03\x03.*\x13\x02XX1.*\x0c\x0cDefault City1.*\x0c\x02XX1.*\x16\x02XX.*\x13\x02XX1.*\x0c\x0cDefault City1.*\x0c\x02XX1.*\x16\x02XX'
+        invert_match: false
+    confidence: Medium
+    comment: "A TLS 1.2 ClientHello that offers ALPN http/1.1. The honeypot (Python's ssl module behind Flask's development server) answers with the server's own cipher choice ECDHE-RSA-AES256-GCM-SHA384, a session ticket, three EC point formats and no ALPN extension, then sends the self-signed certificate the README's openssl example produces: issuer and subject C=XX, ST=XX, L=Default City, O=XX, OU=XX, CN=XX, emailAddress=XX. A GlobalProtect portal presents a certificate issued for its own host name; nginx and Apache httpd select http/1.1 by ALPN. Medium: the certificate is the operator's choice. Matched: CVE-2024-3400-pot 4114de4 (2026-11)."
+  - name: cve-2024-3400-pot-readme-placeholder-certificate-any-stack
+    id: 1951
+    port: 443
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "1603010068010000640303000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f00000a002fc02fc030009c003501000031000a00080006001d00170018000b00020100000d000e000c0401050106010403050308040023000000170000ff01000100"
+        output_match_type: regex
+        output: '(?s)^\x16\x03[\x01-\x03].*0k1\x0b0\x09\x06\x03U\x04\x06\x13\x02XX1\x0b0\x09\x06\x03U\x04\x08\x0c\x02XX1\x150\x13\x06\x03U\x04\x07\x0c\x0cDefault City1\x0b0\x09\x06\x03U\x04\x0a\x0c\x02XX1\x0b0\x09\x06\x03U\x04\x0b\x0c\x02XX1\x0b0\x09\x06\x03U\x04\x03\x0c\x02XX1\x110\x0f\x06\x09.{1,3}H.{1,3}\x0d\x01\x09\x01\x16\x02XX'
+        invert_match: false
+    confidence: Medium
+    comment: "The certificate alone, whatever TLS stack serves it (for example a reverse proxy placed in front of the honeypot with the same key pair): a TLS 1.2 ClientHello returns the README's example certificate with the distinguished name C=XX, ST=XX, L=Default City, O=XX, OU=XX, CN=XX, emailAddress=XX (the answers shown in the README, with the Red Hat style default locality). A genuine GlobalProtect portal presents a certificate for its own host name. Medium: the certificate is the operator's choice. Matched: CVE-2024-3400-pot 4114de4 (2026-11)."
