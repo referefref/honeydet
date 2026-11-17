@@ -15958,3 +15958,39 @@ signatures:
         invert_match: false
     confidence: High
     comment: "boggart's dashboard (8093, meant to stay internal) answers GET / without authentication with the 'Boggart Dashboard' page and its sidebar links to the overview, query and latest-request views of the captured requests. Matched: boggart 5289f0e (2026-11)."
+  - name: finch-tls-alpn-h3-over-tcp
+    id: 1800
+    port: 443
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "160301007b010000770303000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f000012c02fc030c02bc02ccca8cca9009c002f00350100003c000a00080006001d00170018000b00020100000d0014001204010501060104030503080408050806020100100005000302683300170000ff01000100"
+        output_match_type: regex
+        output: '(?s)^\x16\x03\x03..\x02.*\x00\x10\x00\x05\x00\x03\x02h3'
+        invert_match: false
+    confidence: High
+    comment: "A TLS 1.2 ClientHello over TCP whose only ALPN protocol is h3 (HTTP/3). Finch shares one TLS configuration between its TCP listener and its QUIC listener, with h3, h3-34 to h3-29, h2 and http/1.1 in its ALPN list, so it completes the handshake and selects h3 on a TCP connection, then serves HTTP/1.1 on it. HTTP/3 runs only over QUIC (RFC 9114); nginx 1.22, Apache httpd 2.4, Caddy 2.10 (with HTTP/3 enabled), Traefik 3.6, a Go net/http server, Galah, h0neytr4p and CitrixHoneypot refuse the offer with an alert or pick another protocol. Holds with an operator-supplied certificate. Matched: Finch dab1338 (v0.1.0-beta-25) (2026-11)."
+  - name: finch-tls-alpn-prefers-h3-draft
+    id: 1801
+    port: 443
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "1603010087010000830303000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f000012c02fc030c02bc02ccca8cca9009c002f003501000048000a00080006001d00170018000b00020100000d0014001204010501060104030503080408050806020100100011000f0568332d323908687474702f312e3100170000ff01000100"
+        output_match_type: regex
+        output: '(?s)^\x16\x03\x03..\x02.*\x00\x10\x00\x08\x00\x06\x05h3-29'
+        invert_match: false
+    confidence: High
+    comment: "A TLS 1.2 ClientHello over TCP offering ALPN h3-29 (an HTTP/3 draft) and http/1.1. Finch follows its own ALPN order and selects h3-29 on the TCP connection; genuine HTTPS servers select http/1.1 or nothing (Apache httpd, Caddy, Traefik, Go net/http, Galah, h0neytr4p and CitrixHoneypot choose http/1.1). Unlike signature 1800 the client offers an ordinary protocol, so no server needs to send an alert. Holds with an operator-supplied certificate. Matched: Finch dab1338 (v0.1.0-beta-25) (2026-11)."
+  - name: finch-default-selfsigned-cert
+    id: 1802
+    port: 443
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "16030100720100006e0303000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f000012c02fc030c02bc02ccca8cca9009c002f003501000033000a00080006001d00170018000b00020100000d0014001204010501060104030503080408050806020100170000ff01000100"
+        output_match_type: regex
+        output: '(?s)^\x16\x03\x03..\x02.*\x02\x01\x02\x02\x01\x01\x30\x0d\x06\x09\x2a.{1,8}\x0d\x01\x01\x0b\x05\x00\x30\x00\x30\x1e\x17\x0d\d{12}Z\x17\x0d\d{12}Z\x30\x00.*.\x09localhost'
+        invert_match: false
+    confidence: Medium
+    comment: "A TLS 1.2 ClientHello without ALPN, so the certificate travels in the clear. A listener with an empty tls block (as in the shipped configs/finch.hcl and in quick mode) presents a certificate that Finch generates at each start: serial number 1, empty issuer and empty subject, valid from one hour before start for 25 hours, with subjectAltNames localhost, the bind address, 127.0.0.1 and ::1. Genuine servers present a CA-issued certificate or a self-signed one with a subject (nginx, Apache httpd and Go net/http with an openssl certificate, Traefik's TRAEFIK DEFAULT CERT, Caddy's internal CA with a named issuer). Medium: the operator can supply any certificate in the tls block. Matched: Finch dab1338 (v0.1.0-beta-25) (2026-11)."
