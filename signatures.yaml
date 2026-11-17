@@ -15862,3 +15862,99 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: "Port 8080 (upstream default bind_port and Docker image) variant of 1784. Any other path returns a 9-byte plain-text 'Not Found' (fasthttp/router) or, in catch-all mode with the probe's blacklisted user agent, 'Not found', under Server: nginx; nginx's 404 is an HTML page naming nginx. Standalone HellPot only (behind a proxy the front end answers). Medium: shared by any fasthttp/router application that calls itself nginx. Matched: HellPot 0.5.4+build2 (commit 0ba62c9, 2026-11)."
+  - name: boggart-soft-404-and-bare-trace-405
+    id: 1790
+    port: 8092
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /{{rand}} HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n(?:[^\r\n]+\r\n)*Server: [^\r\n]+\r\n(?:[^\r\n]+\r\n)*Date: [^\r\n]+\r\n'
+        invert_match: false
+      - input_type: string
+        input: "TRACE / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        reconnect: true
+        output_match_type: regex
+        output: '^HTTP/1\.[01] 405 Method Not Allowed\r\nDate: [^\r\n]+\r\nContent-Length: 0\r\nConnection: close$'
+        invert_match: false
+    confidence: High
+    comment: "Template independent. A random path is answered by the template's 'default' (404) entry with status 200 OK, because boggart writes the page without setting a status, and with the template's Server header written before Date in Go's sorted header order. TRACE / (a method no template lists) gets gorilla/mux's bare 405: Date, Content-Length 0 and nothing else, without the Server header the template adds to every other answer. Apache and nginx return 404 for unknown paths and put their Server header on 405 answers. Matched: boggart 5289f0e (2026-11)."
+  - name: boggart-default-404-page
+    id: 1791
+    port: 8092
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /{{rand}} HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*<title>404 Not Found</title>.*<h1 class="content">This is a 404\.</h1>.*<h2 class="content2">Content not found!</h2>'
+        invert_match: false
+    confidence: Medium
+    comment: "boggart's own public/honeypot/404.html (red 'This is a 404.' and 'Content not found!'), used as the default answer by the shipped config.yaml, served for any unknown path with status 200 OK. Medium: the page is a configurable default. Matched: boggart 5289f0e (2026-11)."
+  - name: boggart-default-template-root
+    id: 1792
+    port: 8092
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*Server: Akamai Resource Optimizer\r\nServer-Timing: cdn-cache; desc=HIT\r\nDate: .*<title>Hello</title>.*<h1>Hello!</h1>'
+        invert_match: false
+    confidence: Medium
+    comment: "The shipped config.yaml (basic-raw example): GET / returns a two-line 'Hello!' page with 'Server: Akamai Resource Optimizer' and 'Server-Timing: cdn-cache; desc=HIT', followed by a Date header in Go's order, and the same cache-hit claim on every response. Medium: the default template, replaced when an operator writes their own. Matched: boggart 5289f0e (2026-11)."
+  - name: boggart-apache-example-soft-404
+    id: 1793
+    port: 8092
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /{{rand}} HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*Server: Apache/[^\r\n]*\r\n.*<title>404 Not Found</title>.*<address>Apache/2\.4\.52 \(Debian\) Server at 127\.0\.0\.1 Port 10080</address>'
+        invert_match: false
+    confidence: Medium
+    comment: "apache-httpd example template (scripts/set-apache-httpd.sh): an unknown path returns Apache's 'Not Found' page with status 200 OK, and the page's address line is fixed at 'Apache/2.4.52 (Debian) Server at 127.0.0.1 Port 10080' whatever host and port were requested. Genuine Apache returns 404 Not Found and names the requested host and port. Medium: example template. Matched: boggart 5289f0e (2026-11)."
+  - name: boggart-apache-example-static-keepalive
+    id: 1794
+    port: 8092
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n(?:[^\r\n]+\r\n)*Keep-Alive: timeout=5, max=97\r\nServer: Apache/2\.4\.52 \(Debian\)\r\n(?:[^\r\n]+\r\n)*Connection: close\r\n.*<title>Apache2 Ubuntu Default Page: It works</title>'
+        invert_match: false
+    confidence: Medium
+    comment: "apache-httpd example template: the Ubuntu default page served under 'Server: Apache/2.4.52 (Debian)' with a fixed 'Keep-Alive: timeout=5, max=97' header on a response that closes the connection. Genuine Apache sends no Keep-Alive header when it closes the connection, counts max down from 100 per connection, names Ubuntu in the Server header of Ubuntu's own default page, and sends Date before Server. Medium: example template. Matched: boggart 5289f0e (2026-11)."
+  - name: boggart-api-json-404-and-health
+    id: 1795
+    port: 8094
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.[01] 404 Not Found\r\nContent-Type: application/json\r\nDate: [^\r\n]+\r\nContent-Length: 18\r\nConnection: close\r\n\r\n404 page not found$'
+        invert_match: false
+      - input_type: string
+        input: "GET /api/health HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        reconnect: true
+        output_match_type: regex
+        output: '^HTTP/1\.[01] 200 OK\r\nContent-Type: application/json\r\n(?:[^\r\n]+\r\n)*\r\n\{"status":"ok"\}$'
+        invert_match: false
+    confidence: High
+    comment: "boggart's API service (8094, meant to stay internal): GET / is answered by its own not-found handler with 404, Content-Type application/json and the plain text '404 page not found' without a newline (Go's own 404 is text/plain with nosniff and a newline), and /api/health returns {\"status\":\"ok\"}. Matched: boggart 5289f0e (2026-11)."
+  - name: boggart-dashboard
+    id: 1796
+    port: 8093
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*<title>Boggart Dashboard</title>.*<div class="sidebar-heading border-bottom bg-light">Boggart</div>'
+        invert_match: false
+    confidence: High
+    comment: "boggart's dashboard (8093, meant to stay internal) answers GET / without authentication with the 'Boggart Dashboard' page and its sidebar links to the overview, query and latest-request views of the captured requests. Matched: boggart 5289f0e (2026-11)."
