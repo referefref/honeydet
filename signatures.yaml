@@ -17266,3 +17266,81 @@ signatures:
         reconnect: true
     confidence: Medium
     comment: "Two ClientHellos on the SSL-VPN port. A TLS 1.2 ClientHello is refused with a protocol_version alert (honey.conf allows only TLSv1.3), and on a fresh connection a TLS 1.3 ClientHello that offers only the x25519 group is refused with a handshake_failure alert (ssl_ecdh_curve secp384r1 allows no other group). FortiOS SSL VPN accepts TLS 1.2 by default (ssl-min-proto-ver tls1-2, maximum tls1-3), and a stock nginx completes both handshakes. Medium: protocol versions and curves are editable in honey.conf, and a hardened server with the same two settings would match. Matched: Fortigate.VPN-SSL.Honeypot 1fea601 (2026-11)."
+  - name: cupspot-ipp-post-empty-200
+    id: 1940
+    port: 12345
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "504f5354202f7072696e746572732f6f666669636520485454502f312e310d0a486f73743a207072696e7465720d0a436f6e74656e742d547970653a206170706c69636174696f6e2f6970700d0a436f6e74656e742d4c656e6774683a203131370d0a436f6e6e656374696f6e3a20636c6f73650d0a0d0a0200000b0000000701470012617474726962757465732d6368617273657400057574662d3848001b617474726962757465732d6e61747572616c2d6c616e67756167650002656e45000b7072696e7465722d757269001d6970703a2f2f7072696e7465722f7072696e746572732f6f666669636503"
+        output_match_type: regex
+        output: '^HTTP/1\.0 200 OK\r\nServer: BaseHTTP/[0-9.]+ Python/[0-9.]+\r\nDate: [^\r\n]+$'
+        invert_match: false
+    confidence: High
+    comment: 'IPP Get-Printer-Attributes posted to /printers/office on CUPSpot''s listener (TCP 12345). CUPSpot answers every POST with a bare ''HTTP/1.0 200 OK'' from Python''s BaseHTTP server: Server and Date headers only, no Content-Type, no Content-Length and no body, so no IPP response at all. CUPS 2.4 and ippeveprinter answer HTTP/1.1 200 with an application/ipp body that echoes the request id; Python''s http.server answers POST with 501. Matched: CUPSpot 2fbdb6e (2026-11).'
+  - name: cupspot-get-501-post-200
+    id: 1941
+    port: 12345
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "474554202f20485454502f312e310d0a486f73743a207072696e7465720d0a436f6e6e656374696f6e3a20636c6f73650d0a0d0a"
+        output_match_type: regex
+        output: '^HTTP/1\.0 501 Unsupported method \(''GET''\)\r\nServer: BaseHTTP/[0-9.]+ Python/'
+        invert_match: false
+      - input_type: hex
+        input: "504f5354202f20485454502f312e310d0a486f73743a207072696e7465720d0a436f6e74656e742d547970653a20746578742f706c61696e0d0a436f6e74656e742d4c656e6774683a20380d0a436f6e6e656374696f6e3a20636c6f73650d0a0d0a7374617475733d31"
+        reconnect: true
+        output_match_type: regex
+        output: '^HTTP/1\.0 200 OK\r\nServer: BaseHTTP/[0-9.]+ Python/[0-9.]+\r\nDate: [^\r\n]+$'
+        invert_match: false
+    confidence: High
+    comment: 'A request handler that implements only do_POST: GET / gets Python''s ''501 Unsupported method (''GET'')'' page (Server: BaseHTTP), while a text/plain POST to / on a new connection gets an empty 200. A printer or CUPS serves its web interface on GET / and rejects a non-IPP POST (CUPS 426 or 400, ippeveprinter 400); http.server serves GET and refuses POST. Matched: CUPSpot 2fbdb6e (2026-11).'
+  - name: cupspot-policy-uri-word-drops-connection
+    id: 1942
+    port: 12345
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "504f5354202f20485454502f312e310d0a486f73743a207072696e7465720d0a436f6e74656e742d547970653a20746578742f706c61696e0d0a436f6e74656e742d4c656e6774683a2032380d0a436f6e6e656374696f6e3a20636c6f73650d0a0d0a7072696e7465722d707269766163792d706f6c6963792d7572693d31"
+        output_match_type: no-response
+        output: ''
+        invert_match: false
+      - input_type: hex
+        input: "504f5354202f20485454502f312e310d0a486f73743a207072696e7465720d0a436f6e74656e742d547970653a20746578742f706c61696e0d0a436f6e74656e742d4c656e6774683a20380d0a436f6e6e656374696f6e3a20636c6f73650d0a0d0a7374617475733d31"
+        reconnect: true
+        output_match_type: regex
+        output: '^HTTP/1\.0 200 OK\r\nServer: BaseHTTP/[0-9.]+ Python/[0-9.]+\r\nDate: [^\r\n]+$'
+        invert_match: false
+    confidence: High
+    comment: 'A POST whose body contains the attribute name printer-privacy-policy-uri ends in an exception in CUPSpot''s exploit check (the request body is bytes, not a parsed attribute list) and the connection is closed with no HTTP response, while the same POST without that word on a new connection gets the empty BaseHTTP 200. Genuine IPP servers answer both requests in the same way. Matched: CUPSpot 2fbdb6e (2026-11).'
+  - name: cupspot-post-without-content-length-drops-connection
+    id: 1943
+    port: 12345
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "504f5354202f20485454502f312e310d0a486f73743a207072696e7465720d0a436f6e74656e742d547970653a20746578742f706c61696e0d0a436f6e6e656374696f6e3a20636c6f73650d0a0d0a"
+        output_match_type: no-response
+        output: ''
+        invert_match: false
+      - input_type: hex
+        input: "504f5354202f20485454502f312e310d0a486f73743a207072696e7465720d0a436f6e74656e742d547970653a20746578742f706c61696e0d0a436f6e74656e742d4c656e6774683a20380d0a436f6e6e656374696f6e3a20636c6f73650d0a0d0a7374617475733d31"
+        reconnect: true
+        output_match_type: regex
+        output: '^HTTP/1\.0 200 OK\r\nServer: BaseHTTP/[0-9.]+ Python/[0-9.]+\r\nDate: [^\r\n]+$'
+        invert_match: false
+    confidence: High
+    comment: 'A POST without a Content-Length header makes CUPSpot''s handler fail on int(None) and close the connection without a response; a POST with Content-Length on a new connection gets the empty BaseHTTP 200. CUPS answers the first with an HTTP error (426 for a non-IPP body), ippeveprinter with 400, http.server with 501. Matched: CUPSpot 2fbdb6e (2026-11).'
+  - name: cupspot-shared-random-queue-dev-null
+    id: 1944
+    port: 631
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "504f5354202f20485454502f312e310d0a486f73743a203139322e302e322e31303a3633310d0a436f6e74656e742d547970653a206170706c69636174696f6e2f6970700d0a436f6e74656e742d4c656e6774683a203132340d0a436f6e6e656374696f6e3a20636c6f73650d0a0d0a020040020000000501470012617474726962757465732d6368617273657400057574662d3848001b617474726962757465732d6e61747572616c2d6c616e67756167650002656e4400147265717565737465642d61747472696275746573000c7072696e7465722d6e616d65440000000a6465766963652d75726903"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\n.*printer-name\x00\x10Printer_[A-Z0-9]{8}.{0,200}device-uri\x00\x0efile:/dev/null'
+        invert_match: false
+    confidence: Medium
+    comment: 'Only when the operator shares the CUPS scheduler on the network (CUPSpot itself leaves cupsd on localhost). CUPS-Get-Printers lists the queue CUPSpot adds at every start: a random name ''Printer_'' plus eight upper-case letters or digits, device file:/dev/null, so jobs go nowhere (and one more such queue after each restart). Genuine shared queues carry administrator-chosen names and point at a real device (socket://, ipp://, usb://). Medium: a genuine CUPS server could, rarely, have a queue so named. Matched: CUPSpot 2fbdb6e (2026-11).'
