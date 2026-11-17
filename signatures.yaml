@@ -17116,3 +17116,99 @@ signatures:
         invert_match: false
     confidence: High
     comment: "Malformed JSON sent to /login is answered by the Express default error handler with a 400 page carrying the full Node.js stack trace, including the container path /app/webservices/node_modules/body-parser. Cameras do not run Node.js and do not expose stack traces. Matched: SweetCam Agachily/sweetcam master 54edace (2023-07-10) (2026-11)."
+  - name: voiphoneypot-options-swapped-from-to-udp
+    id: 1920
+    port: 5060
+    proto: udp
+    steps:
+      - input_type: hex
+        input: 4f5054494f4e53207369703a6864403139322e302e322e3130205349502f322e300d0a5669613a205349502f322e302f554450203139322e302e322e313a353036303b6272616e63683d7a39684734624b2d6864766f69706f70740d0a4d61782d466f7277617264733a2037300d0a46726f6d3a203c7369703a6864403139322e302e322e313e3b7461673d6864766f69700d0a546f3a203c7369703a6864403139322e302e322e31303e0d0a43616c6c2d49443a206864766f69702d6f7074696f6e73403139322e302e322e310d0a435365713a2037204f5054494f4e530d0a436f6e746163743a203c7369703a6864403139322e302e322e313e0d0a436f6e74656e742d4c656e6774683a20300d0a0d0a
+        output_match_type: regex
+        output: '(?s)\ASIP/2\.0 200 OK\r\nVia: SIP/2\.0/UDP [0-9.]+:\d+;rport=\d+;branch=z9hG4bK-hdvoipopt\r\nTo: <sip:hd@192\.0\.2\.1>;tag=hdvoip\r\nFrom: [^\r\n]* tag=hdvoip\r\n'
+        invert_match: false
+    confidence: High
+    comment: 'An OPTIONS request over UDP is answered ''200 OK'' with the request''s From header returned as To, and the requester''s tag appended to the phone''s own From after a space (''From: 100 <sip:100@...> tag=...'') instead of as a '';tag='' parameter; the Via is rebuilt from the packet''s source address with ''rport=<port>;branch'' and no ''received''. RFC 3261 (section 8.2.6) has a UAS copy From and To unchanged and add its own tag to To; Kamailio and Asterisk do. Needs honeydet -proto udp. Matched: VoIPHoneypot 3f581cb (2026-11).'
+  - name: voiphoneypot-options-swapped-from-to-tcp
+    id: 1921
+    port: 5060
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: 4f5054494f4e53207369703a6864403139322e302e322e3130205349502f322e300d0a5669613a205349502f322e302f544350203139322e302e322e313a353036303b6272616e63683d7a39684734624b2d6864766f69706f70740d0a4d61782d466f7277617264733a2037300d0a46726f6d3a203c7369703a6864403139322e302e322e313e3b7461673d6864766f69700d0a546f3a203c7369703a6864403139322e302e322e31303e0d0a43616c6c2d49443a206864766f69702d6f7074696f6e73403139322e302e322e310d0a435365713a2037204f5054494f4e530d0a436f6e746163743a203c7369703a6864403139322e302e322e313e0d0a436f6e74656e742d4c656e6774683a20300d0a0d0a
+        output_match_type: regex
+        output: '(?s)\ASIP/2\.0 200 OK\r\nVia: SIP/2\.0/TCP [0-9.]+:\d+;rport=\d+;branch=z9hG4bK-hdvoipopt\r\nTo: <sip:hd@192\.0\.2\.1>;tag=hdvoip\r\nFrom: [^\r\n]* tag=hdvoip\r\nCall-ID: hdvoip-options@192\.0\.2\.1\r\nCSeq: 7 OPTIONS\r\nContact: [^\r\n]*\r\nSupported: [^\r\n]*\r\nAllow: [^\r\n]*\r\nAccept: [^\r\n]*\r\nAccept-Language: [^\r\n]*\s*\z'
+        invert_match: false
+    confidence: High
+    comment: 'Over TCP the same ''200 OK'' arrives with From and To swapped and the requester''s tag after a space, and the header block ends without a Content-Length header, which RFC 3261 (section 20.14) requires on stream transports. Kamailio and Asterisk copy From and To, add a To tag and always send Content-Length. Matched: VoIPHoneypot 3f581cb (2026-11).'
+  - name: voiphoneypot-udp-wildcard-address-challenge
+    id: 1922
+    port: 5060
+    proto: udp
+    steps:
+      - input_type: hex
+        input: 494e56495445207369703a6864403139322e302e322e3130205349502f322e300d0a5669613a205349502f322e302f554450203139322e302e322e313a353036303b6272616e63683d7a39684734624b2d6864766f6970696e760d0a4d61782d466f7277617264733a2037300d0a46726f6d3a203c7369703a6864403139322e302e322e313e3b7461673d6864766f69700d0a546f3a203c7369703a6864403139322e302e322e31303e0d0a43616c6c2d49443a206864766f69702d696e76697465403139322e302e322e310d0a435365713a203720494e564954450d0a436f6e746163743a203c7369703a6864403139322e302e322e313e0d0a436f6e74656e742d4c656e6774683a20300d0a0d0a
+        output_match_type: regex
+        output: '(?s)\ASIP/2\.0 401 Unauthorized\r\nVia: SIP/2\.0/UDP 0\.0\.0\.0:\d+\r\n.*WWW-Authenticate: Digest realm="[^"]*@0\.0\.0\.0",nonce="[0-9a-f]{32}",opaque="[0-9a-f]{32}"\s*\z'
+        invert_match: false
+    confidence: High
+    comment: 'An INVITE over UDP is challenged with ''401 Unauthorized'' whose Via, From, Contact and Digest realm all carry the wildcard address 0.0.0.0 (the UDP listener''s bind address used as the phone''s own address), and whose Via replaces the requester''s Via instead of echoing it. A genuine phone or PBX returns the request''s Via and names a routable address or a realm such as ''asterisk''. Needs honeydet -proto udp. Matched: VoIPHoneypot 3f581cb (2026-11).'
+  - name: voiphoneypot-invite-challenge-shape-tcp
+    id: 1923
+    port: 5060
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: 494e56495445207369703a6864403139322e302e322e3130205349502f322e300d0a5669613a205349502f322e302f544350203139322e302e322e313a353036303b6272616e63683d7a39684734624b2d6864766f6970696e760d0a4d61782d466f7277617264733a2037300d0a46726f6d3a203c7369703a6864403139322e302e322e313e3b7461673d6864766f69700d0a546f3a203c7369703a6864403139322e302e322e31303e0d0a43616c6c2d49443a206864766f69702d696e76697465403139322e302e322e310d0a435365713a203720494e564954450d0a436f6e746163743a203c7369703a6864403139322e302e322e313e0d0a436f6e74656e742d4c656e6774683a20300d0a0d0a
+        output_match_type: regex
+        output: '(?s)\ASIP/2\.0 401 Unauthorized\r\nVia: SIP/2\.0/TCP [0-9.]+:\d+\r\nTo: <sip:hd@192\.0\.2\.1>;tag=hdvoip\r\nFrom: [^\r\n]*\r\nCall-ID: hdvoip-invite@192\.0\.2\.1\r\nCSeq: 7 INVITE\r\nContact: [^\r\n]*\r\nWWW-Authenticate: Digest realm="[^"]+@[0-9.]+",nonce="[0-9a-f]{32}",opaque="[0-9a-f]{32}"\s*\z'
+        invert_match: false
+    confidence: High
+    comment: 'An INVITE over TCP is challenged with ''401 Unauthorized'' that replaces the request''s Via with the phone''s own address, returns the caller''s From as To, has no Content-Length, and offers a Digest challenge ''realm="<user>@<address>"'' with a 32-hex nonce and opaque but no algorithm or qop. Asterisk echoes Via, From and To (adding a To tag) and sends algorithm=MD5 and qop; Kamailio refuses with 403. Matched: VoIPHoneypot 3f581cb (2026-11).'
+  - name: voiphoneypot-default-digest-nonce
+    id: 1924
+    port: 5060
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: 494e56495445207369703a6864403139322e302e322e3130205349502f322e300d0a5669613a205349502f322e302f544350203139322e302e322e313a353036303b6272616e63683d7a39684734624b2d6864766f6970696e760d0a4d61782d466f7277617264733a2037300d0a46726f6d3a203c7369703a6864403139322e302e322e313e3b7461673d6864766f69700d0a546f3a203c7369703a6864403139322e302e322e31303e0d0a43616c6c2d49443a206864766f69702d696e76697465403139322e302e322e310d0a435365713a203720494e564954450d0a436f6e746163743a203c7369703a6864403139322e302e322e313e0d0a436f6e74656e742d4c656e6774683a20300d0a0d0a
+        output_match_type: regex
+        output: 'WWW-Authenticate: Digest realm="[^"]*",nonce="64998950c9dd4ba311e332902e48d1c2",'
+        invert_match: false
+    confidence: Medium
+    comment: 'The Digest nonce is the MD5 of the configured SIP password, so it never changes between challenges; with the project''s default password it is always 64998950c9dd4ba311e332902e48d1c2. A fixed nonce also defeats the replay protection the nonce exists for. Changing the password in config.json changes the value (configurable default). Matched: VoIPHoneypot 3f581cb (2026-11).'
+  - name: voiphoneypot-replayed-rapidlogic-cookie
+    id: 1925
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: 474554202f20485454502f312e300d0a0d0a
+        output_match_type: regex
+        output: '(?s)\AHTTP/1\.0 200 OK\r\nServer: RapidLogic/1\.1\r\nMIME-version: 1\.0\r\nContent-type: text/html\r\nSet-Cookie: auth=0a00080d000918f6; path=/\r\n'
+        invert_match: false
+    confidence: High
+    comment: 'The phone''s web interface is replayed byte for byte from responses recorded from a real DPH-150S: an HTTP/1.0 request for / always receives the same session cookie auth=0a00080d000918f6, whose first eight hex digits encode the recording phone''s address 10.0.8.13. A real RapidLogic phone issues a fresh cookie built from its own address and a running counter. Matched: VoIPHoneypot 3f581cb (2026-11).'
+  - name: voiphoneypot-replayed-1970-date
+    id: 1926
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: 474554202f20485454502f312e310d0a486f73743a2070686f6e650d0a0d0a
+        output_match_type: regex
+        output: '(?s)\AHTTP/1\.1 200 OK\r\nServer: Rapid Logic/1\.1\r\nMIME-version: 1\.0\r\nDate: Wed Jan  7 21:36:35 1970 GMT\r\n.*Set-Cookie: auth=0a00080d000916d8; path=/\r\n'
+        invert_match: false
+    confidence: High
+    comment: 'An HTTP/1.1 request for / is answered with the recorded response, frozen at ''Date: Wed Jan  7 21:36:35 1970 GMT'' (the recording phone had no time source) and the same cookie auth=0a00080d000916d8 every time. A live device''s Date header advances between requests. Matched: VoIPHoneypot 3f581cb (2026-11).'
+  - name: voiphoneypot-bare-status-line
+    id: 1927
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: 474554202f726f626f74732e74787420485454502f312e310d0a486f73743a2070686f6e650d0a0d0a
+        output_match_type: regex
+        output: '\AHTTP/1\.1\s*\z'
+        invert_match: false
+    confidence: Medium
+    comment: 'A request for /robots.txt receives only the nine bytes ''HTTP/1.1 '' (no status code, reason or headers) before the connection closes, replayed from an incomplete recording; several other recorded paths answer the same way, and paths that were never recorded get no answer at all. Web servers send a complete status line, normally 404. Matched: VoIPHoneypot 3f581cb (2026-11).'
