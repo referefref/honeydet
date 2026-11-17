@@ -16800,3 +16800,87 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: "GET /version returns a fixed JSON body (meta true, version 1.18.0), with 'Server: clash' and 'Connection: close' and no Date header. mihomo answers with its real version prefixed by 'v' (for example v1.19.16), a Date and Vary: Origin header, no Server header and a trailing newline. Medium: the version string is a constant in the code and could be changed by a rebuild. Matched: HoneySocks 5b2fd7a (app 0.1.0; Android APK on Android 15 and the headless build) (2026-11)."
+  - name: paperclip-operator-panel-login
+    id: 1890
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /login HTTP/1.1\r\nHost: printer\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 .*<title>Paperclip Printer Honeypot - Login</title>'
+        invert_match: false
+    confidence: High
+    comment: "The operator panel (Flask, port 8080, enabled and bound to all interfaces by default) names the product in its login page title. A printer's embedded web server shows the device's own pages. Matched: Paperclip 38d0562 (2026-11)."
+  - name: paperclip-ipp-get-status-page
+    id: 1891
+    port: 631
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: printer\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.0 200 OK\r\nServer: BaseHTTP/[0-9.]+ Python/[0-9.]+\r\n.*<p>Ready to print</p>\s*<p>IPP URI: ipp://printer/ipp/print</p>'
+        invert_match: false
+    confidence: High
+    comment: "GET / on the IPP port returns a four-line status page from Python's http.server (HTTP/1.0, Server BaseHTTP) that echoes the request's Host header into an IPP URI. CUPS serves its web interface (Server: CUPS/2.4 IPP/2.1) and IPP printers answer with their own HTTP/1.1 server. Matched: Paperclip 38d0562 (2026-11)."
+  - name: paperclip-ipp-multivalue-500
+    id: 1892
+    port: 631
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "504f5354202f6970702f7072696e7420485454502f312e310d0a486f73743a207072696e7465720d0a436f6e74656e742d547970653a206170706c69636174696f6e2f6970700d0a436f6e74656e742d4c656e6774683a203136360d0a436f6e6e656374696f6e3a20636c6f73650d0a0d0a0200000b0000730201470012617474726962757465732d6368617273657400057574662d3848001b617474726962757465732d6e61747572616c2d6c616e67756167650002656e45000b7072696e7465722d75726900176970703a2f2f7072696e7465722f6970702f7072696e744400147265717565737465642d61747472696275746573000c7072696e7465722d6e616d65440000000d7072696e7465722d737461746503"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.0 500 Internal Server Error\r\nServer: BaseHTTP/[0-9.]+ Python/.*<p>Error code: 500</p>'
+        invert_match: false
+    confidence: High
+    comment: "A valid Get-Printer-Attributes request whose requested-attributes has two values (the form CUPS and other clients send) ends in an HTTP 500 page from Python's http.server, because the request parser does not handle additional values. CUPS and ippeveprinter answer with an IPP response. Matched: Paperclip 38d0562 (2026-11)."
+  - name: paperclip-ipp-version-1-1-answered-2-0
+    id: 1893
+    port: 631
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "504f5354202f6970702f7072696e7420485454502f312e310d0a486f73743a207072696e7465720d0a436f6e74656e742d547970653a206170706c69636174696f6e2f6970700d0a436f6e74656e742d4c656e6774683a203131310d0a436f6e6e656374696f6e3a20636c6f73650d0a0d0a0101000b0000730301470012617474726962757465732d6368617273657400057574662d3848001b617474726962757465732d6e61747572616c2d6c616e67756167650002656e45000b7072696e7465722d75726900176970703a2f2f7072696e7465722f6970702f7072696e7403"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.0 200 OK\r\n.*Content-Type: application/ipp\r\n.*\r\n\r\n\x02\x00\x00\x00\x00\x00\x73\x03\x01.*\x04.*printer-name'
+        invert_match: false
+    confidence: High
+    comment: "Get-Printer-Attributes sent as IPP/1.1 is answered as IPP/2.0 successful-ok. RFC 8011 servers reply in the version of the request (CUPS and ippeveprinter answer 1.1). Matched: Paperclip 38d0562 (2026-11)."
+  - name: paperclip-ipp-any-version-successful
+    id: 1894
+    port: 631
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "504f5354202f6970702f7072696e7420485454502f312e310d0a486f73743a207072696e7465720d0a436f6e74656e742d547970653a206170706c69636174696f6e2f6970700d0a436f6e74656e742d4c656e6774683a203131310d0a436f6e6e656374696f6e3a20636c6f73650d0a0d0a0909000b0000730401470012617474726962757465732d6368617273657400057574662d3848001b617474726962757465732d6e61747572616c2d6c616e67756167650002656e45000b7072696e7465722d75726900176970703a2f2f7072696e7465722f6970702f7072696e7403"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.0 200 OK\r\n.*Content-Type: application/ipp\r\n.*\r\n\r\n\x02\x00\x00\x00\x00\x00\x73\x04\x01.*\x04.*printer-name'
+        invert_match: false
+    confidence: High
+    comment: "Get-Printer-Attributes with the non-existent IPP version 9.9 is answered successful-ok (as IPP 2.0) with the printer attribute group. CUPS and ippeveprinter answer server-error-version-not-supported (0x0503). Matched: Paperclip 38d0562 (2026-11)."
+  - name: paperclip-ipp-comma-joined-formats
+    id: 1895
+    port: 631
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "504f5354202f6970702f7072696e7420485454502f312e310d0a486f73743a207072696e7465720d0a436f6e74656e742d547970653a206170706c69636174696f6e2f6970700d0a436f6e74656e742d4c656e6774683a203131310d0a436f6e6e656374696f6e3a20636c6f73650d0a0d0a0200000b0000730501470012617474726962757465732d6368617273657400057574662d3848001b617474726962757465732d6e61747572616c2d6c616e67756167650002656e45000b7072696e7465722d75726900176970703a2f2f7072696e7465722f6970702f7072696e7403"
+        output_match_type: regex
+        output: '(?s)\r\n\r\n\x02\x00\x00\x00\x00\x00\x73\x05\x01.*\x49\x00\x19document-format-supported..[a-z]+/[a-z0-9.+-]+,[a-z]+/'
+        invert_match: false
+    confidence: High
+    comment: "Get-Printer-Attributes returns document-format-supported as one mimeMediaType value holding a comma-separated list (and sides-supported likewise). IPP encodes multi-valued attributes as separate values, as CUPS and ippeveprinter do. Matched: Paperclip 38d0562 (2026-11)."
+  - name: paperclip-mdns-default-txt
+    id: 1896
+    port: 5353
+    proto: udp
+    steps:
+      - input_type: hex
+        input: "731600000001000000000000045f697070045f746370056c6f63616c00000c0001"
+        output_match_type: regex
+        output: '(?s)HP-LaserJet-Pro-M404dn.*adminurl=https?://printer\.local:8080.*note=Building 2 Printer'
+        invert_match: false
+    confidence: Medium
+    comment: "Unicast mDNS query for _ipp._tcp.local: the default advertisement names HP-LaserJet-Pro-M404dn with the shipped TXT record (adminurl pointing at port 8080, note 'Building 2 Printer') and none of the keys an IPP Everywhere printer or CUPS publishes (UUID, URF, product). Configurable, so Medium. Matched: Paperclip 38d0562 (2026-11)."
