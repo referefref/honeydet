@@ -17056,3 +17056,63 @@ signatures:
       invert_match: false
     confidence: Medium
     comment: 'shell:id returns a fixed root identity with the SELinux context of the unprivileged shell user (u:r:shell:s0). adbd runs the shell as uid 2000 (shell) unless restarted as root, and a root adb shell runs in the su context. Medium because the canned answers live in the source. Matched: sweetADB 2446fa9 (2026-05-02) with and without the robustness patch (2026-11).'
+  - name: sweetcam-original-login-page-pug-const
+    id: 1910
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /login HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\n.*X-Powered-By: Express\r\n.*<script><const>brandImagePath = /'
+        invert_match: false
+    confidence: High
+    comment: "The login page template writes its brand settings as an inline script that the Pug engine renders as <const>brandImagePath = /brands/...</const> elements inside <script>, served by Express. No camera firmware login page produces this markup. Matched: SweetCam Agachily/sweetcam master 54edace (2023-07-10) (2026-11)."
+  - name: sweetcam-original-admin-path-invalid-token
+    id: 1911
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /picture HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 401 Unauthorized\r\n.*X-Powered-By: Express\r\n.*\r\n\r\n\{"error":"invalid token"\}$'
+        invert_match: false
+    confidence: High
+    comment: "The JSON Web Token check runs on fixed paths (/picture, /video, /user, /images and others) before routing, so GET /picture without a bearer token returns 401 {\"error\":\"invalid token\"} from Express, while other unknown paths return 404. Cameras answer such paths with their own login redirect or 404 page. Matched: SweetCam Agachily/sweetcam master 54edace (2023-07-10) (2026-11)."
+  - name: sweetcam-original-unknown-endpoint-json
+    id: 1912
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /hdprobe-no-such-page HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 404 Not Found\r\nX-Powered-By: Express\r\nContent-Type: application/json; charset=utf-8\r\n.*Set-Cookie: connect\.sid=s%3A.*\r\n\r\n\{"error":"unknown endpoint"\}$'
+        invert_match: false
+    confidence: Medium
+    comment: "Unknown paths get a JSON 404 {\"error\":\"unknown endpoint\"} from Express together with a new connect.sid session cookie (sessions are created for every visitor). Camera web servers return HTML 404 pages. Medium: the same catch-all handler pattern appears in some Express tutorial applications. Matched: SweetCam Agachily/sweetcam master 54edace (2023-07-10) (2026-11)."
+  - name: sweetcam-original-login-user-not-found
+    id: 1913
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST /login HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nContent-Length: 50\r\nConnection: close\r\n\r\n{\"username\":\"hdprobe-nouser\",\"password\":\"hdprobe\"}"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 404 Not Found\r\n.*X-Powered-By: Express\r\n.*\{"error":"user not found"\}'
+        invert_match: false
+    confidence: High
+    comment: "A JSON login for an unknown user returns 404 Not Found with {\"error\":\"user not found\"} (lower case; a known user with a wrong password gets 401 {\"error\":\"wrong password\"}). Camera login APIs use vendor formats and do not reveal whether a user exists in this way. Matched: SweetCam Agachily/sweetcam master 54edace (2023-07-10) (2026-11)."
+  - name: sweetcam-original-json-parse-stack-trace
+    id: 1914
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST /login HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nContent-Length: 3\r\nConnection: close\r\n\r\n{\"x"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 400 Bad Request\r\n.*X-Powered-By: Express\r\n.*<pre>SyntaxError: .*/app/webservices/node_modules/body-parser/'
+        invert_match: false
+    confidence: High
+    comment: "Malformed JSON sent to /login is answered by the Express default error handler with a 400 page carrying the full Node.js stack trace, including the container path /app/webservices/node_modules/body-parser. Cameras do not run Node.js and do not expose stack traces. Matched: SweetCam Agachily/sweetcam master 54edace (2023-07-10) (2026-11)."
