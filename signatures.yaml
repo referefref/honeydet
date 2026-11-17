@@ -16282,3 +16282,123 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: "Redirect Plugins answers requests for the fake plugins in its list with a WordPress error page: readme.txt as an HTML page (200) titled 'Stable tag' with '@Stable tag: <version>' as its message, the directory as 403 'Plugin changed Response'. Every such page starts with 'LOG' before the doctype, printed by the logging function. Where PHP's output_buffering is off (the official WordPress Docker image), that early output fixes the status WordPress had already chosen, 404, and the page is served with it. The path is the first fake plugin in the paper's appendix and the companion script's default list (301-redirects 3.2.1); point it at another listed plugin elsewhere. A list saved with an empty line turns every missing page into a 403 page that starts with LOG. A genuine readme.txt is text/plain; a missing one is WordPress's 404 page. Matched: SCANTRAP 1.0.0 (382bab9) on WordPress 7.1.4 (2026-11)."
+  - name: sweetcam-web-session-cookie
+    id: 1850
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 302 Found\r\n.*\r\nSet-Cookie: sweetcam_session=s%3A'
+        invert_match: false
+    confidence: High
+    comment: "The camera web interfaces (Express) issue a session cookie named sweetcam_session on the first request, before any login, together with X-Powered-By: Express and a redirect to /login. Embedded camera firmware (Hikvision, Dahua, Axis, Reolink, Mobotix, VStarcam) uses its own web servers and cookie names. Same on ports 81, 443, 8081, 10000, 37777 and 3000. Matched: SweetCam honeynet/sweetcam master df63c1d (2025-09-30) (2026-11)."
+  - name: sweetcam-web-config-json-exposed
+    id: 1851
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /config/sweetcam.json HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\n.*\r\n\r\n\{\s*"medium":\s*"[a-z]+",\s*"loginLimit":\s*\d+'
+        invert_match: false
+    confidence: High
+    comment: "The web services publish their own config directory as static files, so /config/sweetcam.json returns the honeypot settings (medium and loginLimit). No genuine camera serves this file. Matched: SweetCam honeynet/sweetcam master df63c1d (2025-09-30) (2026-11)."
+  - name: sweetcam-web-login-user-not-found
+    id: 1852
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST /login HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nContent-Length: 50\r\nConnection: close\r\n\r\n{\"username\":\"hdprobe-nouser\",\"password\":\"hdprobe\"}"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 404 Not Found\r\n.*X-Powered-By: Express\r\n.*\{"error":"User not found"\}'
+        invert_match: false
+    confidence: High
+    comment: "A JSON login for an unknown user returns 404 Not Found with {\"error\":\"User not found\"} from Express (a known user with a wrong password gets 401 {\"error\":\"Wrong password\"}). Camera login APIs use vendor formats (ISAPI XML, RPC2 JSON, VAPIX) and do not reveal whether a user exists in this way. Matched: SweetCam honeynet/sweetcam master df63c1d (2025-09-30) (2026-11)."
+  - name: sweetcam-onvif-root-redirect
+    id: 1853
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 302 Found\r\nServer: ONVIF/1\.0\r\n.*Location: /onvif/device_service\r\n.*Found\. Redirecting to /onvif/device_service'
+        invert_match: false
+    confidence: High
+    comment: "The ONVIF services answer GET / with Server: ONVIF/1.0 and Express's 'Found. Redirecting to /onvif/device_service' text. Same on 8086-8090. Matched: SweetCam honeynet/sweetcam master df63c1d (2025-09-30) (2026-11)."
+  - name: sweetcam-onvif-soap-post-html-404
+    id: 1854
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST /onvif/device_service HTTP/1.1\r\nHost: x\r\nContent-Type: application/soap+xml; charset=utf-8\r\nContent-Length: 200\r\nConnection: close\r\n\r\n<?xml version=\"1.0\" encoding=\"UTF-8\"?><s:Envelope xmlns:s=\"http://www.w3.org/2003/05/soap-envelope\"><s:Body><GetSystemDateAndTime xmlns=\"http://www.onvif.org/ver10/device/wsdl\"/></s:Body></s:Envelope>"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 404 Not Found\r\nServer: ONVIF/1\.0\r\n.*<p>ONVIF/1\.0 device service</p>'
+        invert_match: false
+    confidence: High
+    comment: "A standard ONVIF GetSystemDateAndTime request (which the ONVIF Core specification requires a device to answer without authentication) posted to /onvif/device_service returns an HTML 404 page reading 'ONVIF/1.0 device service'; the SOAP endpoint sits at /onvif/device_service/soap instead. Genuine ONVIF devices answer this request with a SOAP response. Same on 8086-8090. Matched: SweetCam honeynet/sweetcam master df63c1d (2025-09-30) (2026-11)."
+  - name: sweetcam-onvif-device-service-page
+    id: 1855
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /onvif/device_service HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\nServer: ONVIF/1\.0\r\n.*This is an ONVIF-compliant device service endpoint\.'
+        invert_match: false
+    confidence: High
+    comment: "GET /onvif/device_service returns an HTML information page (manufacturer, model, serial number and the list of SOAP methods) headed 'This is an ONVIF-compliant device service endpoint.' Genuine devices return a SOAP fault or an error for a plain GET on the device service. Same on 8086-8090. Matched: SweetCam honeynet/sweetcam master df63c1d (2025-09-30) (2026-11)."
+  - name: sweetcam-rtsp-options-without-cseq
+    id: 1856
+    port: 554
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "OPTIONS rtsp://x:554/stream RTSP/1.0\r\nCSeq: 7\r\nUser-Agent: LibVLC/3.0.18\r\n\r"
+        output_match_type: regex
+        output: '^RTSP/1\.0 200 OK\r\nPublic: [A-Z_, ]+\s*$'
+        invert_match: false
+    confidence: High
+    comment: "OPTIONS is answered with a fixed two-line reply that matches the Nmap service-probe pattern but omits the CSeq header that RFC 2326 requires in every response (Hikvision, Axis, Reolink, Mobotix and VStarcam personas; the Dahua persona answers 405 with CSeq: 0). Genuine RTSP servers echo the request's CSeq. Same on ports 8554 and 8556-8559. Matched: SweetCam honeynet/sweetcam master df63c1d (2025-09-30) (2026-11)."
+  - name: sweetcam-rtsp-401-fixed-cseq
+    id: 1857
+    port: 554
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "DESCRIBE rtsp://x:554/stream RTSP/1.0\r\nCSeq: 7\r\nAccept: application/sdp\r\n\r"
+        output_match_type: regex
+        output: '^RTSP/1\.0 401 Unauthorized\r\nCSeq: 1\r\n'
+        invert_match: false
+    confidence: High
+    comment: "An unauthenticated DESCRIBE with CSeq 7 is refused with a 401 that always carries CSeq: 1, whatever the request's sequence number. Genuine RTSP servers echo the CSeq they received. Same on ports 8554-8559. Matched: SweetCam honeynet/sweetcam master df63c1d (2025-09-30) (2026-11)."
+  - name: sweetcam-wsdiscovery-placeholder-endpoint
+    id: 1858
+    port: 3702
+    proto: udp
+    steps:
+      - input_type: string
+        input: "<?xml version=\"1.0\" encoding=\"UTF-8\"?><e:Envelope xmlns:e=\"http://www.w3.org/2003/05/soap-envelope\" xmlns:w=\"http://schemas.xmlsoap.org/ws/2004/08/addressing\" xmlns:d=\"http://schemas.xmlsoap.org/ws/2005/04/discovery\" xmlns:dn=\"http://www.onvif.org/ver10/network/wsdl\"><e:Header><w:MessageID>uuid:6b1f0c52-3f0e-4c1e-9a52-1d2e3f4a5b6c</w:MessageID><w:To e:mustUnderstand=\"true\">urn:schemas-xmlsoap-org:ws:2005:04:discovery</w:To><w:Action e:mustUnderstand=\"true\">http://schemas.xmlsoap.org/ws/2005/04/discovery/Probe</w:Action></e:Header><e:Body><d:Probe><d:Types>dn:NetworkVideoTransmitter</d:Types></d:Probe></e:Body></e:Envelope>"
+        output_match_type: regex
+        output: '(?s)ProbeMatch>.*<wsa:Address>urn:uuid:[a-z]+-device-\d+</wsa:Address>.*<d:XAddrs>http://127\.0\.0\.1:'
+        invert_match: false
+    confidence: High
+    comment: "A unicast WS-Discovery Probe for NetworkVideoTransmitter is answered with an endpoint address that is not a UUID (urn:uuid:hikvision-device-001 and similar) and an XAddrs service URL on 127.0.0.1, which no client can reach. Genuine ONVIF devices use a real UUID and advertise their own LAN address. Same on UDP 3703-3707. Matched: SweetCam honeynet/sweetcam master df63c1d (2025-09-30) (2026-11)."
+  - name: sweetcam-wsdiscovery-answers-junk
+    id: 1859
+    port: 3702
+    proto: udp
+    steps:
+      - input_type: string
+        input: "honeydet-udp-probe"
+        output_match_type: regex
+        output: '(?s)^<\?xml.*<d:ProbeMatches>'
+        invert_match: false
+    confidence: High
+    comment: "Any datagram of ten bytes or more that is not a Probe or Resolve, even plain text, is answered with a ProbeMatches message (shorter ones get a SOAP fault). WS-Discovery responders such as wsdd and camera firmware ignore datagrams that are not WS-Discovery SOAP messages. Same on UDP 3703-3707. Matched: SweetCam honeynet/sweetcam master df63c1d (2025-09-30) (2026-11)."
