@@ -16502,3 +16502,111 @@ signatures:
         invert_match: false
     confidence: High
     comment: "Telnet greets with only IAC WILL ECHO and 'login: ' (the bytes of Nmap's generic telnet match) and accepts any password, here a random one, with a BusyBox v1.19.4 shell banner. BusyBox telnetd negotiates several options before login, prints the host name in its prompt and rejects a wrong password with 'Login incorrect'. Matched: ipcam-honeypot jsserve-org/ipcam-honeypot 64cb5c7 (2026-08-28) (2026-11)."
+  - name: upnproxypot-any-path-dummy-scpd
+    id: 1870
+    port: 2048
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /lab-check/dummy.xml HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\nContent-Type: text/xml\r\n.*<scpd xmlns="urn:schemas-upnp-org:service-1-0">\s*<specVersion>\s*<major>1</major>\s*<minor>0</minor>\s*</specVersion>\s*<actionList />'
+        invert_match: false
+    confidence: High
+    comment: "Any request that contains 'dummy.xml' anywhere (here under an unknown directory) is answered 200 with the empty Dummy service description: the UPnP listener does not parse the request line but searches the whole request for file names. MiniUPnPd and other UPnP servers serve descriptions only at their exact paths and answer 404 elsewhere. Matched: UPnProxyPot 6cbcd62 (2026-11)."
+  - name: upnproxypot-query-string-device-description
+    id: 1871
+    port: 2048
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /?gatedesc.xml HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\nContent-Type: text/xml\r\n.*<deviceType>urn:schemas-upnp-org:device:InternetGatewayDevice:1</deviceType>'
+        invert_match: false
+    confidence: High
+    comment: "GET / with 'gatedesc.xml' only in the query string returns the full InternetGatewayDevice description, because the file name is matched anywhere in the request. A genuine gateway answers / with 404 (MiniUPnPd) or its web interface, never the device description. Matched: UPnProxyPot 6cbcd62 (2026-11)."
+  - name: upnproxypot-placeholder-mapping-index-0
+    id: 1872
+    port: 2048
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST /etc/linuxigd/gateconnSCPD.ctl HTTP/1.1\r\nHost: 127.0.0.1\r\nContent-Type: text/xml\r\nSOAPAction: \"urn:schemas-upnp-org:service:WANIPConnection:1#GetGenericPortMappingEntry\"\r\nConnection: close\r\n\r\n<?xml version=\"1.0\"?><s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\" s:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\"><s:Body><u:GetGenericPortMappingEntry xmlns:u=\"urn:schemas-upnp-org:service:WANIPConnection:1\"><NewPortMappingIndex>0</NewPortMappingIndex></u:GetGenericPortMappingEntry></s:Body></s:Envelope>"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\n.*<NewExternalPort>0</NewExternalPort><NewProtocol></NewProtocol>.*<NewPortMappingDescription>ignore</NewPortMappingDescription>'
+        invert_match: false
+    confidence: High
+    comment: "Port mapping index 0 always holds the placeholder entry UPnProxyPot creates at start (description 'ignore', external port 0, empty protocol and client) so that injected mappings are numbered from 1. A gateway with no mappings answers index 0 with UPnP error 713 SpecifiedArrayIndexInvalid, and a real entry always has a port and TCP or UDP. Matched: UPnProxyPot 6cbcd62 (2026-11)."
+  - name: upnproxypot-soap-action-404
+    id: 1873
+    port: 2048
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST /etc/linuxigd/gateconnSCPD.ctl HTTP/1.1\r\nHost: 127.0.0.1\r\nContent-Type: text/xml\r\nSOAPAction: \"urn:schemas-upnp-org:service:WANIPConnection:1#GetExternalIPAddress\"\r\nConnection: close\r\n\r\n<?xml version=\"1.0\"?><s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\" s:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\"><s:Body><u:GetExternalIPAddress xmlns:u=\"urn:schemas-upnp-org:service:WANIPConnection:1\"></u:GetExternalIPAddress></s:Body></s:Envelope>"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 404 Not Found\r\n.*Server: Net-OS 5\.xx UPnP/1\.0\r\n'
+        invert_match: false
+    confidence: Medium
+    comment: "GetExternalIPAddress (like every action other than AddPortMapping, DeletePortMapping and GetGenericPortMappingEntry) sent to the control URL the honeypot advertises is answered with the 404 page under the default Net-OS banner. Every Internet Gateway Device implements GetExternalIPAddress (MiniUPnPd answers 200 with NewExternalIPAddress). The banner comes from editable payload files, so Medium. Matched: UPnProxyPot 6cbcd62 (2026-11)."
+  - name: upnproxypot-soap-bare-lf-headers
+    id: 1874
+    port: 2048
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST /etc/linuxigd/gateconnSCPD.ctl HTTP/1.1\r\nHost: 127.0.0.1\r\nContent-Type: text/xml\r\nSOAPAction: \"urn:schemas-upnp-org:service:WANIPConnection:1#DeletePortMapping\"\r\nConnection: close\r\n\r\n<?xml version=\"1.0\"?><s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\" s:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\"><s:Body><u:DeletePortMapping xmlns:u=\"urn:schemas-upnp-org:service:WANIPConnection:1\"><NewRemoteHost></NewRemoteHost><NewExternalPort>40999</NewExternalPort><NewProtocol>TCP</NewProtocol></u:DeletePortMapping></s:Body></s:Envelope>"
+        output_match_type: regex
+        output: '^HTTP/1\.1 200 OK\nContent-Type: text/xml\nConnection: close\nContent-Length: \d+\nServer: [^\r\n]*\n\n<\?xml version="1\.0"\?>\n<s:Envelope [^\n]*<u:DeletePortMappingResponse [^\n]*/>'
+        invert_match: false
+    confidence: High
+    comment: "SOAP control responses use bare LF line endings in the status line and headers (the payload files were saved with Unix line endings); DeletePortMapping is answered with success whatever the mapping. HTTP requires CRLF, which MiniUPnPd (which also answers this request with success) and other UPnP stacks send. Matched: UPnProxyPot 6cbcd62 (2026-11)."
+  - name: upnproxypot-non-http-gets-404
+    id: 1875
+    port: 2048
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "HELLO\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 404 Not Found\r\nContent-Type: text/html\r\nConnection: close\r\nContent-Length: 134\r\nServer: Net-OS 5\.xx UPnP/1\.0\r\n\r\n<HTML><HEAD><TITLE>404 Not Found</TITLE>'
+        invert_match: false
+    confidence: Medium
+    comment: "A line that is not HTTP at all is answered with a complete HTTP 404 page under the Net-OS banner, because the listener sends a canned response without parsing the request. MiniUPnPd answers '501 Not Implemented' and general web servers 400 Bad Request. Banner from an editable payload file, so Medium. Matched: UPnProxyPot 6cbcd62 (2026-11)."
+  - name: upnproxypot-ssdp-any-st-rootdevice
+    id: 1876
+    port: 1900
+    proto: udp
+    steps:
+      - input_type: hex
+        input: 4d2d534541524348202a20485454502f312e310d0a484f53543a203233392e3235352e3235352e3235303a313930300d0a4d414e3a2022737364703a646973636f766572220d0a4d583a20310d0a53543a2075726e3a6c61622d636865636b3a6465766963653a4e6f7468696e673a390d0a0d0a
+        output_match_type: regex
+        output: '^HTTP/1\.1 200 OK\r?\nCACHE-CONTROL: max-age=\d+\r?\nST: upnp:rootdevice\r?\n'
+        invert_match: false
+    confidence: High
+    comment: "An M-SEARCH for a search target no device offers (urn:lab-check:device:Nothing:9) is answered with ST: upnp:rootdevice: every datagram containing M-SEARCH gets the same canned reply. UPnP devices answer only search targets they implement (MiniUPnPd stays silent), and a reply's ST echoes the requested target. Matched: UPnProxyPot 6cbcd62 (2026-11)."
+  - name: upnproxypot-ssdp-non-http-m-search
+    id: 1877
+    port: 1900
+    proto: udp
+    steps:
+      - input_type: hex
+        input: 6c61622d636865636b204d2d534541524348206c61622d636865636b
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r?\n.*ST: '
+        invert_match: false
+    confidence: High
+    comment: "A datagram that is not an SSDP request but only contains the text M-SEARCH ('lab-check M-SEARCH lab-check') is answered with an SSDP search reply. SSDP stacks parse the request line, so MiniUPnPd and others ignore it. Matched: UPnProxyPot 6cbcd62 (2026-11)."
+  - name: upnproxypot-ssdp-default-reply
+    id: 1878
+    port: 1900
+    proto: udp
+    steps:
+      - input_type: hex
+        input: 4d2d534541524348202a20485454502f312e310d0a484f53543a203233392e3235352e3235352e3235303a313930300d0a4d414e3a2022737364703a646973636f766572220d0a4d583a20310d0a53543a2075706e703a726f6f746465766963650d0a0d0a
+        output_match_type: regex
+        output: '^HTTP/1\.1 200 OK\nCACHE-CONTROL: max-age=120\nST: upnp:rootdevice\nUSN: uuid:fc4ec57e-b051-11db-88f8-0060085db3f6::upnp:rootdevice\nEXT:\nSERVER: Net-OS 5\.xx UPnP/1\.0\nLOCATION: http://192\.168\.0\.1:2048/etc/linuxigd/gatedesc\.xml\n?$'
+        invert_match: false
+    confidence: Medium
+    comment: "Default SSDP reply (payloads/ssdp.http): bare LF line endings, no closing blank line, the fixed device UUID fc4ec57e-b051-11db-88f8-0060085db3f6, SERVER Net-OS 5.xx UPnP/1.0 and LOCATION http://192.168.0.1:2048/etc/linuxigd/gatedesc.xml, an address that is not the responder's own. SSDP replies end every header with CRLF followed by a blank line. Editable payload file, so Medium. Matched: UPnProxyPot 6cbcd62 (2026-11)."
