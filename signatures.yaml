@@ -17212,3 +17212,57 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: 'A request for /robots.txt receives only the nine bytes ''HTTP/1.1 '' (no status code, reason or headers) before the connection closes, replayed from an incomplete recording; several other recorded paths answer the same way, and paths that were never recorded get no answer at all. Web servers send a complete status line, normally 404. Matched: VoIPHoneypot 3f581cb (2026-11).'
+  - name: fortigate-vpn-ssl-honeypot-nginx-plain-http-page
+    id: 1930
+    port: 10443
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 400 Bad Request\r\n.*<title>400 The plain HTTP request was sent to HTTPS port</title>.*<hr><center>nginx</center>'
+        invert_match: false
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?i)\r\nServer:'
+        invert_match: true
+        reconnect: true
+    confidence: High
+    comment: "Plain HTTP sent to the SSL-VPN port (10443). The honeypot's nginx front end (headers-more, server_tokens off, more_clear_headers Server) answers with nginx's own '400 The plain HTTP request was sent to HTTPS port' page, whose body ends in '<center>nginx</center>', but with no Server header at all. A FortiGate does not run nginx and never returns this page; a stock nginx returns the page with 'Server: nginx'. The second step (fresh connection) confirms the missing Server header. Any nginx with the same header-stripping configuration on this port would also match. Matched: Fortigate.VPN-SSL.Honeypot 1fea601 (2026-11)."
+  - name: fortigate-vpn-ssl-honeypot-nginx-1k-header-buffers
+    id: 1931
+    port: 10443
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nX-Pad: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 400 Bad Request\r\n.*<title>400 Request Header Or Cookie Too Large</title>.*<hr><center>nginx</center>'
+        invert_match: false
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?i)\r\nServer:'
+        invert_match: true
+        reconnect: true
+    confidence: Medium
+    comment: "A plain HTTP request with one header line of about 1,500 bytes on the SSL-VPN port. The honeypot's honey.conf (OWASP-style limits taken from T-Pot) sets large_client_header_buffers 2 1k, so nginx answers '400 Request Header Or Cookie Too Large' instead of the plain-HTTP-to-HTTPS page that a stock nginx (8k buffers) returns for the same request; the second step (fresh connection) confirms there is no Server header. A FortiGate does not run nginx. Medium: the buffer sizes are an editable configuration value. Matched: Fortigate.VPN-SSL.Honeypot 1fea601 (2026-11)."
+  - name: fortigate-vpn-ssl-honeypot-tls13-only-secp384r1
+    id: 1932
+    port: 10443
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "1603010068010000640303000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f00000a002fc02fc030009c003501000031000a00080006001d00170018000b00020100000d000e000c0401050106010403050308040023000000170000ff01000100"
+        output_match_type: regex
+        output: '^\x15\x03[\x01-\x03]\x00\x02\x02\x46'
+        invert_match: false
+      - input_type: hex
+        input: "160301007a010000760303000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f00000613011302130301000047002b0003020304000a00040002001d003300260024001d0020202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f000d000a00080804040308050401"
+        output_match_type: regex
+        output: '^\x15\x03[\x01-\x03]\x00\x02\x02\x28'
+        invert_match: false
+        reconnect: true
+    confidence: Medium
+    comment: "Two ClientHellos on the SSL-VPN port. A TLS 1.2 ClientHello is refused with a protocol_version alert (honey.conf allows only TLSv1.3), and on a fresh connection a TLS 1.3 ClientHello that offers only the x25519 group is refused with a handshake_failure alert (ssl_ecdh_curve secp384r1 allows no other group). FortiOS SSL VPN accepts TLS 1.2 by default (ssl-min-proto-ver tls1-2, maximum tls1-3), and a stock nginx completes both handshakes. Medium: protocol versions and curves are editable in honey.conf, and a hardened server with the same two settings would match. Matched: Fortigate.VPN-SSL.Honeypot 1fea601 (2026-11)."
