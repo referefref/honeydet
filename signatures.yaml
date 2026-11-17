@@ -16884,3 +16884,175 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: "Unicast mDNS query for _ipp._tcp.local: the default advertisement names HP-LaserJet-Pro-M404dn with the shipped TXT record (adminurl pointing at port 8080, note 'Building 2 Printer') and none of the keys an IPP Everywhere printer or CUPS publishes (UUID, URF, product). Configurable, so Medium. Matched: Paperclip 38d0562 (2026-11)."
+  - name: sweetadb-any-auth-signature-accepted
+    id: 1900
+    port: 5555
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: 434e584e0100000100001000240000003c0d0000bcb1a7b1686f73743a3a66656174757265733d7368656c6c5f76322c636d642c737461745f763200
+      output_match_type: regex
+      output: (?s)^AUTH\x01\x00\x00\x00\x00\x00\x00\x00\x14\x00\x00\x00
+      invert_match: false
+    - input_type: hex
+      input: 41555448020000000000000000010000807f0000beaaabb70b30557a9fc4e90e33587da2c7ec11365b80a5caef14395e83a8cdf2173c6186abd0f51a3f6489aed3f81d42678cb1d6fb20456a8fb4d9fe23486d92b7dc01264b7095badf04294e7398bde2072c51769bc0e50a2f54799ec3e80d32577ca1c6eb10355a7fa4c9ee13385d82a7ccf1163b6085aacff4193e6388add2f71c41668bb0d5fa1f44698eb3d8fd22476c91b6db00254a6f94b9de03284d7297bce1062b50759abfe4092e53789dc2e70c31567ba0c5ea0f34597ea3c8ed12375c81a6cbf0153a5f84a9cef3183d6287acd1f61b40658aafd4f91e43688db2d7fc21466b90b5daff24496e93b8dd02274c7196bbe0052a4f7499bee3082d52779cc1e6
+      output_match_type: regex
+      output: '(?s)^CNXN.{8,24}?device::'
+      invert_match: false
+    confidence: High
+    comment: 'sweetADB asks for authentication (AUTH token) and then accepts any AUTH SIGNATURE, here 256 bytes that sign nothing, by sending its CNXN device banner. adbd verifies the signature against its trusted keys and answers a failed one with a new AUTH token (genuine adbd 5.1.1 in the lab; AOSP adbd_auth). Matched: sweetADB 2446fa9 (2026-05-02) with and without the robustness patch (2026-11).'
+  - name: sweetadb-auth-before-cnxn
+    id: 1901
+    port: 5555
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: 41555448020000000000000000010000807f0000beaaabb70b30557a9fc4e90e33587da2c7ec11365b80a5caef14395e83a8cdf2173c6186abd0f51a3f6489aed3f81d42678cb1d6fb20456a8fb4d9fe23486d92b7dc01264b7095badf04294e7398bde2072c51769bc0e50a2f54799ec3e80d32577ca1c6eb10355a7fa4c9ee13385d82a7ccf1163b6085aacff4193e6388add2f71c41668bb0d5fa1f44698eb3d8fd22476c91b6db00254a6f94b9de03284d7297bce1062b50759abfe4092e53789dc2e70c31567ba0c5ea0f34597ea3c8ed12375c81a6cbf0153a5f84a9cef3183d6287acd1f61b40658aafd4f91e43688db2d7fc21466b90b5daff24496e93b8dd02274c7196bbe0052a4f7499bee3082d52779cc1e6
+      output_match_type: regex
+      output: '(?s)^CNXN.{8,24}?device::'
+      invert_match: false
+    confidence: High
+    comment: 'An AUTH SIGNATURE sent as the very first packet, without a CNXN, is answered with the CNXN device banner. adbd answers it with an AUTH token (lab adbd 5.1.1) and never brings a transport online without a CNXN and a verified key. Matched: sweetADB 2446fa9 (2026-05-02) with and without the robustness patch (2026-11).'
+  - name: sweetadb-open-before-auth
+    id: 1902
+    port: 5555
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: 434e584e0100000100001000240000003c0d0000bcb1a7b1686f73743a3a66656174757265733d7368656c6c5f76322c636d642c737461745f763200
+      output_match_type: regex
+      output: (?s)^AUTH\x01\x00\x00\x00\x00\x00\x00\x00\x14\x00\x00\x00
+      invert_match: false
+    - input_type: hex
+      input: 4f50454e010000000000000013000000f5060000b0afbab17368656c6c3a6563686f20686470726f626500
+      output_match_type: hex
+      output: 4f4b41590100000000100000
+      invert_match: false
+    confidence: High
+    comment: 'After the AUTH challenge, and with no answer to it, an OPEN shell:echo is still accepted: sweetADB sends OKAY(1, 0x1000), with the client''s stream id first and its own fixed id 0x1000 second (adbd puts its own id first). adbd ignores OPEN until the device is authorised and online. Matched: sweetADB 2446fa9 (2026-05-02) with and without the robustness patch (2026-11).'
+  - name: sweetadb-prompt-in-oneshot-shell
+    id: 1903
+    port: 5555
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: 434e584e0100000100001000240000003c0d0000bcb1a7b1686f73743a3a66656174757265733d7368656c6c5f76322c636d642c737461745f763200
+      output_match_type: regex
+      output: (?s)^AUTH\x01\x00\x00\x00\x00\x00\x00\x00\x14\x00\x00\x00
+      invert_match: false
+    - input_type: hex
+      input: 41555448020000000000000000010000807f0000beaaabb70b30557a9fc4e90e33587da2c7ec11365b80a5caef14395e83a8cdf2173c6186abd0f51a3f6489aed3f81d42678cb1d6fb20456a8fb4d9fe23486d92b7dc01264b7095badf04294e7398bde2072c51769bc0e50a2f54799ec3e80d32577ca1c6eb10355a7fa4c9ee13385d82a7ccf1163b6085aacff4193e6388add2f71c41668bb0d5fa1f44698eb3d8fd22476c91b6db00254a6f94b9de03284d7297bce1062b50759abfe4092e53789dc2e70c31567ba0c5ea0f34597ea3c8ed12375c81a6cbf0153a5f84a9cef3183d6287acd1f61b40658aafd4f91e43688db2d7fc21466b90b5daff24496e93b8dd02274c7196bbe0052a4f7499bee3082d52779cc1e6
+      output_match_type: regex
+      output: '(?s)^CNXN.{8,24}?device::'
+      invert_match: false
+    - input_type: hex
+      input: 4f50454e010000000000000013000000f5060000b0afbab17368656c6c3a6563686f20686470726f626500
+      output_match_type: hex
+      output: 686470726f62650a23
+      invert_match: false
+    confidence: High
+    comment: 'The output of a one-shot shell:echo hdprobe service ends with an interactive root prompt (''hdprobe
+
+      # '') and the stream stays open. adbd returns only the command output (hdprobe followed by CR LF on a pty, LF with shell_v2) and closes the stream (CLSE). Matched: sweetADB 2446fa9 (2026-05-02) with and without the robustness patch (2026-11).'
+  - name: sweetadb-unknown-command-silent
+    id: 1904
+    port: 5555
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: 434e584e0100000100001000240000003c0d0000bcb1a7b1686f73743a3a66656174757265733d7368656c6c5f76322c636d642c737461745f763200
+      output_match_type: regex
+      output: (?s)^AUTH\x01\x00\x00\x00\x00\x00\x00\x00\x14\x00\x00\x00
+      invert_match: false
+    - input_type: hex
+      input: 41555448020000000000000000010000807f0000beaaabb70b30557a9fc4e90e33587da2c7ec11365b80a5caef14395e83a8cdf2173c6186abd0f51a3f6489aed3f81d42678cb1d6fb20456a8fb4d9fe23486d92b7dc01264b7095badf04294e7398bde2072c51769bc0e50a2f54799ec3e80d32577ca1c6eb10355a7fa4c9ee13385d82a7ccf1163b6085aacff4193e6388add2f71c41668bb0d5fa1f44698eb3d8fd22476c91b6db00254a6f94b9de03284d7297bce1062b50759abfe4092e53789dc2e70c31567ba0c5ea0f34597ea3c8ed12375c81a6cbf0153a5f84a9cef3183d6287acd1f61b40658aafd4f91e43688db2d7fc21466b90b5daff24496e93b8dd02274c7196bbe0052a4f7499bee3082d52779cc1e6
+      output_match_type: regex
+      output: '(?s)^CNXN.{8,24}?device::'
+      invert_match: false
+    - input_type: hex
+      input: 4f50454e01000000000000001800000059090000b0afbab17368656c6c3a686470726f62655f6e6f73756368636d6400
+      output_match_type: hex
+      output: 5752544500100000010000000200000056451ec4a8adabba23
+      invert_match: false
+    confidence: High
+    comment: 'A command that does not exist (shell:hdprobe_nosuchcmd) returns nothing but the prompt ''# '' in a WRTE from stream 0x1000 whose checksum field is a CRC32. A real shell reports ''not found'' (/system/bin/sh: ...: inaccessible or not found on Android) and adbd''s data_check is a byte sum or zero, never a CRC32. Matched: sweetADB 2446fa9 (2026-05-02) with and without the robustness patch (2026-11).'
+  - name: sweetadb-unknown-service-okay
+    id: 1905
+    port: 5555
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: 434e584e0100000100001000240000003c0d0000bcb1a7b1686f73743a3a66656174757265733d7368656c6c5f76322c636d642c737461745f763200
+      output_match_type: regex
+      output: (?s)^AUTH\x01\x00\x00\x00\x00\x00\x00\x00\x14\x00\x00\x00
+      invert_match: false
+    - input_type: hex
+      input: 41555448020000000000000000010000807f0000beaaabb70b30557a9fc4e90e33587da2c7ec11365b80a5caef14395e83a8cdf2173c6186abd0f51a3f6489aed3f81d42678cb1d6fb20456a8fb4d9fe23486d92b7dc01264b7095badf04294e7398bde2072c51769bc0e50a2f54799ec3e80d32577ca1c6eb10355a7fa4c9ee13385d82a7ccf1163b6085aacff4193e6388add2f71c41668bb0d5fa1f44698eb3d8fd22476c91b6db00254a6f94b9de03284d7297bce1062b50759abfe4092e53789dc2e70c31567ba0c5ea0f34597ea3c8ed12375c81a6cbf0153a5f84a9cef3183d6287acd1f61b40658aafd4f91e43688db2d7fc21466b90b5daff24496e93b8dd02274c7196bbe0052a4f7499bee3082d52779cc1e6
+      output_match_type: regex
+      output: '(?s)^CNXN.{8,24}?device::'
+      invert_match: false
+    - input_type: hex
+      input: 4f50454e010000000000000017000000cc080000b0afbab1686470726f62652d6e6f73756368736572766963653a00
+      output_match_type: hex
+      output: 4f4b41590100000000100000
+      invert_match: false
+    confidence: High
+    comment: 'An OPEN for a service that does not exist (hdprobe-nosuchservice:) is accepted with OKAY(1, 0x1000). adbd refuses unknown services with CLSE (lab adbd 5.1.1). Matched: sweetADB 2446fa9 (2026-05-02) with and without the robustness patch (2026-11).'
+  - name: sweetadb-bad-magic-accepted
+    id: 1906
+    port: 5555
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: 434e584e0100000100001000240000003c0d000000000000686f73743a3a66656174757265733d7368656c6c5f76322c636d642c737461745f763200
+      output_match_type: regex
+      output: (?s)^AUTH\x01\x00\x00\x00\x00\x00\x00\x00\x14\x00\x00\x00
+      invert_match: false
+    confidence: High
+    comment: 'A CNXN whose magic field is zero (it must be the command XOR 0xffffffff) is answered with an AUTH challenge. adbd validates every header and drops the connection (lab adbd 5.1.1). Matched: sweetADB 2446fa9 (2026-05-02) with and without the robustness patch (2026-11).'
+  - name: sweetadb-default-device-banner
+    id: 1907
+    port: 5555
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: 41555448020000000000000000010000807f0000beaaabb70b30557a9fc4e90e33587da2c7ec11365b80a5caef14395e83a8cdf2173c6186abd0f51a3f6489aed3f81d42678cb1d6fb20456a8fb4d9fe23486d92b7dc01264b7095badf04294e7398bde2072c51769bc0e50a2f54799ec3e80d32577ca1c6eb10355a7fa4c9ee13385d82a7ccf1163b6085aacff4193e6388add2f71c41668bb0d5fa1f44698eb3d8fd22476c91b6db00254a6f94b9de03284d7297bce1062b50759abfe4092e53789dc2e70c31567ba0c5ea0f34597ea3c8ed12375c81a6cbf0153a5f84a9cef3183d6287acd1f61b40658aafd4f91e43688db2d7fc21466b90b5daff24496e93b8dd02274c7196bbe0052a4f7499bee3082d52779cc1e6
+      output_match_type: string
+      output: ro.product.device=p3s;features=cmd,shell,dev,stat,ls,sync,send_recv
+      invert_match: false
+    confidence: Medium
+    comment: 'Built-in device banner of a Galaxy S21 Ultra (SM-G998B, p3s) whose feature list (cmd,shell,dev,stat,ls,sync,send_recv) uses names adbd has never advertised (AOSP features are shell_v2, cmd, stat_v2, ls_v2, fixed_push_mkdir, abb and so on) and ends with a newline. Medium because the banner can be changed by editing the source. Matched: sweetADB 2446fa9 (2026-05-02) with and without the robustness patch (2026-11).'
+  - name: sweetadb-cnxn-crc32-checksum
+    id: 1908
+    port: 5555
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: 41555448020000000000000000010000807f0000beaaabb70b30557a9fc4e90e33587da2c7ec11365b80a5caef14395e83a8cdf2173c6186abd0f51a3f6489aed3f81d42678cb1d6fb20456a8fb4d9fe23486d92b7dc01264b7095badf04294e7398bde2072c51769bc0e50a2f54799ec3e80d32577ca1c6eb10355a7fa4c9ee13385d82a7ccf1163b6085aacff4193e6388add2f71c41668bb0d5fa1f44698eb3d8fd22476c91b6db00254a6f94b9de03284d7297bce1062b50759abfe4092e53789dc2e70c31567ba0c5ea0f34597ea3c8ed12375c81a6cbf0153a5f84a9cef3183d6287acd1f61b40658aafd4f91e43688db2d7fc21466b90b5daff24496e93b8dd02274c7196bbe0052a4f7499bee3082d52779cc1e6
+      output_match_type: hex
+      output: 434e584e00000001000004007f00000042c88908bcb1a7b1
+      invert_match: false
+    confidence: Medium
+    comment: 'The CNXN header carries version 0x01000000, a 256 KiB maximum payload and a CRC32 of the banner (0x0889c842) in data_check. adbd fills data_check with a byte sum (version 0x01000000) or zero (0x01000001 and later, Android 9+), and an Android 14 device answers version 0x01000001 with up to 1 MiB. Medium because the exact value follows the default banner. Matched: sweetADB 2446fa9 (2026-05-02) with and without the robustness patch (2026-11).'
+  - name: sweetadb-canned-root-id
+    id: 1909
+    port: 5555
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: 434e584e0100000100001000240000003c0d0000bcb1a7b1686f73743a3a66656174757265733d7368656c6c5f76322c636d642c737461745f763200
+      output_match_type: regex
+      output: (?s)^AUTH\x01\x00\x00\x00\x00\x00\x00\x00\x14\x00\x00\x00
+      invert_match: false
+    - input_type: hex
+      input: 41555448020000000000000000010000807f0000beaaabb70b30557a9fc4e90e33587da2c7ec11365b80a5caef14395e83a8cdf2173c6186abd0f51a3f6489aed3f81d42678cb1d6fb20456a8fb4d9fe23486d92b7dc01264b7095badf04294e7398bde2072c51769bc0e50a2f54799ec3e80d32577ca1c6eb10355a7fa4c9ee13385d82a7ccf1163b6085aacff4193e6388add2f71c41668bb0d5fa1f44698eb3d8fd22476c91b6db00254a6f94b9de03284d7297bce1062b50759abfe4092e53789dc2e70c31567ba0c5ea0f34597ea3c8ed12375c81a6cbf0153a5f84a9cef3183d6287acd1f61b40658aafd4f91e43688db2d7fc21466b90b5daff24496e93b8dd02274c7196bbe0052a4f7499bee3082d52779cc1e6
+      output_match_type: regex
+      output: '(?s)^CNXN.{8,24}?device::'
+      invert_match: false
+    - input_type: hex
+      input: 4f50454e0100000000000000090000001f030000b0afbab17368656c6c3a696400
+      output_match_type: regex
+      output: uid=0\(root\) gid=0\(root\) groups=0\(root\),1004\(input\)[^\n]*context=u:r:shell:s0
+      invert_match: false
+    confidence: Medium
+    comment: 'shell:id returns a fixed root identity with the SELinux context of the unprivileged shell user (u:r:shell:s0). adbd runs the shell as uid 2000 (shell) unless restarted as root, and a root adb shell runs in the su context. Medium because the canned answers live in the source. Matched: sweetADB 2446fa9 (2026-05-02) with and without the robustness patch (2026-11).'
