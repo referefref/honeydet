@@ -16204,3 +16204,81 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: "Missing pages get the template's 404.html (title '404 - Page Not Found', 'The page you are looking for does not exist.') written by basicgopot's handler, with no Server header. The same page ships with all four templates. Medium: the page is part of the template. Matched: basicgopot main 0bafbf9 (2026-11); not v1.1.4 (plain Go '404 page not found')."
+  - name: scantrap-author-query-blocked
+    id: 1840
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /?author=1 HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 500 .*<div class="wp-die-message">You do not the rights to access this address</div>'
+        invert_match: false
+    confidence: High
+    comment: "Prevent User Enumeration: any front-end request with a non-empty author parameter is stopped with wp_die and SCANTRAP's own message, missing a word ('You do not the rights to access this address'), as a 500 error page. WordPress itself redirects /?author=1 to the author's archive (/author/<login>/) or answers 404 when there is no such user. Matched: SCANTRAP 1.0.0 (382bab9) on WordPress 7.1.4 (2026-11)."
+  - name: scantrap-rest-api-closed
+    id: 1841
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /wp-json/ HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 500 .*\{"code":"rest_API_cannot_access","message":\{"status":40[13]\},"data":null\}'
+        invert_match: false
+    confidence: High
+    comment: "Prevent User Enumeration closes the whole REST API with a WP_Error whose code is rest_API_cannot_access (mixed case) and whose message is the array meant as error data, so WordPress returns HTTP 500 with {\"code\":\"rest_API_cannot_access\",\"message\":{\"status\":401},\"data\":null}. WordPress answers /wp-json/ with the site index (200), and REST-blocking plugins use lower-case codes such as rest_cannot_access or rest_login_required with a text message and a 401. Matched: SCANTRAP 1.0.0 (382bab9) on WordPress 7.1.4 (2026-11)."
+  - name: scantrap-empty-login-error
+    id: 1842
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST /wp-login.php HTTP/1.1\r\nHost: x\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: 21\r\nConnection: close\r\n\r\nlog=scanuser-x7&pwd=x"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 .*<div id="login_error" class="notice notice-error">\s*</div>'
+        invert_match: false
+    confidence: Medium
+    comment: "A failed login (an unknown user name) shows WordPress's error box with nothing in it: SCANTRAP's login_errors filter returns null instead of a message. WordPress fills the box ('The username ... is not registered on this site'), and plugins that hide the reason usually replace it with a generic sentence rather than an empty box. Creates nothing; one failed login is recorded by any login-limiting plugin. Matched: SCANTRAP 1.0.0 (382bab9) on WordPress 7.1.4 (2026-11)."
+  - name: scantrap-theme-directory-hidden
+    id: 1843
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /wp-content/themes/twentytwentyfive/ HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 404 Not Found\r\n.*<p>The requested URL was not found on this server\.</p>'
+        invert_match: false
+      - input_type: string
+        input: "GET /wp-content/themes/twentytwentyfive/style.css HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        reconnect: true
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 .*Theme Name: Twenty Twenty-Five'
+        invert_match: false
+    confidence: Medium
+    comment: "Redirect Themes writes 'RedirectMatch 404' lines into .htaccess for every installed theme directory, so Apache answers the directory itself with its own 404 page while the files inside it, style.css among them, are still served. A genuine Apache server answers an existing directory with a listing (200) or 403, never 404. Uses Twenty Twenty-Five, WordPress's default theme since 6.7 and installed with every current release; needs Apache with AllowOverride (the rules are .htaccess directives). Matched: SCANTRAP 1.0.0 (382bab9) on WordPress 7.1.4 (2026-11)."
+  - name: scantrap-trailing-space-in-core-js
+    id: 1844
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /wp-includes/js/jquery/jquery.min.js HTTP/1.1\r\nHost: x\r\nRange: bytes=-3\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 206 .*\r\n\r\n\);\z'
+        invert_match: false
+    confidence: High
+    comment: "Prevent Version Detection appends a space to every .js, .css and .json file of the installation so that their MD5 hashes no longer match a scanner's fingerprint database. The last three bytes of WordPress's jquery.min.js are then ');' and a space instead of WordPress's '();' (jQuery.noConflict();). The range request reads only those three bytes; honeydet trims the trailing space, so the reply ends in ');' directly after the headers. Matched: SCANTRAP 1.0.0 (382bab9) on WordPress 7.1.4 (2026-11)."
+  - name: scantrap-fake-plugin-readme
+    id: 1845
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /wp-content/plugins/301-redirects/readme.txt HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] (?:200|404) .*Content-Type: text/html.*\r\n\r\nLOG<!DOCTYPE html>.*<title>Stable tag</title>'
+        invert_match: false
+    confidence: Medium
+    comment: "Redirect Plugins answers requests for the fake plugins in its list with a WordPress error page: readme.txt as an HTML page (200) titled 'Stable tag' with '@Stable tag: <version>' as its message, the directory as 403 'Plugin changed Response'. Every such page starts with 'LOG' before the doctype, printed by the logging function. Where PHP's output_buffering is off (the official WordPress Docker image), that early output fixes the status WordPress had already chosen, 404, and the page is served with it. The path is the first fake plugin in the paper's appendix and the companion script's default list (301-redirects 3.2.1); point it at another listed plugin elsewhere. A list saved with an empty line turns every missing page into a 403 page that starts with LOG. A genuine readme.txt is text/plain; a missing one is WordPress's 404 page. Matched: SCANTRAP 1.0.0 (382bab9) on WordPress 7.1.4 (2026-11)."
