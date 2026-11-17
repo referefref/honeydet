@@ -15994,3 +15994,69 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: "A TLS 1.2 ClientHello without ALPN, so the certificate travels in the clear. A listener with an empty tls block (as in the shipped configs/finch.hcl and in quick mode) presents a certificate that Finch generates at each start: serial number 1, empty issuer and empty subject, valid from one hour before start for 25 hours, with subjectAltNames localhost, the bind address, 127.0.0.1 and ::1. Genuine servers present a CA-issued certificate or a self-signed one with a subject (nginx, Apache httpd and Go net/http with an openssl certificate, Traefik's TRAEFIK DEFAULT CERT, Caddy's internal CA with a named issuer). Medium: the operator can supply any certificate in the tls block. Matched: Finch dab1338 (v0.1.0-beta-25) (2026-11)."
+  - name: honeyaml-auth-missing-parameter-list
+    id: 1810
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST /auth HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nContent-Type: application/json\r\nContent-Length: 2\r\n\r\n{}"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 401 Unauthorized\r\n.*?\r\n\r\nincorrect/missing parameter \["'
+        invert_match: false
+    confidence: High
+    comment: "An empty JSON object posted to the authenticator path (/auth in the shipped api.yml and the Docker image) is refused with 401 and the text 'incorrect/missing parameter [...]' followed by the sorted names of every field the configured accounts use (username, password and any extra field such as realm), so the reply tells a client exactly which fields to send. The wording comes from the code, not the YAML file; only the path is configurable. A genuine actix-web JSON API answers with a deserialisation error or its own JSON error, and no other web server or lab honeypot produced the text. Matched: Honeyaml 1.0.0 (3a60d0d) and the T-Pot fork t3chn0m4g3/honeyaml 79b48b3 (2026-11)."
+  - name: honeyaml-default-root-201
+    id: 1811
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nAccept: */*\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 201 Created\r\n.*?\r\n\r\n<html>\n<body>Authenticate through /auth first\.?</body>'
+        invert_match: false
+    confidence: Medium
+    comment: "The shipped api.yml answers GET / (and, through its catch-all prefix rule, every other GET path) with 201 Created and a short HTML page saying 'Authenticate through /auth first' (with a full stop in T-Pot's api.yml). 201 is a creation status that no server uses for a home page. The page and status come from the example configuration, so an operator who writes their own api.yml removes this tell; hence Medium. Matched: Honeyaml 1.0.0 (3a60d0d) and the T-Pot fork t3chn0m4g3/honeyaml 79b48b3 (2026-11)."
+  - name: honeyaml-forced-close-bare-headers
+    id: 1812
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /hd-{{rand}} HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nAccept: */*\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 [0-9]{3} [A-Za-z ]+\r\ncontent-length: [0-9]+\r\nconnection: close\r\ndate: [^\r\n]+\r\n\r\n'
+        invert_match: false
+    confidence: High
+    comment: "A GET for a random path on a keep-alive connection. Every answer from Honeyaml's request handler, whatever the YAML file says (the configured page, 401 or 404), closes the connection and carries only three lower-case headers in this order: content-length, connection: close and date, with no Server or Content-Type header. A genuine actix-web application keeps the connection open and sets content-type on bodies; nginx, Apache, Caddy, Kestrel, Gitea and Go net/http send capitalised headers with Server or Content-Type. Survives a custom api.yml. Matched: Honeyaml 1.0.0 (3a60d0d) and the T-Pot fork t3chn0m4g3/honeyaml 79b48b3 (2026-11)."
+  - name: honeyaml-bearer-401-no-challenge
+    id: 1813
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /end-point1 HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nAccept: */*\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 401 Unauthorized\r\ncontent-length: 0\r\nconnection: close\r\ndate: [^\r\n]+\s*$'
+        invert_match: false
+    confidence: Medium
+    comment: "A request without a token to /end-point1, the protected path in the shipped api.yml, is refused with an empty 401 and no WWW-Authenticate header, and the connection is closed. RFC 6750 requires a bearer-protected resource to send 'WWW-Authenticate: Bearer'; actix-web's own bearer middleware, Gitea and other genuine APIs do. The path comes from the example configuration (any protected path in a custom api.yml behaves the same), hence Medium. Matched: Honeyaml 1.0.0 (3a60d0d) (2026-11); not the T-Pot fork 79b48b3, whose api.yml has no /end-point1."
+  - name: honeyaml-head-not-routed
+    id: 1814
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nAccept: */*\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 2[0-9][0-9] [A-Za-z ]+\r\ncontent-length: [0-9]+\r\nconnection: close\r\n'
+        invert_match: false
+      - input_type: string
+        input: "HEAD / HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nAccept: */*\r\nConnection: close\r\n\r"
+        reconnect: true
+        output_match_type: regex
+        output: '^HTTP/1\.1 404 Not Found\r\ncontent-length: 0\r\n(connection: close\r\n)?date: [^\r\n]+\s*$'
+        invert_match: false
+    confidence: Medium
+    comment: "GET / succeeds (with the forced close of signature 1812) but HEAD / on a new connection is 404 Not Found with an empty body and no Allow header: Honeyaml registers its catch-all route for GET, POST, PUT and DELETE only, so HEAD and PATCH fall through to actix-web's default 404 (the T-Pot fork routes every method to its handler, which answers 404 with connection: close because no path is configured for HEAD). HTTP requires a server that supports GET to support HEAD; genuine servers answer HEAD like GET, and a genuine actix-web application answers 405 with an Allow header. Needs a success on GET /, which a custom api.yml may not configure; hence Medium. Matched: Honeyaml 1.0.0 (3a60d0d) and the T-Pot fork t3chn0m4g3/honeyaml 79b48b3 (2026-11)."
