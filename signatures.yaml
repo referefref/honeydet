@@ -16402,3 +16402,103 @@ signatures:
         invert_match: false
     confidence: High
     comment: "Any datagram of ten bytes or more that is not a Probe or Resolve, even plain text, is answered with a ProbeMatches message (shorter ones get a SOAP fault). WS-Discovery responders such as wsdd and camera firmware ignore datagrams that are not WS-Discovery SOAP messages. Same on UDP 3703-3707. Matched: SweetCam honeynet/sweetcam master df63c1d (2025-09-30) (2026-11)."
+  - name: ipcam-honeypot-boa-404-address-footer
+    id: 1860
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /hd-{{rand}}.htm HTTP/1.0\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.0 404 Not Found\r\nDate: [^\r]+\r\nServer: Boa/0\.94\.14rc21\r\n.*<ADDRESS>Boa/0\.94\.14rc21 Server</ADDRESS>'
+        invert_match: false
+    confidence: High
+    comment: "A missing page returns a 404 that claims Boa 0.94.14rc21 but carries an Apache-style body with an <HR> and an <ADDRESS>Boa/0.94.14rc21 Server</ADDRESS> footer, a Content-Length and 'Content-type: text/html'. Genuine Boa 0.94.14rc21 sends a compact page with no footer, 'Content-Type: text/html; charset=ISO-8859-1', Accept-Ranges and no Content-Length. Matched: ipcam-honeypot jsserve-org/ipcam-honeypot 64cb5c7 (2026-08-28) (2026-11)."
+  - name: ipcam-honeypot-http-version-echo
+    id: 1861
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/9.9\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/9\.9 [0-9]{3} [^\r]*\r\nDate: [^\r]+\r\nServer: Boa/0\.94\.14rc21\r\n'
+        invert_match: false
+    confidence: High
+    comment: "The HTTP status line echoes whatever protocol version the client sent, so a request for HTTP/9.9 is answered 'HTTP/9.9 200 OK' (or 'HTTP/9.9 404 Not Found' without the firmware web root) with Server: Boa/0.94.14rc21. Genuine Boa answers 'HTTP/1.0 400 Bad Request'; no real server replies with an unknown HTTP version. Matched: ipcam-honeypot jsserve-org/ipcam-honeypot 64cb5c7 (2026-08-28) (2026-11)."
+  - name: ipcam-honeypot-501-version-and-text
+    id: 1862
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "OPTIONS / HTTP/1.0\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 501 Not Implemented\r\n.*Server: Boa/0\.94\.14rc21\r\n.*The method OPTIONS is not supported by this server\.'
+        invert_match: false
+    confidence: High
+    comment: "An unsupported method in an HTTP/1.0 request is answered with an HTTP/1.1 status line and 'The method OPTIONS is not supported by this server.' Genuine Boa 0.94.14rc21 answers 'HTTP/1.0 501 Not Implemented' with the text 'POST to non-script is not supported in Boa.' for any method it does not implement. Matched: ipcam-honeypot jsserve-org/ipcam-honeypot 64cb5c7 (2026-08-28) (2026-11)."
+  - name: ipcam-honeypot-wap-page-headers
+    id: 1863
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /wap.htm HTTP/1.0\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.0 200 OK\r\nDate: [^\r]+\r\nServer: Boa/0\.94\.14rc21\r\nContent-type: text/html; charset=utf-8\r\nCache-Control: no-cache\r\nConnection: close\r\nContent-Length: [0-9]+\r\n\r\n.*<title>LOGIN MENU</title>'
+        invert_match: false
+    confidence: Medium
+    comment: "The mobile login page /wap.htm comes with 'Content-type: text/html; charset=utf-8' and Cache-Control: no-cache directly after the Boa Server header, without the Accept-Ranges and Last-Modified headers Boa 0.94.14rc21 adds to every file it serves. Medium: assumes the device serves this page as a file. Matched: ipcam-honeypot jsserve-org/ipcam-honeypot 64cb5c7 (2026-08-28) (2026-11)."
+  - name: ipcam-honeypot-two-camera-realms
+    id: 1864
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /image/jpeg.cgi HTTP/1.0\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.0 401 Unauthorized\r\n.*WWW-Authenticate: Basic realm="DCS-2130", charset="UTF-8"\r\n'
+        invert_match: false
+      - input_type: string
+        input: "GET /jpeg HTTP/1.0\r\n\r"
+        reconnect: true
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.0 401 Unauthorized\r\n.*WWW-Authenticate: Basic realm="IDE10DN", charset="UTF-8"\r\n'
+        invert_match: false
+    confidence: Medium
+    comment: "In the default PERSONAS=both mode the same server asks for credentials for two different cameras: realm DCS-2130 on the D-Link snapshot URL and realm IDE10DN on the Pelco one, both with the RFC 7617 charset parameter that predates neither firmware. A real camera has one realm. Medium: PERSONAS=dlink or pelco removes it. Matched: ipcam-honeypot jsserve-org/ipcam-honeypot 64cb5c7 (2026-08-28) (2026-11)."
+  - name: ipcam-honeypot-rtsp-describe-any-path
+    id: 1865
+    port: 554
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "DESCRIBE rtsp://x/hd-{{rand}} RTSP/1.0\r\nCSeq: 3\r\n\r"
+        output_match_type: regex
+        output: '(?s)^RTSP/1\.0 200 OK\r\nCSeq: 3\r\n.*\r\ns=DCS-2130 Live\r\n'
+        invert_match: false
+    confidence: High
+    comment: "DESCRIBE for any stream path, without credentials, returns 200 OK with the same H.264 SDP (s=DCS-2130 Live, c=IN IP4 0.0.0.0) and echoes the made-up path in Content-Base. Genuine RTSP servers answer 404 for a stream that does not exist (MediaMTX) or ask for authentication. Matched: ipcam-honeypot jsserve-org/ipcam-honeypot 64cb5c7 (2026-08-28) (2026-11)."
+  - name: ipcam-honeypot-telnet-any-password
+    id: 1866
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: hex
+        output: "fffb016c6f67696e3a"
+        invert_match: false
+      - input_type: string
+        input: "root"
+        output_match_type: string
+        output: "Password:"
+        invert_match: false
+      - input_type: string
+        input: "hd{{rand}}"
+        output_match_type: string
+        output: "BusyBox v1.19.4 () built-in shell (ash)"
+        invert_match: false
+    confidence: High
+    comment: "Telnet greets with only IAC WILL ECHO and 'login: ' (the bytes of Nmap's generic telnet match) and accepts any password, here a random one, with a BusyBox v1.19.4 shell banner. BusyBox telnetd negotiates several options before login, prints the host name in its prompt and rejects a wrong password with 'Login incorrect'. Matched: ipcam-honeypot jsserve-org/ipcam-honeypot 64cb5c7 (2026-08-28) (2026-11)."
