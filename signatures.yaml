@@ -16120,3 +16120,87 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: "HEAD of a random path returns 200 with exactly content-type text/html; charset=utf-8, content-length 0 and a date (hyper's lower-case headers, no Server header): the catch-all stream has no known length, so HEAD reports an empty page. Web servers answer a random path with 404, and catch-all applications report the real length of their page. Medium: needs the default catch-all mode and default content_type, and would match any hyper server streaming HTML of unknown length on every path. Standalone only (a front end answers other paths itself). Matched: pandoras_pot 0.7.2 (commit a00e6e9, 2026-11)."
+  - name: basicgopot-upload-get-405-method-not-allowed
+    id: 1830
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /upload HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 405 Method Not Allowed\r\nContent-Type: text/plain; charset=utf-8\r\nX-Content-Type-Options: nosniff\r\nDate: [^\r]+\r\nContent-Length: 20\r\n(?:Connection: close\r\n)?\r\nMethod not allowed!$'
+        invert_match: false
+    confidence: High
+    comment: "A GET of the upload endpoint is refused by basicgopot's own handler with 405 and the text 'Method not allowed!' (lower case, exclamation mark, no Allow header, no Server header). Go's method routing and http.StatusText send 'Method Not Allowed' with an Allow header; nginx, Apache, Caddy and Gitea answer 404. Independent of the template. Matched: basicgopot main 0bafbf9 (2026-11); not v1.1.4 (see 1831)."
+  - name: basicgopot-upload-get-400-file-upload-failed-text
+    id: 1831
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /upload HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 400 Bad Request\r\nDate: [^\r]+\r\nContent-Length: 19\r\nContent-Type: text/plain; charset=utf-8\r\n(?:Connection: close\r\n)?\r\nFile upload failed!$'
+        invert_match: false
+    confidence: High
+    comment: "In the v1.1.4 release a GET of the upload endpoint falls through to multipart parsing and is answered with 400 and the bare text 'File upload failed!' (no Server header). Genuine servers answer 404 or 405 for a GET of a missing or POST-only path. Independent of the template. Matched: basicgopot v1.1.4 (2026-11); not main 0bafbf9 (see 1830)."
+  - name: basicgopot-file-below-file-400-empty
+    id: 1832
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /index.html/x HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 400 Bad Request\r\nDate: [^\r]+\r\nContent-Length: 0(?:\r\nConnection: close)?$'
+        invert_match: false
+    confidence: Medium
+    comment: "A path below an existing file (/index.html/x) makes basicgopot's existence check fail with 'not a directory', which it answers with an empty 400 and no Server or Content-Type header. Go's http.FileServer, nginx, Apache, Gitea and motionEye answer 404. Medium: Caddy also sends an empty 400 for this path (with Server: Caddy, which this signature excludes), and the page must exist in the template (index.html exists in all four). Matched: basicgopot main 0bafbf9 (2026-11); not v1.1.4 (plain Go 404)."
+  - name: basicgopot-upload-post-400-upload-failed
+    id: 1833
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST /upload HTTP/1.1\r\nHost: x\r\nContent-Length: 0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?si)^HTTP/1\.1 400 Bad Request\r\nDate: [^\r]+\r\nContent-Length: \d+\r\nContent-Type: text/(?:html|plain); charset=utf-8\r\n(?:Connection: close\r\n)?\r\n.*File upload failed'
+        invert_match: false
+    confidence: Medium
+    comment: "An empty POST to the upload endpoint gets 400 with an 'upload failed' page (the template's upload-failed.html, or the bare text 'File upload failed!' in v1.1.4) and no Server header. Genuine servers answer 404 or 405, or 411/400 without that wording. Medium: the failure page is part of the template and can be rewritten. Matched: basicgopot main 0bafbf9 and v1.1.4 (2026-11)."
+  - name: basicgopot-upload-without-file-200-success
+    id: 1834
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST /upload HTTP/1.1\r\nHost: x\r\nContent-Type: multipart/form-data; boundary=XyZ\r\nContent-Length: 67\r\nConnection: close\r\n\r\n--XyZ\r\nContent-Disposition: form-data; name=\"note\"\r\n\r\nhi\r\n--XyZ--\r"
+        output_match_type: regex
+        output: '(?si)^HTTP/1\.1 200 OK\r\nDate: [^\r]+\r\nContent-Length: \d+\r\nContent-Type: text/html; charset=utf-8\r\n(?:Connection: close\r\n)?\r\n.*<title>[^<]*Upload Success'
+        invert_match: false
+    confidence: Medium
+    comment: "A multipart POST that contains no file at all is answered with 200 and the template's 'Upload Success' page: the success page is sent as soon as the form parses, before the file field is read. A genuine upload handler rejects a form without the file. The probe stores nothing (basicgopot logs a failed upload). Medium: the success page belongs to the template. Matched: basicgopot main 0bafbf9 (2026-11); not v1.1.4 (400 'File upload failed!')."
+  - name: basicgopot-default-template-firmware-upload
+    id: 1835
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\nAccept-Ranges: bytes\r\nContent-Length: \d+\r\nContent-Type: text/html; charset=utf-8\r\nLast-Modified: [^\r]+\r\nDate: [^\r]+\r\n(?:Connection: close\r\n)?\r\n.*<title>IP Camera Firmware Upload</title>.*<form action="/upload" method="post" enctype="multipart/form-data">.*name="fileupload"'
+        invert_match: false
+    confidence: Medium
+    comment: "The default firmware_update_v2 template: an 'IP Camera Firmware Upload' page with a camera list and a firmware file field posting to /upload, served by Go's file server with no Server header and no authentication. A genuine camera asks for a login before any firmware page. Medium: the page is the default template and operators can choose another or write their own. Matched: basicgopot main 0bafbf9 and v1.1.4 (2026-11)."
+  - name: basicgopot-template-404-page
+    id: 1836
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /basicgopot-missing-page HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 404 Not Found\r\nDate: [^\r]+\r\nContent-Length: \d+\r\nContent-Type: text/html; charset=utf-8\r\n(?:Connection: close\r\n)?\r\n.*<title>404 - Page Not Found</title>.*The page you are looking for does not exist\.'
+        invert_match: false
+    confidence: Medium
+    comment: "Missing pages get the template's 404.html (title '404 - Page Not Found', 'The page you are looking for does not exist.') written by basicgopot's handler, with no Server header. The same page ships with all four templates. Medium: the page is part of the template. Matched: basicgopot main 0bafbf9 (2026-11); not v1.1.4 (plain Go '404 page not found')."
