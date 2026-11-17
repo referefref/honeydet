@@ -16060,3 +16060,63 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: "GET / succeeds (with the forced close of signature 1812) but HEAD / on a new connection is 404 Not Found with an empty body and no Allow header: Honeyaml registers its catch-all route for GET, POST, PUT and DELETE only, so HEAD and PATCH fall through to actix-web's default 404 (the T-Pot fork routes every method to its handler, which answers 404 with connection: close because no path is configured for HEAD). HTTP requires a server that supports GET to support HEAD; genuine servers answer HEAD like GET, and a genuine actix-web application answers 405 with an Allow header. Needs a success on GET /, which a custom api.yml may not configure; hence Medium. Matched: Honeyaml 1.0.0 (3a60d0d) and the T-Pot fork t3chn0m4g3/honeyaml 79b48b3 (2026-11)."
+  - name: pandoras-pot-axum-any-method-405
+    id: 1820
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "FOO /wp-login.php HTTP/1.1\r\nHost: x\r\nUser-Agent: honeydet\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 405 Method Not Allowed\r\n.*(?i:allow): GET,HEAD,TRACE,PUT,POST,PATCH,OPTIONS,DELETE(?:\r\n|$)'
+        invert_match: false
+    confidence: High
+    comment: "An unknown method on the tarpit path gets an empty '405 Method Not Allowed' whose Allow header lists exactly GET,HEAD,TRACE,PUT,POST,PATCH,OPTIONS,DELETE: pandoras_pot routes every standard method except CONNECT to its stream (axum on() with its own method filter). nginx and Apache answer FOO with a 404, 405 or 501 HTML page; ordinary axum routes list only their own methods and axum any() handlers accept FOO. Default catch-all mode, routes mode when /wp-login.php is a route, and behind an nginx front end that proxies the path. Matched: pandoras_pot 0.7.2 (commit a00e6e9, 2026-11)."
+  - name: pandoras-pot-catchall-head-empty-html
+    id: 1821
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "HEAD /hd-{{rand}}.php HTTP/1.1\r\nHost: x\r\nUser-Agent: honeydet\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 200 OK\r\ncontent-type: text/html; charset=utf-8\r\ncontent-length: 0\r\n(?:connection: close\r\n)?date: [^\r\n]+ GMT$'
+        invert_match: false
+    confidence: Medium
+    comment: "HEAD of a random path returns 200 with exactly content-type text/html; charset=utf-8, content-length 0 and a date (hyper's lower-case headers, no Server header): the catch-all stream has no known length, so HEAD reports an empty page. Web servers answer a random path with 404, and catch-all applications report the real length of their page. Medium: needs the default catch-all mode and default content_type, and would match any hyper server streaming HTML of unknown length on every path. Standalone only (a front end answers other paths itself). Matched: pandoras_pot 0.7.2 (commit a00e6e9, 2026-11)."
+  - name: pandoras-pot-health-port-ok
+    id: 1822
+    port: 8081
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "HEAD /hd-{{rand}} HTTP/1.1\r\nHost: x\r\nUser-Agent: honeydet\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 200 OK\r\ncontent-type: text/plain; charset=utf-8\r\ncontent-length: 3\r\n(?:connection: close\r\n)?date: [^\r\n]+ GMT$'
+        invert_match: false
+    confidence: Medium
+    comment: "The optional health port (http.health_port_enabled, default port 8081, off by default) answers GET and HEAD on every path with a three-byte 'OK' plus newline as text/plain from hyper (lower-case headers, no Server header); the probe uses HEAD, which reports content-length 3 and never reaches the stream if the port is the tarpit itself. Medium: off by default, meant to stay internal, and any small axum or hyper service with an 'OK' fallback would answer the same. Matched: pandoras_pot 0.7.2 (commit a00e6e9, 2026-11)."
+  - name: pandoras-pot-axum-any-method-405-80
+    id: 1823
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "FOO /wp-login.php HTTP/1.1\r\nHost: x\r\nUser-Agent: honeydet\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 405 Method Not Allowed\r\n.*(?i:allow): GET,HEAD,TRACE,PUT,POST,PATCH,OPTIONS,DELETE(?:\r\n|$)'
+        invert_match: false
+    confidence: High
+    comment: "An unknown method on the tarpit path gets an empty '405 Method Not Allowed' whose Allow header lists exactly GET,HEAD,TRACE,PUT,POST,PATCH,OPTIONS,DELETE: pandoras_pot routes every standard method except CONNECT to its stream (axum on() with its own method filter). nginx and Apache answer FOO with a 404, 405 or 501 HTML page; ordinary axum routes list only their own methods and axum any() handlers accept FOO. Default catch-all mode, routes mode when /wp-login.php is a route, and behind an nginx front end that proxies the path. Matched: pandoras_pot 0.7.2 (commit a00e6e9, 2026-11)."
+  - name: pandoras-pot-catchall-head-empty-html-80
+    id: 1824
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "HEAD /hd-{{rand}}.php HTTP/1.1\r\nHost: x\r\nUser-Agent: honeydet\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 200 OK\r\ncontent-type: text/html; charset=utf-8\r\ncontent-length: 0\r\n(?:connection: close\r\n)?date: [^\r\n]+ GMT$'
+        invert_match: false
+    confidence: Medium
+    comment: "HEAD of a random path returns 200 with exactly content-type text/html; charset=utf-8, content-length 0 and a date (hyper's lower-case headers, no Server header): the catch-all stream has no known length, so HEAD reports an empty page. Web servers answer a random path with 404, and catch-all applications report the real length of their page. Medium: needs the default catch-all mode and default content_type, and would match any hyper server streaming HTML of unknown length on every path. Standalone only (a front end answers other paths itself). Matched: pandoras_pot 0.7.2 (commit a00e6e9, 2026-11)."
