@@ -18705,3 +18705,75 @@ signatures:
         invert_match: false
     confidence: High
     comment: "The Telnet service prints 'Ubuntu 20.04 LTS' and 'login: ' straight away, with no Telnet option negotiation (no IAC bytes) and without the host name that Ubuntu's /etc/issue.net and login prompt include. Genuine telnetd (inetutils, netkit) opens with IAC DO/WILL negotiation. Matched: Shmakov Honeypot 1c3d5f3 (0.1.0, Dec 2025) built with Rust 1.99.0 (2026-11)."
+  - name: hostage-http-fixed-header-layout
+    id: 1360
+    port: "8080"
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\nDate: [^\r\n]+ GMT\r\nServer: [^\r\n]* \r\nVary: Accept-Encoding\r\nContent-Length: [0-9]+\r\nKeep-Alive: timeout=5, max=100\r\nConnection: Keep-Alive\r\nContent-Type: text/html\r\n\r\n<!doctype html>\n<html lang="en">\n<head>\n<meta charset="UTF-8">\n<title>[^<]*</title>\n<body>.*</body>\n</head>\n</html>$'
+        invert_match: false
+    confidence: High
+    comment: "HosTaGe's HTTP service answers every request with the same template: a Server header (a version drawn at random from Apache 2.0 to 2.4 and IIS lists, or fixed by a Windows or Arduino profile) followed by a trailing space, a fixed header order with Keep-Alive although it closes the connection, and a page whose </body> comes before </head>. No genuine Apache or IIS produces this combination. Matched: HosTaGe 2.4 (Android, versionCode 16) (2026-11)."
+  - name: hostage-http-505-for-http10
+    id: 1361
+    port: "8080"
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.0\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 505 HTTP Version not supported\r\nDate: [^\r\n]+\r\nServer: [^\r\n]* \r\nVary: Accept-Encoding\r\n'
+        invert_match: false
+    confidence: High
+    comment: "Any request that does not contain the string HTTP/1.1 (or HTTP/2) gets '505 HTTP Version not supported' with the trailing-space Server header. Apache and IIS serve HTTP/1.0 requests normally. Matched: HosTaGe 2.4 (Android, versionCode 16) (2026-11)."
+  - name: hostage-https-localmachine-certificate
+    id: 1362
+    port: "8443"
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "1603010074010000700303000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f000016c02fc030c02bc02c009c009d002f0035c013c014000a01000031000a0008000600170018001d000b00020100000d001600140401050106010804080508060403050302010203ff01000100"
+        output_match_type: regex
+        output: '(?s)localMachine0\x1e\x17\r200817111705Z\x17\r210817111705Z'
+        invert_match: false
+    confidence: High
+    comment: "A TLS 1.2 ClientHello returns the certificate bundled in the app (https_cert.bks): self-signed, subject and issuer C=US, CN=localMachine, serial 5F3A6731, valid 17 August 2020 to 17 August 2021, so expired. Every installation of HosTaGe 2.4 presents the same certificate. Matched: HosTaGe 2.4 (Android, versionCode 16) (2026-11)."
+  - name: hostage-ftp-closes-after-user
+    id: 1363
+    port: "32768-60999"
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "USER anonymous\r"
+        output_match_type: regex
+        output: '^220 Service ready for new user\.\r\n(?:332 Need account for login\.\r\n)*331 User name ok, need password\.\r\n221 Service closing control connection\.$'
+        invert_match: false
+    confidence: High
+    comment: "HosTaGe's FTP service greets with the RFC 959 reply texts ('220 Service ready for new user.'), floods '332 Need account for login.' while the client is silent, and after USER sends 331 and then, without waiting for PASS, '221 Service closing control connection.' and closes. Genuine FTP servers wait for PASS. Matched: HosTaGe 2.4 (Android, versionCode 16) (2026-11)."
+  - name: hostage-telnet-debian7-login
+    id: 1364
+    port: "32768-60999"
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "\r"
+        output_match_type: regex
+        output: '(?s)^\x{FFFD}\x{FFFD}\x03\x{FFFD}\x{FFFD}\x01.*Debian GNU/Linux 7\.0\r\nlogin:$'
+        invert_match: false
+    confidence: High
+    comment: "TELNET opens with IAC WILL SUPPRESS-GO-AHEAD, IAC WILL ECHO and, after any client input, the fixed text 'Debian GNU/Linux 7.0' and 'login: ' with no host name. Debian's telnetd negotiates terminal type first and prints '<hostname> login: '; Debian 7 identifies itself as 'Debian GNU/Linux 7'. (Bytes 0xff and 0xfb are not valid UTF-8 and match as U+FFFD.). Matched: HosTaGe 2.4 (Android, versionCode 16) (2026-11)."
+  - name: hostage-mysql-fixed-scramble
+    id: 1367
+    port: "3306"
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "0100000001"
+        output_match_type: hex
+        output: "2a0000004464497e6048257e00fff70802000f8015000000000000000000006c26712c2572313d7d21263b006d7973716c5f6e61746976655f70617373776f72640007000001000000020000"
+        invert_match: false
+    confidence: High
+    comment: "The MySQL greeting always carries connection id 42 and the same 20-byte scramble (DdI~`H%~ and l&q,%r1=}!&;); genuine MySQL and MariaDB generate a random scramble for every connection. The probe sends COM_QUIT immediately; HosTaGe still answers with an unsolicited OK packet (07 00 00 01 00 00 00 02 00 00 00) and closes. A genuine server never sends OK before a handshake response. Matched: HosTaGe 2.4 (Android, versionCode 16) (2026-11)."
