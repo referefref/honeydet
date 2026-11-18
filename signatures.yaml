@@ -18372,3 +18372,141 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: "RFC 5389 Binding Request answered with a 12-byte success response holding only MAPPED-ADDRESS; RFC 5389 servers such as coturn answer with XOR-MAPPED-ADDRESS (and usually SOFTWARE and FINGERPRINT). UDP: run honeydet with -proto udp. Matched: masscanned 0.2.0 (master 7844fef, 2026-11)."
+  - name: fictusvnc-rfb33-client-disconnected
+    id: 2100
+    port: 5900
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^RFB 003\.008$'
+        invert_match: false
+      - input_type: hex
+        input: "524642203030332e3030330a"
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+    confidence: High
+    comment: "A server that greets with RFB 003.008 closes the connection at once, without a byte, when the client answers RFB 003.003 (FictusVNC refuses RFB 3.3 and older in server.go). RFB 3.3 is the baseline every VNC client and server supports, and genuine servers answer it with a security type: TigerVNC, x11vnc and TightVNC send 00000001 (no password) or 00000002 plus a random challenge. No login is attempted. Matched: FictusVNC 2.1.0 (0e4878e) (2026-11)."
+  - name: fictusvnc-malformed-version-disconnected
+    id: 2101
+    port: 5900
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^RFB 003\.008$'
+        invert_match: false
+      - input_type: hex
+        input: "524642203030332e3030780a"
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+      - input_type: hex
+        input: ""
+        reconnect: true
+        output_match_type: regex
+        output: '^RFB 003\.008$'
+        invert_match: false
+      - input_type: hex
+        input: "524642203030332e3838390a"
+        output_match_type: regex
+        output: '^\x01\x01$'
+        invert_match: false
+    confidence: Medium
+    comment: "A version string with a non-digit ('RFB 003.00x') makes the server close the connection silently (outcome malformed_version in its log), while on a new connection the Apple Remote Desktop version 'RFB 003.889' is accepted with security type None alone. TigerVNC, x11vnc and TightVNC answer the malformed version as RFB 3.3 with a security type; honeytrap's VNC service closes on both. Medium: other VNC implementations may also reject a malformed version. Matched: FictusVNC 2.1.0 (0e4878e) (2026-11)."
+  - name: fictusvnc-unoffered-security-type-reason
+    id: 2102
+    port: 5900
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^RFB 003\.008$'
+        invert_match: false
+      - input_type: hex
+        input: "524642203030332e3030380a"
+        output_match_type: regex
+        output: '^\x01\x01$'
+        invert_match: false
+      - input_type: hex
+        input: "02"
+        output_match_type: regex
+        output: '^\x00\x00\x00\x01\x00\x00\x00\x19Unsupported security type$'
+        invert_match: false
+    confidence: High
+    comment: "The server offers security type None alone; a client that chooses VNC authentication (type 2), which was not offered, receives a failed SecurityResult with the reason 'Unsupported security type'. TigerVNC and x11vnc (libvncserver) offering None only close the connection without a reason. No password is sent. Matched: FictusVNC 2.1.0 (0e4878e) (2026-11)."
+  - name: fictusvnc-rfb4-treated-as-rfb38
+    id: 2103
+    port: 5900
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^RFB 003\.008$'
+        invert_match: false
+      - input_type: hex
+        input: "524642203030342e3030300a"
+        output_match_type: regex
+        output: '^\x01\x01$'
+        invert_match: false
+    confidence: Medium
+    comment: "A server that announces RFB 3.8 accepts a client claiming RFB 4.000, a version newer than its own, and offers security type None as if 3.8 had been chosen. TigerVNC refuses with 'Client needs protocol version 4.0, server has 3.8'; x11vnc and TightVNC close the connection. Medium: the reply to an impossible version is implementation-specific. Matched: FictusVNC 2.1.0 (0e4878e) (2026-11)."
+  - name: fictusvnc-branded-desktop-name
+    id: 2104
+    port: 5900
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^RFB 003\.008$'
+        invert_match: false
+      - input_type: hex
+        input: "524642203030332e3030380a"
+        output_match_type: regex
+        output: '^\x01\x01$'
+        invert_match: false
+      - input_type: hex
+        input: "01"
+        output_match_type: regex
+        output: '^\x00\x00\x00\x00$'
+        invert_match: false
+      - input_type: hex
+        input: "01"
+        output_match_type: string
+        output: "FictusVNC - "
+        invert_match: false
+    confidence: Medium
+    comment: "With branding on (the default), the desktop name in ServerInit is the global name 'FictusVNC' followed by ' - ' and the server's own name, for example 'FictusVNC - My Desktop'. The handshake uses security type None, so no credential is involved; no framebuffer is requested. Medium: branding = false or a different global name removes it. Matched: FictusVNC 2.1.0 (0e4878e) (2026-11)."
+  - name: fictusvnc-default-image-500x220
+    id: 2105
+    port: 5900
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^RFB 003\.008$'
+        invert_match: false
+      - input_type: hex
+        input: "524642203030332e3030380a"
+        output_match_type: regex
+        output: '^\x01\x01$'
+        invert_match: false
+      - input_type: hex
+        input: "01"
+        output_match_type: regex
+        output: '^\x00\x00\x00\x00$'
+        invert_match: false
+      - input_type: hex
+        input: "01"
+        output_match_type: hex
+        output: "01f400dc2018000100ff00ff00ff100800"
+        invert_match: false
+    confidence: Medium
+    comment: "ServerInit announces a 500 x 220 framebuffer (the size of the bundled images/default.png) with 32 bits per pixel, depth 24, true colour and shifts 16/8/0. A real desktop has a screen resolution such as 1024 x 768 or 1920 x 1080. Medium: holds only while the sample image is served. Matched: FictusVNC 2.1.0 (0e4878e) (2026-11)."
