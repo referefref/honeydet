@@ -17948,3 +17948,133 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: "GET / returns exactly three headers and the body 'Hello!', while HEAD / returns Gin's 404 (Content-Length: 18) because only GET and POST are routed. A Next.js site serves HTML at / and answers HEAD like GET. Medium: any minimal Gin 'Hello!' application looks the same; the stronger signatures are 2050 to 2053. Matched: react2shell-honeypot commit 8b41715 (2026-11)."
+  - name: reditrap-eval-disabled-honeypot-marker
+    id: 2060
+    port: 6379
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "*3\r\n$4\r\nEVAL\r\n$8\r\nreturn 1\r\n$1\r\n0\r"
+        output_match_type: regex
+        output: '^-ERR script execution disabled \(honeypot\)$'
+        invert_match: false
+    confidence: High
+    comment: "EVAL of the harmless script 'return 1' is refused with '-ERR script execution disabled (honeypot)'. Genuine Redis 2.8 to 8.2 and Valkey 8.1 return ':1' (or NOAUTH when a password is set); no Redis error names a honeypot. Matched: RediTrap 8b5d789 (2026-11)."
+  - name: reditrap-script-load-disabled-honeypot-marker
+    id: 2061
+    port: 6379
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "*3\r\n$6\r\nSCRIPT\r\n$4\r\nLOAD\r\n$8\r\nreturn 1\r"
+        output_match_type: regex
+        output: '^-ERR script loading disabled \(honeypot\)$'
+        invert_match: false
+    confidence: High
+    comment: "SCRIPT LOAD of 'return 1' is refused with '-ERR script loading disabled (honeypot)'. Genuine Redis and Valkey return the script's SHA-1 as a bulk string. Matched: RediTrap 8b5d789 (2026-11)."
+  - name: reditrap-info-lf-line-endings
+    id: 2062
+    port: 6379
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "*1\r\n$4\r\nINFO\r"
+        output_match_type: regex
+        output: '^\$[0-9]+\r\n# Server\nredis_version:'
+        invert_match: false
+    confidence: High
+    comment: "INFO is a bulk string whose lines end in a bare LF ('# Server' then LF then 'redis_version:'). Every genuine Redis and Valkey version tested separates INFO lines with CRLF. Matched: RediTrap 8b5d789 (2026-11)."
+  - name: reditrap-get-unknown-command
+    id: 2063
+    port: 6379
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "*2\r\n$3\r\nGET\r\n$5\r\nhdkey\r"
+        output_match_type: regex
+        output: '^-ERR unknown command ''GET''$'
+        invert_match: false
+    confidence: High
+    comment: "GET, the most basic Redis command, is answered '-ERR unknown command 'GET''. Genuine Redis returns a nil bulk string ($-1) or the value; RediTrap implements only PING, ECHO, AUTH, INFO, KEYS, PUBSUB CHANNELS, COMMAND, HELLO, QUIT and the script commands. Matched: RediTrap 8b5d789 (2026-11)."
+  - name: reditrap-command-empty-list
+    id: 2064
+    port: 6379
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "*1\r\n$7\r\nCOMMAND\r"
+        output_match_type: regex
+        output: '^\*0$'
+        invert_match: false
+    confidence: High
+    comment: "COMMAND returns an empty array ('*0'). Genuine Redis 2.8 onwards lists its commands (157 in 2.8, 241 in 7.2) and Valkey does the same. Matched: RediTrap 8b5d789 (2026-11)."
+  - name: reditrap-auth-any-credentials-accepted
+    id: 2065
+    port: 6379
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "*3\r\n$4\r\nAUTH\r\n$18\r\nhd{{rand}}\r\n$16\r\n{{rand}}\r"
+        output_match_type: regex
+        output: '^\+OK$'
+        invert_match: false
+    confidence: High
+    comment: "AUTH with a random user name and password returns '+OK'. Genuine Redis 6 onwards and Valkey answer WRONGPASS, and Redis 2.8 to 5 reject the two-argument form. Matched: RediTrap 8b5d789 (2026-11)."
+  - name: reditrap-protocol-error-python-bytes
+    id: 2066
+    port: 6379
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "*1\r\nPING\r"
+        output_match_type: regex
+        output: '^-ERR protocol error: expected bulk string, got b''P''$'
+        invert_match: false
+    confidence: High
+    comment: "A RESP array whose element lacks the '$' prefix gets '-ERR protocol error: expected bulk string, got b'P'' (lower-case 'protocol' and a Python bytes literal). Genuine Redis and Valkey answer \"-ERR Protocol error: expected '$', got 'P'\". Matched: RediTrap 8b5d789 (2026-11)."
+  - name: reditrap-hello-unknown-on-redis6plus
+    id: 2067
+    port: 6379
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "*2\r\n$5\r\nHELLO\r\n$1\r\n3\r"
+        output_match_type: regex
+        output: '^-ERR unknown command ''HELLO''$'
+        invert_match: false
+      - input_type: string
+        input: "*1\r\n$4\r\nINFO\r"
+        output_match_type: regex
+        output: 'redis_version:[6-9]\.'
+        invert_match: false
+    confidence: Medium
+    comment: "HELLO 3 is answered in the Redis 2.8/3.2 style, '-ERR unknown command 'HELLO'', while INFO on the same connection reports redis_version 6 or later. Genuine Redis 6 onwards supports HELLO (Redis 4 and 5 add ', with args beginning with:'). Depends on the reported version (--redis-version, default 7.2.4), hence Medium. Matched: RediTrap 8b5d789 (2026-11)."
+  - name: reditrap-default-info-identity
+    id: 2068
+    port: 6379
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "*1\r\n$4\r\nINFO\r"
+        output_match_type: regex
+        output: '(?s)redis_build_id:e7873c849a0397f9\n.*gcc_version:4\.7\.2\n.*run_id:badba07e346c19a7dba51425ef9cbdda9e16cd0f\n.*mem_allocator:jemalloc-3\.6\.0\n'
+        invert_match: false
+    confidence: High
+    comment: "INFO always returns the same hard-coded identity: redis_build_id e7873c849a0397f9, run_id badba07e..., gcc 4.7.2 and jemalloc 3.6.0 (a Redis 2.8-era build), whatever version it reports. Genuine Redis generates a new run_id at every start, and its build id, compiler and allocator follow the release. Matched: RediTrap 8b5d789 (2026-11)."
+  - name: reditrap-echo-missing-argument-unknown
+    id: 2069
+    port: 6379
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "*1\r\n$4\r\nECHO\r"
+        output_match_type: regex
+        output: '^-ERR unknown command ''ECHO''$'
+        invert_match: false
+      - input_type: string
+        input: "*2\r\n$4\r\nECHO\r\n$2\r\nhd\r"
+        output_match_type: regex
+        output: '^\$2\r\nhd$'
+        invert_match: false
+    confidence: High
+    comment: "ECHO without an argument is answered '-ERR unknown command 'ECHO'', while ECHO hd on the same connection is echoed. Genuine Redis and Valkey answer \"-ERR wrong number of arguments for 'echo' command\"; NoSQLpot, which also says 'unknown command', does not implement ECHO at all. Matched: RediTrap 8b5d789 (2026-11)."
