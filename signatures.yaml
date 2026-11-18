@@ -17654,3 +17654,63 @@ signatures:
         invert_match: false
     confidence: High
     comment: "A request for the service description of the WSUS client web service (ClientWebService/Client.asmx, the path Microsoft's MS-WUSP specification mandates and the one public CVE-2025-59287 checks use) returns the decoy's fixed SOAP envelope with GetStatusResponse from nginx instead of a WSDL document or an IIS/ASP.NET page. The decoy's own capture locations use other paths (ClientWebService/ClientWebService.asmx, ReportWebService/ReportWebService.asmx), so this genuine path falls through to the catch-all. Matched: WSUS CVE-2025-59287 decoy cf17c31 (2026-11)."
+  - name: confluencepot-tls13-hello-retry-no-x25519
+    id: 2010
+    port: 443
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "16030100c1010000bd0303000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f204844484448444844484448444844484448444844484448444844484448444844000a130113021303c02bc02f0100006a000a00060004001d0017000b00020100000d0014001204030804040105030805050108060601020100170000ff01000100002b00050403040303002d00020101003300260024001d00208520f0098930a754748b7ddcb43ef75a0dbf3a0d26381af4eba4a98eaa9b4e6a"
+        output_match_type: hex
+        output: "0303cf21ad74e59a6111be1d8c021e65b891c2a211167abb8c5e079e09e2c8a8339c"
+        invert_match: false
+    confidence: Medium
+    comment: "A TLS 1.3 ClientHello with an X25519 key share (the first share browsers and OpenSSL send) and P-256 as the second group is answered with a HelloRetryRequest asking for P-256: the server's curve list (P-521, P-384, P-256) has no X25519. Confluence's Tomcat, nginx, Caddy and Traefik accept the X25519 share at once. Servers restricted to NIST curves (for example FIPS builds) behave the same, hence Medium. Matched: confluencePot commit 847f249 built with Go 1.27.4 (2026-11)."
+  - name: confluencepot-tls12-refuses-aes128-gcm
+    id: 2011
+    port: 443
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "1603010084010000800303000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f2048444844484448444844484448444844484448444844484448444844484448440006c02bc02f009c01000031000a00060004001d0017000b00020100000d0014001204030804040105030805050108060601020100170000ff01000100"
+        output_match_type: hex
+        output: "15030300020228"
+        invert_match: false
+    confidence: Medium
+    comment: "A TLS 1.2 ClientHello offering only the AES-128-GCM suites (ECDHE-ECDSA, ECDHE-RSA and RSA) gets a fatal handshake_failure alert: the server's suite list holds only AES-256 suites. AES-128-GCM is the most widely supported TLS 1.2 suite and every genuine server tested negotiated it. Servers deliberately limited to 256-bit suites behave the same, hence Medium. Matched: confluencePot commit 847f249 built with Go 1.27.4 (2026-11)."
+  - name: confluencepot-tls12-no-x25519
+    id: 2012
+    port: 443
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "16030100800100007c0303000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f2048444844484448444844484448444844484448444844484448444844484448440004c02cc0300100002f000a00040002001d000b00020100000d0014001204030804040105030805050108060601020100170000ff01000100"
+        output_match_type: hex
+        output: "15030300020228"
+        invert_match: false
+    confidence: Medium
+    comment: "A TLS 1.2 ClientHello offering ECDHE AES-256-GCM suites with X25519 as the only group gets a fatal handshake_failure alert, because the server's curve list has no X25519; genuine servers negotiate X25519. Servers restricted to NIST curves behave the same, hence Medium. Matched: confluencePot commit 847f249 built with Go 1.27.4 (2026-11)."
+  - name: confluencepot-go-https-aes256-nist-only
+    id: 2013
+    port: 443
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: string
+        output: "Client sent an HTTP request to an HTTPS server."
+        invert_match: false
+      - input_type: hex
+        input: "16030100c1010000bd0303000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f204844484448444844484448444844484448444844484448444844484448444844000a130113021303c02bc02f0100006a000a00060004001d0017000b00020100000d0014001204030804040105030805050108060601020100170000ff01000100002b00050403040303002d00020101003300260024001d00208520f0098930a754748b7ddcb43ef75a0dbf3a0d26381af4eba4a98eaa9b4e6a"
+        reconnect: true
+        output_match_type: hex
+        output: "0303cf21ad74e59a6111be1d8c021e65b891c2a211167abb8c5e079e09e2c8a8339c"
+        invert_match: false
+      - input_type: hex
+        input: "1603010084010000800303000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f2048444844484448444844484448444844484448444844484448444844484448440006c02bc02f009c01000031000a00060004001d0017000b00020100000d0014001204030804040105030805050108060601020100170000ff01000100"
+        reconnect: true
+        output_match_type: hex
+        output: "15030300020228"
+        invert_match: false
+    confidence: High
+    comment: "Three connections: a plain HTTP request to the TLS port gets Go net/http's 'Client sent an HTTP request to an HTTPS server.' (so the server is written in Go, never Confluence's Java stack or an Apache/nginx proxy), a TLS 1.3 X25519 key share gets a HelloRetryRequest, and an AES-128-GCM-only TLS 1.2 offer is refused. Go servers with default settings (Caddy, Traefik) pass the last two checks. Matched: confluencePot commit 847f249 built with Go 1.27.4 (2026-11)."
