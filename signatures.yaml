@@ -5598,7 +5598,7 @@ signatures:
         output: '^(?:[^S]|S[^S]|SS[^H]|SSH[^-])[\x20-\x7e\t\r\n]*$'
         invert_match: false
     confidence: Medium
-    comment: "Port 22 answers an SSH client identification with plain text that is not an SSH identification string: the PenTBox honeypot's configured false message (for example 'Access denied'). Covers operator-chosen messages that do not imitate an SSH banner. Matched: honeypot-ddos f288125 (2026-11). With a honeydet timeout over 10 seconds it also matches the endlessh tarpit on port 22 (commit dfe44eb, 2026-11)."
+    comment: "Port 22 answers an SSH client identification with plain text that is not an SSH identification string: the PenTBox honeypot's configured false message (for example 'Access denied'). Covers operator-chosen messages that do not imitate an SSH banner. Matched: honeypot-ddos f288125 (2026-11). With a honeydet timeout over 10 seconds it also matches the endlessh tarpit on port 22 (commit dfe44eb, 2026-11). Also matches endlessh-go 2026.0730.0 (2026-11)."
   - name: honeypot-ddos-pentbox-telnet-no-negotiation
     id: 714
     port: 23
@@ -9351,7 +9351,7 @@ signatures:
         output: '^(?:[ -RT-~][ -~]{0,29}|S|S[ -RT-~][ -~]{0,28}|SS|SS[ -GI-~][ -~]{0,27}|SSH|SSH[ -,.-~][ -~]{0,26})$'
         invert_match: false
     confidence: High
-    comment: "endlessh SSH tarpit on its default port 2222. It never sends an SSH version line: from Delay milliseconds after the connection is accepted (default 10000) it sends one random line of printable ASCII every Delay (1 to 30 characters plus CRLF at the default MaxLineLength 32, never starting with SSH-), ignores everything the client sends and keeps the connection open. Two client idents get back one short printable line that is not a version line, and two more idents get a second such line on the still-open connection. Genuine SSH servers (OpenSSH, Dropbear, tinysshd) answer at once with SSH-2.0- and a binary key exchange; line-based services answer each input line or close. Needs honeydet -timeout 11 or more at the default Delay (about 20 s per probe). Matched: endlessh 1.1 (source dfe44eb and Debian 1.1-5+b1) (2026-11)."
+    comment: "endlessh SSH tarpit on its default port 2222. It never sends an SSH version line: from Delay milliseconds after the connection is accepted (default 10000) it sends one random line of printable ASCII every Delay (1 to 30 characters plus CRLF at the default MaxLineLength 32, never starting with SSH-), ignores everything the client sends and keeps the connection open. Two client idents get back one short printable line that is not a version line, and two more idents get a second such line on the still-open connection. Genuine SSH servers (OpenSSH, Dropbear, tinysshd) answer at once with SSH-2.0- and a binary key exchange; line-based services answer each input line or close. Needs honeydet -timeout 11 or more at the default Delay (about 20 s per probe). Matched: endlessh 1.1 (source dfe44eb and Debian 1.1-5+b1) (2026-11). Also matches endlessh-go 2026.0730.0 (2026-11)."
   - name: endlessh-ssh-tarpit-two-random-lines-port-22
     id: 1051
     port: "22"
@@ -9368,7 +9368,7 @@ signatures:
         output: '^(?:[ -RT-~][ -~]{0,29}|S|S[ -RT-~][ -~]{0,28}|SS|SS[ -GI-~][ -~]{0,27}|SSH|SSH[ -,.-~][ -~]{0,26})$'
         invert_match: false
     confidence: High
-    comment: "endlessh SSH tarpit on port 22 (the usual deployment, with the real SSH server moved to another port). It never sends an SSH version line: from Delay milliseconds after the connection is accepted (default 10000) it sends one random line of printable ASCII every Delay (1 to 30 characters plus CRLF at the default MaxLineLength 32, never starting with SSH-), ignores everything the client sends and keeps the connection open. Two client idents get back one short printable line that is not a version line, and two more idents get a second such line on the still-open connection. Genuine SSH servers (OpenSSH, Dropbear, tinysshd) answer at once with SSH-2.0- and a binary key exchange; line-based services answer each input line or close. Needs honeydet -timeout 11 or more at the default Delay (about 20 s per probe). Matched: endlessh 1.1 (source dfe44eb and Debian 1.1-5+b1) (2026-11)."
+    comment: "endlessh SSH tarpit on port 22 (the usual deployment, with the real SSH server moved to another port). It never sends an SSH version line: from Delay milliseconds after the connection is accepted (default 10000) it sends one random line of printable ASCII every Delay (1 to 30 characters plus CRLF at the default MaxLineLength 32, never starting with SSH-), ignores everything the client sends and keeps the connection open. Two client idents get back one short printable line that is not a version line, and two more idents get a second such line on the still-open connection. Genuine SSH servers (OpenSSH, Dropbear, tinysshd) answer at once with SSH-2.0- and a binary key exchange; line-based services answer each input line or close. Needs honeydet -timeout 11 or more at the default Delay (about 20 s per probe). Matched: endlessh 1.1 (source dfe44eb and Debian 1.1-5+b1) (2026-11). Also matches endlessh-go 2026.0730.0 (2026-11)."
   - name: endlessh-ssh-tarpit-two-random-lines-any-length-default-port
     id: 1052
     port: "2222"
@@ -9385,7 +9385,7 @@ signatures:
         output: '^(?:[ -RT-~][ -~]{0,252}|S|S[ -RT-~][ -~]{0,251}|SS|SS[ -GI-~][ -~]{0,250}|SSH|SSH[ -,.-~][ -~]{0,249})$'
         invert_match: false
     confidence: Medium
-    comment: "endlessh SSH tarpit on its default port 2222 with any MaxLineLength (3 to 255): two client idents get back a single random printable line (up to 253 characters, not a version line, no binary key exchange), and two more idents a second line on the still-open connection, each arriving only after the configured Delay. Survives a changed MaxLineLength; Medium because a line-based service that answers each pair of input lines with exactly one long printable line and stays open would also match. Needs honeydet -timeout greater than the Delay (11 or more at the default 10 s). Matched: endlessh 1.1 (source dfe44eb and Debian 1.1-5+b1), MaxLineLength 32, 100 and 255 (2026-11)."
+    comment: "endlessh SSH tarpit on its default port 2222 with any MaxLineLength (3 to 255): two client idents get back a single random printable line (up to 253 characters, not a version line, no binary key exchange), and two more idents a second line on the still-open connection, each arriving only after the configured Delay. Survives a changed MaxLineLength; Medium because a line-based service that answers each pair of input lines with exactly one long printable line and stays open would also match. Needs honeydet -timeout greater than the Delay (11 or more at the default 10 s). Matched: endlessh 1.1 (source dfe44eb and Debian 1.1-5+b1), MaxLineLength 32, 100 and 255 (2026-11). Also matches endlessh-go 2026.0730.0 (2026-11)."
   - name: endlessh-ssh-tarpit-two-random-lines-any-length-port-22
     id: 1053
     port: "22"
@@ -9402,7 +9402,7 @@ signatures:
         output: '^(?:[ -RT-~][ -~]{0,252}|S|S[ -RT-~][ -~]{0,251}|SS|SS[ -GI-~][ -~]{0,250}|SSH|SSH[ -,.-~][ -~]{0,249})$'
         invert_match: false
     confidence: Medium
-    comment: "endlessh SSH tarpit on port 22 with any MaxLineLength (3 to 255): two client idents get back a single random printable line (up to 253 characters, not a version line, no binary key exchange), and two more idents a second line on the still-open connection, each arriving only after the configured Delay. Survives a changed MaxLineLength; Medium because a line-based service that answers each pair of input lines with exactly one long printable line and stays open would also match. Needs honeydet -timeout greater than the Delay (11 or more at the default 10 s). Matched: endlessh 1.1 (source dfe44eb and Debian 1.1-5+b1), MaxLineLength 32, 100 and 255 (2026-11)."
+    comment: "endlessh SSH tarpit on port 22 with any MaxLineLength (3 to 255): two client idents get back a single random printable line (up to 253 characters, not a version line, no binary key exchange), and two more idents a second line on the still-open connection, each arriving only after the configured Delay. Survives a changed MaxLineLength; Medium because a line-based service that answers each pair of input lines with exactly one long printable line and stays open would also match. Needs honeydet -timeout greater than the Delay (11 or more at the default 10 s). Matched: endlessh 1.1 (source dfe44eb and Debian 1.1-5+b1), MaxLineLength 32, 100 and 255 (2026-11). Also matches endlessh-go 2026.0730.0 (2026-11)."
   - name: honssh-twisted-kexinit-rsa-dss-md5-sha1
     id: 1060
     port: 22
@@ -18121,3 +18121,153 @@ signatures:
         invert_match: false
     confidence: High
     comment: "The honeypot has no CONNECT handler, so Node closes a CONNECT request at once without a reply (a minimal Node forward proxy does the same), and on a new connection an HTTP/1.0 proxy request without a User-Agent gets the honeypot's bare text/plain 500 answered as HTTP/1.1 without chunking. Genuine proxies answer CONNECT (Squid 503 or 403, tinyproxy and the Node proxy package 500, Privoxy 500, 3proxy 200 Connection established). Matched: HTTP-Proxy-Abuse-Honeypot 64243eb (2026-11)."
+  - name: endlessh-go-ssh-tarpit-one-second-lines-default-port
+    id: 2080
+    port: "2222"
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "SSH-2.0-OpenSSH_9.2p1\r\nSSH-2.0-OpenSSH_9.2p1\r"
+        output_match_type: regex
+        output: '^[ !#-\[\]-_a-}]{0,31}$'
+        invert_match: false
+        min_response_ms: 400
+        max_response_ms: 1700
+      - input_type: string
+        input: "SSH-2.0-OpenSSH_9.2p1\r\nSSH-2.0-OpenSSH_9.2p1\r"
+        output_match_type: regex
+        output: '^[ !#-\[\]-_a-}]{0,31}$'
+        invert_match: false
+        min_response_ms: 400
+        max_response_ms: 1700
+    confidence: High
+    comment: "endlessh-go SSH tarpit on its default port 2222 with the default -interval_ms 1000 and -line_length 32. It never sends an SSH version line: one second after the connection is accepted, and every second after that, it sends one random line of 0 to 31 characters drawn from its own alphabet (letters, digits, space and !@#$%^&*()-=_+[]{}|;:',./<>?, never a double quote, backslash, backtick or tilde) ending in a bare LF, ignores everything the client sends and keeps the connection open. Two client idents get back one such line after about a second, and two more idents a second line on the still-open connection about 0.7 s later. Genuine SSH servers answer at once with SSH-2.0- and a binary key exchange; the original C endlessh waits 10 s per line by default, so it does not match. Works at honeydet's default -timeout 5 (about 2 s per probe). Matched: endlessh-go 2026.0730.0 (2026-11)."
+  - name: endlessh-go-ssh-tarpit-one-second-lines-port-22
+    id: 2081
+    port: "22"
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "SSH-2.0-OpenSSH_9.2p1\r\nSSH-2.0-OpenSSH_9.2p1\r"
+        output_match_type: regex
+        output: '^[ !#-\[\]-_a-}]{0,31}$'
+        invert_match: false
+        min_response_ms: 400
+        max_response_ms: 1700
+      - input_type: string
+        input: "SSH-2.0-OpenSSH_9.2p1\r\nSSH-2.0-OpenSSH_9.2p1\r"
+        output_match_type: regex
+        output: '^[ !#-\[\]-_a-}]{0,31}$'
+        invert_match: false
+        min_response_ms: 400
+        max_response_ms: 1700
+    confidence: High
+    comment: "endlessh-go SSH tarpit on port 22 (the usual deployment, with the real SSH server moved elsewhere) at the default -interval_ms 1000 and -line_length 32. It never sends an SSH version line: one second after the connection is accepted, and every second after that, it sends one random line of 0 to 31 characters from its own alphabet (never a double quote, backslash, backtick or tilde) ending in a bare LF, ignores client input and keeps the connection open. Two client idents get back one such line after about a second, and two more a second line about 0.7 s later. Genuine SSH servers answer at once with SSH-2.0- and a binary key exchange; the original C endlessh waits 10 s per line by default, so it does not match. Works at honeydet's default -timeout 5 (about 2 s per probe). Matched: endlessh-go 2026.0730.0 (2026-11)."
+  - name: endlessh-go-ssh-tarpit-alphabet-any-interval-default-port
+    id: 2082
+    port: "2222"
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "SSH-2.0-OpenSSH_9.2p1\r\nSSH-2.0-OpenSSH_9.2p1\r"
+        output_match_type: regex
+        output: '^[ !#-\[\]-_a-}]{0,1000}$'
+        invert_match: false
+        min_response_ms: 300
+        max_response_ms: 9500
+      - input_type: string
+        input: "SSH-2.0-OpenSSH_9.2p1\r\nSSH-2.0-OpenSSH_9.2p1\r"
+        output_match_type: regex
+        output: '^[ !#-\[\]-_a-}]{0,1000}$'
+        invert_match: false
+        min_response_ms: 300
+        max_response_ms: 9500
+      - input_type: string
+        input: "SSH-2.0-OpenSSH_9.2p1\r\nSSH-2.0-OpenSSH_9.2p1\r"
+        output_match_type: regex
+        output: '^[ !#-\[\]-_a-}]{0,1000}$'
+        invert_match: false
+        min_response_ms: 300
+        max_response_ms: 9500
+      - input_type: string
+        input: "SSH-2.0-OpenSSH_9.2p1\r\nSSH-2.0-OpenSSH_9.2p1\r"
+        output_match_type: regex
+        output: '^[ !#-\[\]-_a-}]{0,1000}$'
+        invert_match: false
+        min_response_ms: 300
+        max_response_ms: 9500
+      - input_type: string
+        input: "SSH-2.0-OpenSSH_9.2p1\r\nSSH-2.0-OpenSSH_9.2p1\r"
+        output_match_type: regex
+        output: '^[ !#-\[\]-_a-}]{0,1000}$'
+        invert_match: false
+        min_response_ms: 300
+        max_response_ms: 9500
+    confidence: Medium
+    comment: "endlessh-go SSH tarpit on its default port 2222 with any -interval_ms up to about 9 s and any -line_length. Five times in a row on one connection, two client idents get back, between 0.3 and 9.5 s later, a single line drawn only from endlessh-go's alphabet (letters, digits, space and !@#$%^&*()-=_+[]{}|;:',./<>?, never a double quote, backslash, backtick or tilde; empty lines possible) and never an SSH version line or binary key exchange. The original C endlessh waits 10 s per line by default and so never matches; set to a shorter Delay it uses all 95 printable characters, so about half of its lines contain one of the four missing ones and five clean lines in a row are unlikely (about 5 per cent), which is one reason this is Medium; a line-based service that answers every input slowly with one such line would also match. honeydet must send the fifth step before -timeout runs out, so -timeout must exceed four intervals plus about a second (the default 5 is just enough at the default 1 s, about 5 s per probe; 35 or more at 8 s). Matched: endlessh-go 2026.0730.0 at -interval_ms 1000, 3000 and 8000 and -line_length 32, 64 and 100 (2026-11)."
+  - name: endlessh-go-ssh-tarpit-alphabet-any-interval-port-22
+    id: 2083
+    port: "22"
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "SSH-2.0-OpenSSH_9.2p1\r\nSSH-2.0-OpenSSH_9.2p1\r"
+        output_match_type: regex
+        output: '^[ !#-\[\]-_a-}]{0,1000}$'
+        invert_match: false
+        min_response_ms: 300
+        max_response_ms: 9500
+      - input_type: string
+        input: "SSH-2.0-OpenSSH_9.2p1\r\nSSH-2.0-OpenSSH_9.2p1\r"
+        output_match_type: regex
+        output: '^[ !#-\[\]-_a-}]{0,1000}$'
+        invert_match: false
+        min_response_ms: 300
+        max_response_ms: 9500
+      - input_type: string
+        input: "SSH-2.0-OpenSSH_9.2p1\r\nSSH-2.0-OpenSSH_9.2p1\r"
+        output_match_type: regex
+        output: '^[ !#-\[\]-_a-}]{0,1000}$'
+        invert_match: false
+        min_response_ms: 300
+        max_response_ms: 9500
+      - input_type: string
+        input: "SSH-2.0-OpenSSH_9.2p1\r\nSSH-2.0-OpenSSH_9.2p1\r"
+        output_match_type: regex
+        output: '^[ !#-\[\]-_a-}]{0,1000}$'
+        invert_match: false
+        min_response_ms: 300
+        max_response_ms: 9500
+      - input_type: string
+        input: "SSH-2.0-OpenSSH_9.2p1\r\nSSH-2.0-OpenSSH_9.2p1\r"
+        output_match_type: regex
+        output: '^[ !#-\[\]-_a-}]{0,1000}$'
+        invert_match: false
+        min_response_ms: 300
+        max_response_ms: 9500
+    confidence: Medium
+    comment: "endlessh-go SSH tarpit on port 22 with any -interval_ms up to about 9 s and any -line_length. Five times in a row on one connection, two client idents get back, between 0.3 and 9.5 s later, a single line drawn only from endlessh-go's alphabet (letters, digits, space and !@#$%^&*()-=_+[]{}|;:',./<>?, never a double quote, backslash, backtick or tilde; empty lines possible) and never an SSH version line or binary key exchange. The original C endlessh waits 10 s per line by default and so never matches; set to a shorter Delay it uses all 95 printable characters, so about half of its lines contain one of the four missing ones and five clean lines in a row are unlikely (about 5 per cent), which is one reason this is Medium; a line-based service that answers every input slowly with one such line would also match. honeydet must send the fifth step before -timeout runs out, so -timeout must exceed four intervals plus about a second (the default 5 is just enough at the default 1 s, about 5 s per probe; 35 or more at 8 s). Matched: endlessh-go 2026.0730.0 at -interval_ms 1000, 3000 and 8000 and -line_length 32, 64 and 100 (2026-11)."
+  - name: endlessh-go-prometheus-metrics-endlessh-series
+    id: 2084
+    port: "2112"
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /metrics HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r"
+        output_match_type: string
+        output: "# TYPE endlessh_client_open_count_total counter"
+        invert_match: false
+    confidence: High
+    comment: "endlessh-go Prometheus exporter (-prometheus_enabled) on its default port 2112, which listens on all addresses unless -prometheus_host is set. Once any client has connected to the tarpit, GET /metrics lists the endlessh_client_open_count_total, endlessh_client_open_count (with the ip, local_port, country, location and geohash of every trapped client), endlessh_client_trapped_time_seconds, endlessh_sent_bytes_total and endlessh_trapped_time_seconds_total series. Before the first connection the page is empty (see 2085). Genuine Go and Python applications instrumented on 2112 expose their own series plus the default go_ or python_ and process_ collectors. Matched: endlessh-go 2026.0730.0 (2026-11)."
+  - name: endlessh-go-prometheus-metrics-only-endlessh-or-empty
+    id: 2085
+    port: "2112"
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /metrics HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 200 OK\r\nContent-Type: text/plain; version=0\.0\.4[^\r\n]*(?:\r\n[^\r\n]+)*(?:\r\n\r\n(?:(?:# (?:HELP|TYPE) )?endlessh_[^\n]*(?:\n|$))*)?$'
+        invert_match: false
+    confidence: Medium
+    comment: "endlessh-go Prometheus exporter on its default port 2112, including a freshly started one that no client has reached yet: GET /metrics returns 200 in the Prometheus text format with nothing but endlessh_ series, or an empty page. endlessh-go registers its six counters in a private registry without the Go runtime and process collectors, so there are no go_ or process_ series; genuine exporters (client_golang default handler, Python prometheus_client, node_exporter) always carry those. Only while the page fits in one response of under 2 KB (Go's server switches to chunked transfer encoding above that, which splits the series), that is a fresh instance or one that has seen a few client addresses; busier instances are covered by the High signature 2084. Medium because any other exporter with an empty private registry would match the empty case. Matched: endlessh-go 2026.0730.0, fresh and with up to two client addresses (2026-11)."
