@@ -17426,3 +17426,111 @@ signatures:
         invert_match: false
     confidence: "Medium"
     comment: "Probe: POST / with no body on the optional results API. honeypot.rs answers with a status line and the text Unauthorized, with no headers and no authentication challenge. Matched: honeypot.rs 3486e7e (infokek/activemq-honeypot), 2026-11."
+  - name: livewire-honeypot-stub-livewire-js
+    id: 1970
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /livewire/livewire.js HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 .*\r\n\r\n/\*\*\n \* Livewire v[0-9.]+ .{1,8}Alpine-based reactive component framework for Laravel\n.*minified runtime excluded for edge delivery'
+        invert_match: false
+    confidence: High
+    comment: "/livewire/livewire.js is a 3.9 kB hand-written stub whose header comment reads 'Livewire v3.5.1 ... Alpine-based reactive component framework for Laravel' and 'Build: production (minified runtime excluded for edge delivery)'. Genuine Livewire 2 serves the 175 kB minified bundle at this path, and Livewire 3 and 4 in production serve livewire.min.js (this path gives Laravel's 404 page). Matched: livewire-honeypot 3390485 (2026-11)."
+  - name: livewire-honeypot-message-trap
+    id: 1971
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST /livewire/message HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nX-Livewire: true\r\nContent-Length: 45\r\nConnection: close\r\n\r\n{\"components\":[{\"snapshot\":\"{}\",\"calls\":[]}]}"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 .*\r\n\r\n\{"components": \[\{"snapshot": ".*", "effects": \{"returns": \[\], "html": "<div wire:id=\\"[0-9a-f]{12}\\"><!-- component --></div>"\}\}\]\}$'
+        invert_match: false
+    confidence: High
+    comment: "POST /livewire/message (the CVE-2025-54068 trap) answers a JSON request without CSRF token or session with 200 and a Livewire 3 style envelope serialised by Python (spaces after ':' and ','), echoing the submitted snapshot and an html effect '<div wire:id=\"<12 hex>\"><!-- component --></div>'. Genuine Livewire 3 and 4 have no such route (404) and use /livewire/update or /livewire-<hash>/update; Livewire 2 uses /livewire/message/<component> and rejects tokenless requests with 419. Matched: livewire-honeypot 3390485 (2026-11)."
+  - name: livewire-honeypot-script-tag
+    id: 1972
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 .*<script src="/livewire/livewire\.js\?id=[0-9a-f]{8}" data-csrf="[0-9a-f]{40}" data-update-uri="/livewire/message" data-navigate-once="true">'
+        invert_match: false
+    confidence: High
+    comment: "Every facade page (base template) loads Livewire with a Livewire 3 style script tag (data-csrf, data-navigate-once) but data-update-uri=/livewire/message, an endpoint name from Livewire 2, and a CSRF token of 40 hexadecimal characters. Genuine Livewire 3 production pages load livewire.min.js with data-update-uri=/livewire/update, Livewire 4 uses /livewire-<hash>/ URLs, Livewire 2 uses a different tag without data-csrf, and Laravel CSRF tokens are 40 mixed-case letters and digits. Matched: livewire-honeypot 3390485 (2026-11)."
+  - name: livewire-honeypot-python-laravel-cookies
+    id: 1973
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*\r\nx-powered-by: PHP/[0-9.]+\r\n(?:[^\r\n]*\r\n)*?set-cookie: XSRF-TOKEN="?[A-Za-z0-9+/]{80}"?; Path=/; SameSite=lax\r\n'
+        invert_match: false
+    confidence: High
+    comment: "Laravel-looking headers produced by Starlette: lower-case 'x-powered-by: PHP/8.3.12' and 'set-cookie' header names, and an XSRF-TOKEN cookie holding 80 random base64 characters (double-quoted by Python whenever it contains / or +) with no expires or Max-Age. PHP and Laravel send X-Powered-By and Set-Cookie in mixed case, and Laravel's XSRF-TOKEN and session cookies are URL-encoded encrypted payloads (eyJpdiI6...%3D) with expires and Max-Age. Matched: livewire-honeypot 3390485 (2026-11)."
+  - name: livewire-honeypot-upload-validation
+    id: 1974
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST /livewire/upload-file HTTP/1.1\r\nHost: x\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: 3\r\nConnection: close\r\n\r\na=1"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 422 .*\r\n\r\n\{"detail":\[\{"type":"missing","loc":\["body","file"\],"msg":"Field required"'
+        invert_match: false
+    confidence: High
+    comment: "POST /livewire/upload-file (the CVE-2024-47823 / CVE-2025-14894 trap) without a file field returns FastAPI's request validation error: 422 with {\"detail\":[{\"type\":\"missing\",\"loc\":[\"body\",\"file\"],\"msg\":\"Field required\"...}]}. Genuine Livewire answers a POST without session and CSRF token with 419 (Page Expired), or 404 where the route is absent. Nothing is uploaded. Matched: livewire-honeypot 3390485 (2026-11)."
+  - name: livewire-honeypot-php-shell-stub
+    id: 1975
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /wp-login.php HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*\r\nx-powered-by: PHP/[0-9.]+\r\n.*\r\n\r\n<\?php \?>$'
+        invert_match: false
+    confidence: Medium
+    comment: "The *.php catch-all answers 16 common webshell and probe names (wp-login.php, admin.php, accesson.php and others) with 200 and the literal 8-byte body '<?php ?>', which a PHP server never sends (it executes PHP rather than returning its source). A Laravel site returns 404 for these paths. Medium: the list of names lives in the code and may change. Matched: livewire-honeypot 3390485 (2026-11)."
+  - name: livewire-honeypot-404-page
+    id: 1976
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /lwhp-missing-page HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 404 Not Found\r\n.*\r\nx-powered-by: PHP/[0-9.]+\r\n.*\r\n\r\n<!DOCTYPE html><html><head><title>404</title></head><body><h1>Not Found</h1></body></html>$'
+        invert_match: false
+    confidence: Medium
+    comment: "Unknown paths return a 90-byte one-line page '<!DOCTYPE html><html><head><title>404</title></head><body><h1>Not Found</h1></body></html>' with X-Powered-By: PHP and Laravel cookies. Laravel's own 404 page is a styled 6.6 kB view titled 'Not Found' and sets no cookies on unknown routes. Matched: livewire-honeypot 3390485 (2026-11)."
+  - name: livewire-honeypot-preview-file
+    id: 1977
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /livewire/preview-file/lwhp HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*Content-Type: application/octet-stream\r\nContent-Length: 0\r\n.*x-powered-by: PHP/'
+        invert_match: false
+    confidence: Medium
+    comment: "GET /livewire/preview-file/<anything> without a signed URL returns 200 with an empty application/octet-stream body. Genuine Livewire 2 and 3 require a valid URL signature (401) and Livewire 4 has no route at this path (404). Matched: livewire-honeypot 3390485 (2026-11)."
+  - name: livewire-honeypot-head-not-found
+    id: 1978
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "HEAD / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 404 Not Found\r\n.*\r\nx-powered-by: PHP/[0-9.]+\r\n'
+        invert_match: false
+    confidence: Medium
+    comment: "HEAD / returns 404 (FastAPI GET routes do not answer HEAD; the request falls through to the catch-all) although GET / returns the home page. Laravel answers HEAD on every GET route with 200 and the same headers. Matched: livewire-honeypot 3390485 (2026-11)."
