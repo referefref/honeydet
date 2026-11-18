@@ -352,7 +352,7 @@ signatures:
         output: ""
         invert_match: false
     confidence: High
-    comment: "OpenCanary logs SNMP requests but never replies. A closed port (ICMP unreachable) does not match; a firewall that silently drops 161/udp will. Also fires on the silent port 161 of the lab AMP-Research honeypot (2026-11)."
+    comment: "OpenCanary logs SNMP requests but never replies. A closed port (ICMP unreachable) does not match; a firewall that silently drops 161/udp will. Also fires on the silent port 161 of the lab AMP-Research honeypot (2026-11). Also matches masscanned 0.2.0 (2026-11)."
   - name: AMTHoneypot
     id: 19
     port: 16992
@@ -1027,7 +1027,7 @@ signatures:
         output: '^SSH-2\.0-[^\r\n]*$'
         invert_match: false
     confidence: High
-    comment: "After the client identification, OpenCanary sends only its banner and never its KEXINIT. Genuine SSH servers send KEXINIT immediately. Run without -u/-pw (raw mode). Also matches MockSSH 2.0.0 (4cb930c, 2026-11). Also fires on sshesame v0.0.39 when credentials are supplied (2026-11)."
+    comment: "After the client identification, OpenCanary sends only its banner and never its KEXINIT. Genuine SSH servers send KEXINIT immediately. Run without -u/-pw (raw mode). Also matches MockSSH 2.0.0 (4cb930c, 2026-11). Also fires on sshesame v0.0.39 when credentials are supplied (2026-11). Also matches masscanned 0.2.0 (2026-11)."
   - name: opencanary-ssh-default-banner
     id: 59
     port: 22
@@ -18271,3 +18271,104 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: "endlessh-go Prometheus exporter on its default port 2112, including a freshly started one that no client has reached yet: GET /metrics returns 200 in the Prometheus text format with nothing but endlessh_ series, or an empty page. endlessh-go registers its six counters in a private registry without the Go runtime and process collectors, so there are no go_ or process_ series; genuine exporters (client_golang default handler, Python prometheus_client, node_exporter) always carry those. Only while the page fits in one response of under 2 KB (Go's server switches to chunked transfer encoding above that, which splits the series), that is a fresh instance or one that has seen a few client addresses; busier instances are covered by the High signature 2084. Medium because any other exporter with an empty private registry would match the empty case. Matched: endlessh-go 2026.0730.0, fresh and with up to two client addresses (2026-11)."
+  - name: masscanned-http-401-lf
+    id: 2090
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: 474554202f20485454502f312e310d0a486f73743a207777770d0a4163636570743a202a2f2a0d0a0d0a
+        output_match_type: regex
+        output: '^HTTP/1\.1 401 Unauthorized\nServer: nginx/1\.14\.2\nDate: [^\r\n]+\nContent-Type: text/html\nContent-Length: 188\nConnection: keep-alive\nWWW-Authenticate: Basic realm="Access to admin page"\n\n<html>'
+        invert_match: false
+    confidence: High
+    comment: "masscanned answers any HTTP request on any port with one fixed 401 page claiming nginx/1.14.2 (realm 'Access to admin page'), with bare LF line endings in the status line and headers; nginx always sends CRLF. Matched: masscanned 0.2.0 (master 7844fef, 2026-11)."
+  - name: masscanned-http-date-offset
+    id: 2091
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: 474554202f20485454502f312e310d0a486f73743a207777770d0a4163636570743a202a2f2a0d0a0d0a
+        output_match_type: regex
+        output: '^HTTP/1\.1 401 Unauthorized\r?\nServer: nginx/1\.14\.2\r?\nDate: [A-Z][a-z]{2}, \d{1,2} [A-Z][a-z]{2} \d{4} \d\d:\d\d:\d\d \+0000\r?\n'
+        invert_match: false
+    confidence: High
+    comment: "Date header in RFC 2822 form with a numeric +0000 offset under a Server: nginx/1.14.2 401; nginx writes HTTP dates with 'GMT' (RFC 9110 IMF-fixdate). Port 8080 because masscanned answers HTTP on every port. Matched: masscanned 0.2.0 (master 7844fef, 2026-11)."
+  - name: masscanned-http-on-tls-port
+    id: 2092
+    port: 443
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: 474554202f20485454502f312e310d0a486f73743a207777770d0a4163636570743a202a2f2a0d0a0d0a
+        output_match_type: regex
+        output: '^HTTP/1\.1 401 Unauthorized\nServer: nginx/1\.14\.2\n'
+        invert_match: false
+    confidence: High
+    comment: "A plain-text HTTP request to 443 gets the masscanned 401 page (bare LF) instead of a TLS alert or nginx's '400 The plain HTTP request was sent to HTTPS port'. Matched: masscanned 0.2.0 (master 7844fef, 2026-11)."
+  - name: masscanned-http-over-udp
+    id: 2093
+    port: 80
+    proto: udp
+    steps:
+      - input_type: hex
+        input: 474554202f20485454502f312e310d0a486f73743a207777770d0a4163636570743a202a2f2a0d0a0d0a
+        output_match_type: regex
+        output: '^HTTP/1\.1 401 Unauthorized\nServer: nginx/1\.14\.2\n'
+        invert_match: false
+    confidence: High
+    comment: "An HTTP/1.1 request sent as a single UDP datagram to port 80 is answered with an HTTP 401 page; HTTP/1.1 servers do not listen on UDP (HTTP/3 needs QUIC). UDP: run honeydet with -proto udp. Matched: masscanned 0.2.0 (master 7844fef, 2026-11)."
+  - name: masscanned-ssh-banner
+    id: 2094
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: 5353482d322e302d4f70656e5353485f392e3270310d0a
+        output_match_type: regex
+        output: '^SSH-2\.0-1$'
+        invert_match: false
+    confidence: High
+    comment: "masscanned stays silent until the client sends its SSH banner, then replies with the identification string SSH-2.0-1 and nothing else (no KEXINIT); SSH servers send their own banner first (RFC 4253) and then key exchange. Matched: masscanned 0.2.0 (master 7844fef, 2026-11)."
+  - name: masscanned-smb2-guid-echo
+    id: 2095
+    port: 445
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: 0000006afe534d4240000000000000000000010000000000000000000000000000000000fffe0000000000000000000000000000000000000000000000000000000000002400030001000000000000006d617373636e6e6564677569643230950000000000000000020210020003
+        output_match_type: hex
+        output: 41000100020201006d617373636e6e656467756964323095
+        invert_match: false
+    confidence: High
+    comment: "SMB2 NEGOTIATE with a chosen ClientGuid: masscanned returns that value as its own ServerGuid (dialect 2.0.2). A genuine SMB server returns its own server GUID. Matched: masscanned 0.2.0 (master 7844fef, 2026-11)."
+  - name: masscanned-dns-any-a
+    id: 2096
+    port: 53
+    proto: udp
+    steps:
+      - input_type: hex
+        input: 1d2c01000001000000000000076578616d706c6503636f6d0000010001
+        output_match_type: hex
+        output: 1d2c8500000100010000000007
+        invert_match: false
+      - input_type: hex
+        input: 1d2c01000001000000000000076578616d706c6503636f6d0000010001
+        output_match_type: hex
+        output: 076578616d706c6503636f6d0000010001076578616d706c6503636f6d00000100010000a8c00004
+        invert_match: false
+    confidence: High
+    comment: "Any IN/A query gets an authoritative answer (flags 0x8500, recursion not available) with the honeypot's own address, TTL 43200 and the owner name written out again instead of a compression pointer; DNS servers compress the repeated name. UDP: run honeydet with -proto udp. Matched: masscanned 0.2.0 (master 7844fef, 2026-11)."
+  - name: masscanned-stun-mapped-only
+    id: 2097
+    port: 3478
+    proto: udp
+    steps:
+      - input_type: hex
+        input: 000100002112a4426d61737363616e6e65640001
+        output_match_type: hex
+        output: 0101000c2112a4426d61737363616e6e6564000100010008
+        invert_match: false
+    confidence: Medium
+    comment: "RFC 5389 Binding Request answered with a 12-byte success response holding only MAPPED-ADDRESS; RFC 5389 servers such as coturn answer with XOR-MAPPED-ADDRESS (and usually SOFTWARE and FINGERPRINT). UDP: run honeydet with -proto udp. Matched: masscanned 0.2.0 (master 7844fef, 2026-11)."
