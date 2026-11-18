@@ -17714,3 +17714,57 @@ signatures:
         invert_match: false
     confidence: High
     comment: "Three connections: a plain HTTP request to the TLS port gets Go net/http's 'Client sent an HTTP request to an HTTPS server.' (so the server is written in Go, never Confluence's Java stack or an Apache/nginx proxy), a TLS 1.3 X25519 key share gets a HelloRetryRequest, and an AES-128-GCM-only TLS 1.2 offer is refused. Go servers with default settings (Caddy, Traefik) pass the last two checks. Matched: confluencePot commit 847f249 built with Go 1.27.4 (2026-11)."
+  - name: minecraft-log4j-honeypot-status-template
+    id: 2020
+    port: 25565
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "0800f205017863dd010100"
+        output_match_type: regex
+        output: '\{"version":\{"name":"1\.16\.5","protocol":754\},"players":\{"max":50,"online":0,"sample":\[\]\},"description":\{"text":"A Minecraft Server"\}\}$'
+        invert_match: false
+    confidence: High
+    comment: "Server List Ping (handshake protocol 754, next state 1, then Status Request). The honeypot answers with a fixed JSON document in Go struct order (version, players, description), max 50 players, an empty sample array and a description object, all hard-coded in minecraft/status.go. Vanilla Java servers send description first, version last, omit sample when nobody is online and default to 20 players; recent releases also send a plain description string and enforcesSecureChat. Matched: minecraft-log4j-honeypot 88918dc (2026-11)."
+  - name: minecraft-log4j-honeypot-version-mirror
+    id: 2021
+    port: 25565
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "07002f017863dd010100"
+        output_match_type: regex
+        output: '"version":\{"name":"1\.8\.9","protocol":47\},"players":\{"max":50,'
+        invert_match: false
+      - input_type: hex
+        input: "0800d402017863dd010100"
+        reconnect: true
+        output_match_type: regex
+        output: '"version":\{"name":"1\.12\.2","protocol":340\},"players":\{"max":50,'
+        invert_match: false
+    confidence: High
+    comment: "Two status requests on separate connections, claiming protocol 47 (Minecraft 1.8.9) and then 340 (1.12.2). The honeypot looks the client's protocol up in a table and reports that version back, so it is 1.8.9 to one client and 1.12.2 to the next (minecraft/status.go GetVersionName). A genuine server reports its own version name whatever the client sends. Matched: minecraft-log4j-honeypot 88918dc (2026-11)."
+  - name: minecraft-log4j-honeypot-login-any-version
+    id: 2022
+    port: 25565
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "0800d402017863dd020c000a4c616256697369746f72"
+        output_match_type: hex
+        output: "2300000000010000000000320764656661756c7401"
+        invert_match: false
+    confidence: High
+    comment: "Login as LabVisitor with protocol 340 (Minecraft 1.12.2). The honeypot accepts any client version and answers in that version's format: Login Success without compression, then a 1.12.2 Join Game with entity id 0, creative mode, peaceful difficulty, 50 players and level type 'default' (minecraft/server.go joinGame). A genuine server accepts only its own protocol (vanilla 1.16.5 and 26.3 disconnect a 1.12.2 client as outdated) and a vanilla 1.12.2 server defaults to survival, easy difficulty and 20 players. Matched: minecraft-log4j-honeypot 88918dc (2026-11)."
+  - name: minecraft-log4j-honeypot-login-flat-world
+    id: 2023
+    port: 25565
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "0800f205017863dd020c000a4c616256697369746f72"
+        output_match_type: hex
+        output: "24000000000001010105776f726c64"
+        invert_match: false
+    confidence: High
+    comment: "Login as LabVisitor with protocol 754 (1.16.5). With no encryption and no compression the honeypot sends Login Success and then a Join Game packet with entity id 0, creative mode, a single world named 'world' and a flat level (minecraft/server.go joinGame). A vanilla 1.16.5 server in online mode answers with an Encryption Request; in offline mode it sends Set Compression first and a Join Game with three namespaced worlds (minecraft:overworld, minecraft:the_nether, minecraft:the_end) and survival mode; newer servers refuse the old protocol. Matched: minecraft-log4j-honeypot 88918dc (2026-11)."
