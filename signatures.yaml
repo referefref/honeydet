@@ -17840,3 +17840,39 @@ signatures:
         invert_match: false
     confidence: High
     comment: 'The grafana-stack compose file publishes Loki 2.9.3 on port 3100 without authentication (auth_enabled: false), and Promtail ships attacks.json under the label job=cisco-asa-honeypot. Asking Loki for the values of the job label returns cisco-asa-honeypot, and the honeypot''s own event log can be read the same way. Loki lists labels seen in the last six hours by default, so the label appears once the honeypot has recorded an event in that window (any /+CSCOE+/ request, as 2031 sends). A genuine ASA runs no Loki; a genuine Loki holds its owner''s streams. High: the job label is hard-coded in promtail-config.yaml. Matched: mizuna-honeypot CiscoASA_Honeypot 38574f9 (2026-11).'
+  - name: mizuna-fortinet-honeypot-remote-login-500
+    id: 2040
+    port: 10443
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /remote/login?lang=en HTTP/1.1\r\nHost: fortigate\r\nUser-Agent: Mozilla/5.0\r\nAccept: */*\r\nConnection: close\r\n\r\n"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 500 INTERNAL SERVER ERROR\r\nServer: Werkzeug/[0-9.]+ Python/[0-9.]+\r\n.*Content-Type: text/html; charset=utf-8\r\nContent-Length: 21\r\n.*\r\n\r\nInternal Server Error$'
+        invert_match: false
+    confidence: High
+    comment: "Requesting the FortiOS SSL-VPN sign-in page returns HTTP 500 from Flask's development server (Server: Werkzeug ... Python ...), with the 21-byte plain body 'Internal Server Error' labelled text/html. The honeypot's single catch-all route gives this answer for every path and method. A genuine FortiGate serves its SSL-VPN sign-in page over HTTPS from its own web server, and a genuine Flask application raising an error returns Werkzeug's HTML error page, not this bare string. High: the response is hard-coded in honeypot.py. Matched: mizuna-honeypot Fortinet_Honeypot 3ec3b3e (2026-11)."
+  - name: mizuna-fortinet-honeypot-options-500
+    id: 2041
+    port: 10443
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "OPTIONS / HTTP/1.1\r\nHost: fortigate\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r\n"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 500 INTERNAL SERVER ERROR\r\nServer: Werkzeug/[0-9.]+ Python/[0-9.]+\r\n.*Content-Length: 21\r\n.*\r\n\r\nInternal Server Error$'
+        invert_match: false
+    confidence: High
+    comment: "An OPTIONS request to / also returns the 500 'Internal Server Error' answer: the route lists OPTIONS among its methods, so Flask passes it to the honeypot function instead of answering it automatically. A genuine Flask application answers OPTIONS itself with 200 and an Allow header listing the route's methods. High: hard-coded in honeypot.py. Matched: mizuna-honeypot Fortinet_Honeypot 3ec3b3e (2026-11)."
+  - name: mizuna-fortinet-honeypot-loki-container-labels
+    id: 2042
+    port: 3100
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /loki/api/v1/label/container/values HTTP/1.1\r\nHost: loki\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r\n"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\n.*\{"status":"success","data":\[[^\]]*"fortinet-honeypot"'
+        invert_match: false
+    confidence: High
+    comment: "The stack publishes Loki 2.9.2 on port 3100 without authentication (auth_enabled: false), and Promtail labels every Docker container's log stream with its container name. Asking Loki for the values of the container label lists the compose stack's fixed name fortinet-honeypot (with grafana, loki and promtail); anyone can read the honeypot's own event log the same way. A genuine FortiGate runs no Loki, and a genuine Loki holds its owner's streams. High: the container name is hard-coded in docker-compose.yml. Needs at least one honeypot log line within Loki's label window (startup lines or any request, for example 2040). Matched: mizuna-honeypot Fortinet_Honeypot 3ec3b3e (2026-11)."
