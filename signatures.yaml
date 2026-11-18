@@ -18078,3 +18078,46 @@ signatures:
         invert_match: false
     confidence: High
     comment: "ECHO without an argument is answered '-ERR unknown command 'ECHO'', while ECHO hd on the same connection is echoed. Genuine Redis and Valkey answer \"-ERR wrong number of arguments for 'echo' command\"; NoSQLpot, which also says 'unknown command', does not implement ECHO at all. Matched: RediTrap 8b5d789 (2026-11)."
+  - name: http-proxy-abuse-honeypot-no-user-agent-500
+    id: 2070
+    port: 3128
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 500 Internal Server Error\r\nContent-Type: text/plain\r\nDate: [^\r\n]+\r\nConnection: close\r\n(?:Transfer-Encoding: chunked\r\n)?\r\n(?:[0-9a-f]+\r\n)?(?:\x1b\[31m)?Internal Server Error(?:\x1b\[39m)?(?:\r\n0)?$'
+        invert_match: false
+    confidence: High
+    comment: "A request without a User-Agent header makes honeypot.js fail while logging it (it colours the missing value), so its catch block answers '500 Internal Server Error' with only Content-Type: text/plain, Date and Connection headers and the body 'Internal Server Error', wrapped in ANSI colour codes when the honeypot was started from a terminal. Genuine proxies answer an origin-form request with their own error page (Squid 400 ERR_INVALID_URL, tinyproxy 500 'Unable to connect' HTML, Privoxy 400, 3proxy 502) and never depend on the User-Agent. Matched: HTTP-Proxy-Abuse-Honeypot 64243eb (2026-11)."
+  - name: http-proxy-abuse-honeypot-proxy-request-no-user-agent-500
+    id: 2071
+    port: 3128
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET http://127.0.0.1:1/ HTTP/1.1\r\nHost: 127.0.0.1:1\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 500 Internal Server Error\r\nContent-Type: text/plain\r\nDate: [^\r\n]+\r\nConnection: close\r\n(?:Transfer-Encoding: chunked\r\n)?\r\n(?:[0-9a-f]+\r\n)?(?:\x1b\[31m)?Internal Server Error(?:\x1b\[39m)?(?:\r\n0)?$'
+        invert_match: false
+    confidence: High
+    comment: "A proxy request (absolute URL, here to a closed port on the proxy's own loopback) without a User-Agent is not forwarded: the honeypot's logging fails first and the request gets the bare text/plain '500 Internal Server Error' from its catch block. Genuine proxies forward it regardless of the User-Agent and report the refused connection with their own page (Squid 503 ERR_CONNECT_FAIL, tinyproxy 500 'Unable to connect', Privoxy 500 'Internal Privoxy Error', the Node proxy package a 500 without Content-Type) or close (3proxy). Matched: HTTP-Proxy-Abuse-Honeypot 64243eb (2026-11)."
+  - name: http-proxy-abuse-honeypot-connect-dropped-and-no-ua-500
+    id: 2072
+    port: 3128
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "CONNECT 127.0.0.1:1 HTTP/1.1\r\nHost: 127.0.0.1:1\r\nUser-Agent: Mozilla/5.0\r\n\r"
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+        max_response_ms: 1000
+      - input_type: string
+        input: "GET http://127.0.0.1:1/ HTTP/1.0\r\n\r"
+        reconnect: true
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 500 Internal Server Error\r\nContent-Type: text/plain\r\nDate: [^\r\n]+\r\nConnection: close\r\n\r\n(?:\x1b\[31m)?Internal Server Error(?:\x1b\[39m)?$'
+        invert_match: false
+    confidence: High
+    comment: "The honeypot has no CONNECT handler, so Node closes a CONNECT request at once without a reply (a minimal Node forward proxy does the same), and on a new connection an HTTP/1.0 proxy request without a User-Agent gets the honeypot's bare text/plain 500 answered as HTTP/1.1 without chunking. Genuine proxies answer CONNECT (Squid 503 or 403, tinyproxy and the Node proxy package 500, Privoxy 500, 3proxy 200 Connection established). Matched: HTTP-Proxy-Abuse-Honeypot 64243eb (2026-11)."
