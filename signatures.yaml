@@ -17368,3 +17368,61 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: "The certificate alone, whatever TLS stack serves it (for example a reverse proxy placed in front of the honeypot with the same key pair): a TLS 1.2 ClientHello returns the README's example certificate with the distinguished name C=XX, ST=XX, L=Default City, O=XX, OU=XX, CN=XX, emailAddress=XX (the answers shown in the README, with the Red Hat style default locality). A genuine GlobalProtect portal presents a certificate for its own host name. Medium: the certificate is the operator's choice. Matched: CVE-2024-3400-pot 4114de4 (2026-11)."
+  - name: "honeypot.rs: one fixed ActiveMQ 5.15.6 WireFormatInfo, then the connection closes"
+    id: 1960
+    port: 61616
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "0000013b014163746976654d510000000c01000001290000000c00115463704e6f44656c6179456e61626c65640101001253697a6550726566697844697361626c656401000009436163686553697a650500000400000c50726f76696465724e616d650900084163746976654d510011537461636b5472616365456e61626c65640101000f506c6174666f726d44657461696c730900044a617661000c4361636865456e61626c6564010100145469676874456e636f64696e67456e61626c65640101000c4d61784672616d6553697a6506000000000640000000154d6178496e61637469766974794475726174696f6e06000000000000753000204d6178496e61637469766974794475726174696f6e496e6974616c44656c6179060000000000002710000f50726f766964657256657273696f6e090006352e31352e36"
+        output_match_type: regex
+        output: '(?s)ActiveMQ.*ProviderVersion\t\x00\x065\.15\.6$'
+        invert_match: false
+      - input_type: hex
+        input: ""
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+    confidence: "High"
+    comment: "Probe: a genuine OpenWire WireFormatInfo (the bytes an ActiveMQ 5.15.6 broker sends), then a read on the same connection. honeypot.rs answers with a stored WireFormatInfo naming ActiveMQ 5.15.6 and nothing else, then closes the connection. A genuine broker has already sent its own WireFormatInfo on connect, follows the client's with a BrokerInfo (broker id, tcp:// URL, broker name) and keeps the connection open. Matched: honeypot.rs 3486e7e (infokek/activemq-honeypot), 2026-11."
+  - name: "honeypot.rs: any first bytes get the ActiveMQ 5.15.6 WireFormatInfo, then the connection closes"
+    id: 1961
+    port: 61616
+    proto: tcp
+    steps:
+      - input_type: string
+        input: ""
+        output_match_type: regex
+        output: '(?s)^\x00\x00\x01;\x01ActiveMQ.*ProviderVersion\t\x00\x065\.15\.6$'
+        invert_match: false
+      - input_type: hex
+        input: ""
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+    confidence: "High"
+    comment: "Probe: a single newline, which is not an OpenWire frame, then a read on the same connection. honeypot.rs replies to whatever arrives first with its stored ActiveMQ 5.15.6 WireFormatInfo and closes the connection at once. Matched: honeypot.rs 3486e7e (infokek/activemq-honeypot), 2026-11."
+  - name: "honeypot.rs results API: bare 405 with no headers"
+    id: 1962
+    port: 9123
+    proto: tcp
+    steps:
+      - input_type: GET
+        input: "GET"
+        output_match_type: regex
+        output: '^HTTP/1\.1 405 Method Not Allowed\r\n\r\nMethod Not Allowed$'
+        invert_match: false
+    confidence: "Medium"
+    comment: "Probe: GET / on the optional results API (off by default; port 9123 in the example configuration). honeypot.rs answers every non-POST request with a status line and the text Method Not Allowed, with no headers at all; genuine web servers send at least a Content-Length or Date header. Matched: honeypot.rs 3486e7e (infokek/activemq-honeypot), 2026-11."
+  - name: "honeypot.rs results API: bare 401 for a POST without valid credentials"
+    id: 1963
+    port: 9123
+    proto: tcp
+    steps:
+      - input_type: POST
+        input: "POST"
+        output_match_type: regex
+        output: '^HTTP/1\.1 401 Unauthorized\r\n\r\nUnauthorized$'
+        invert_match: false
+    confidence: "Medium"
+    comment: "Probe: POST / with no body on the optional results API. honeypot.rs answers with a status line and the text Unauthorized, with no headers and no authentication challenge. Matched: honeypot.rs 3486e7e (infokek/activemq-honeypot), 2026-11."
