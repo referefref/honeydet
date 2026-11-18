@@ -17534,3 +17534,39 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: "HEAD / returns 404 (FastAPI GET routes do not answer HEAD; the request falls through to the catch-all) although GET / returns the home page. Laravel answers HEAD on every GET route with 200 and the same headers. Matched: livewire-honeypot 3390485 (2026-11)."
+  - name: mizuna-ivanti-honeypot-generate-ssl-certificate
+    id: 1980
+    port: 443
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "1603010068010000640303000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f00000a002fc02fc030009c003501000031000a00080006001d00170018000b00020100000d000e000c0401050106010403050308040023000000170000ff01000100"
+        output_match_type: regex
+        output: '(?s)^\x16\x03[\x01-\x03].*\x06\x03U\x04\x06\x13\x02US1\x130\x11\x06\x03U\x04\x08\x0c\x0aCalifornia1\x150\x13\x06\x03U\x04\x07\x0c\x0cSanFrancisco1\x0f0\x0d\x06\x03U\x04\x0a\x0c\x06Ivanti1\x0b0\x09\x06\x03U\x04\x0b\x0c\x02IT1\x1d0\x1b\x06\x03U\x04\x03\x0c\x14connect\.ivanti\.local.*\x06\x03U\x04\x06\x13\x02US1\x130\x11\x06\x03U\x04\x08\x0c\x0aCalifornia1\x150\x13\x06\x03U\x04\x07\x0c\x0cSanFrancisco1\x0f0\x0d\x06\x03U\x04\x0a\x0c\x06Ivanti1\x0b0\x09\x06\x03U\x04\x0b\x0c\x02IT1\x1d0\x1b\x06\x03U\x04\x03\x0c\x14connect\.ivanti\.local'
+        invert_match: false
+    confidence: Medium
+    comment: "A TLS 1.2 ClientHello returns the self-signed certificate that the project's nginx/generate-ssl.sh creates, issuer and subject C=US, ST=California, L=SanFrancisco, O=Ivanti, OU=IT, CN=connect.ivanti.local, whatever TLS stack serves it. A genuine Ivanti Connect Secure appliance presents the certificate its administrator installed for the gateway's own host name; a .local name with an Ivanti organisation and this locality is the honeypot's placeholder. Medium: the certificate is the operator's choice (the README recommends replacing it). Matched: mizuna-honeypot Ivanti_Honeypot 4c72ace (2026-11)."
+  - name: mizuna-ivanti-honeypot-nginx-h2-generate-ssl-certificate
+    id: 1981
+    port: 443
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "160301007a010000760303000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f00000a002fc02fc030009c003501000043000a00080006001d00170018000b00020100000d000e000c0401050106010403050308040023000000170000ff010001000010000e000c02683208687474702f312e31"
+        output_match_type: regex
+        output: '(?s)^\x16\x03\x03.{2}\x02.*\x00\x10\x00\x05\x00\x03\x02h2.*\x16\x03\x03.*\x06\x03U\x04\x06\x13\x02US1\x130\x11\x06\x03U\x04\x08\x0c\x0aCalifornia1\x150\x13\x06\x03U\x04\x07\x0c\x0cSanFrancisco1\x0f0\x0d\x06\x03U\x04\x0a\x0c\x06Ivanti1\x0b0\x09\x06\x03U\x04\x0b\x0c\x02IT1\x1d0\x1b\x06\x03U\x04\x03\x0c\x14connect\.ivanti\.local.*\x06\x03U\x04\x06\x13\x02US1\x130\x11\x06\x03U\x04\x08\x0c\x0aCalifornia1\x150\x13\x06\x03U\x04\x07\x0c\x0cSanFrancisco1\x0f0\x0d\x06\x03U\x04\x0a\x0c\x06Ivanti1\x0b0\x09\x06\x03U\x04\x0b\x0c\x02IT1\x1d0\x1b\x06\x03U\x04\x03\x0c\x14connect\.ivanti\.local'
+        invert_match: false
+    confidence: Medium
+    comment: "A TLS 1.2 ClientHello offering ALPN h2 and http/1.1: the stack's nginx (listen 443 ssl http2) selects h2 in its ServerHello and then sends the generate-ssl.sh certificate (issuer and subject C=US, ST=California, L=SanFrancisco, O=Ivanti, OU=IT, CN=connect.ivanti.local). Narrower than 1980: it needs the project's HTTP/2 nginx front end as well as the certificate. Medium: the certificate is the operator's choice. Matched: mizuna-honeypot Ivanti_Honeypot 4c72ace (2026-11)."
+  - name: mizuna-ivanti-honeypot-loki-container-labels
+    id: 1982
+    port: 3100
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /loki/api/v1/label/container/values HTTP/1.1\r\nHost: loki\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r\n"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\n.*\{"status":"success","data":\[[^\]]*"ivanti-(app|nginx|loki|promtail|grafana)"'
+        invert_match: false
+    confidence: High
+    comment: "The stack publishes Loki 2.9.3 on port 3100 without authentication (auth_enabled: false), and Promtail labels every stream with the Docker container name. Asking Loki for the values of the container label lists the compose stack's fixed container names (ivanti-app, ivanti-nginx, ivanti-loki, ivanti-promtail, ivanti-grafana); anyone can read the honeypot's own detection log the same way. A genuine Ivanti Connect Secure appliance runs no Loki; a genuine Loki holds its owner's streams. High: the container names are hard-coded in docker-compose.yml. Matched: mizuna-honeypot Ivanti_Honeypot 4c72ace (2026-11)."
