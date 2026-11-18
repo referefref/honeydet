@@ -18919,3 +18919,87 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: "A random path that cannot exist is answered '200 OK' with an empty body (Content-Length: 0) by the Werkzeug server: WhisperPot's catch-all route logs every other path and method and returns nothing. Flask applications answer unknown paths '404 NOT FOUND'. Medium: the signature relies on the Werkzeug development server, which an operator could replace. Matched: WhisperPot 38465e3 (2026-11)."
+  - name: b0gus-ssh-random-version-banner
+    id: 2160
+    port: 2222
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^SSH-2\.0-(OpenSSH|libssh|libssh2|billsSSHP|PuTTY|paramiko|FlowSSH|check_ssh|dropbear)_\d\.\d\.\d (Debian-1[01]|Ubuntu-(18|20|22)\.04|Fedora-3[456]|Alpine-3\.1[456]|FreeBSD-1[23]|OpenWrt-2[12]\.0[23]|Windows-1[01]|macOS-10\.15|Raspbian-5\+deb8u4)\s*$'
+        invert_match: false
+    confidence: High
+    comment: "b0gus builds a new SSH version string for every connection from a fixed list: one of nine client or server products, a random single-digit x.y.z version and a random OS label (for example SSH-2.0-billsSSHP_8.8.1 FreeBSD-12 or SSH-2.0-paramiko_5.8.9 Windows-10). Genuine servers send a fixed banner in their own format (OpenSSH_9.2p1 Debian-2+deb12u3, dropbear_2022.83), never a client product name or a three-part single-digit version followed by an OS label. Matched: b0gus 0.3.0 (2026-11)."
+  - name: b0gus-smtp-dated-greeting-unsolicited-ehlo
+    id: 2161
+    port: 2555
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^220 (Mon|Tues|Wednes|Thurs|Fri|Satur|Sun)day, \d\d-[A-Z][a-z]{2}-\d\d \d\d:\d\d:\d\d [A-Z]{2,5}\r\n250 '
+        invert_match: false
+    confidence: High
+    comment: "The SMTP greeting is 220 followed only by an RFC 850 date (Wednesday, 18-Nov-26 15:52:53 UTC), with no host name, and the server then sends its EHLO reply (250 Hello and the extension list, in random order) before the client has said anything. RFC 5321 greetings start with the server's domain, and replies never arrive unrequested. Matched: b0gus 0.3.0 (2026-11)."
+  - name: b0gus-smtp-line-editor-prompt
+    id: 2162
+    port: 2555
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '(?s)^220 .*\r\n\r\x1b\[00m> \x1b\[00m'
+        invert_match: false
+    confidence: High
+    comment: "b0gus drives SMTP through its terminal line editor, so after the greeting the server sends an ANSI-coloured '> ' prompt (CR ESC[00m> ESC[00m) and echoes each typed character with cursor-control sequences. No SMTP server sends terminal escape codes. Matched: b0gus 0.3.0 (2026-11)."
+  - name: b0gus-smtp-help-text
+    id: 2163
+    port: 2555
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "HELP\r"
+        output_match_type: regex
+        output: '214 noop    - test current connection\r\n214 rset    - reset current connection\r\n214 quit    - quit'
+        invert_match: false
+    confidence: High
+    comment: "HELP is answered with b0gus's own three-line list (noop, rset and quit with short descriptions) and a 214 Help line. Postfix answers HELP with 502, Exim and Sendmail with their own help texts. Matched: b0gus 0.3.0 (2026-11)."
+  - name: b0gus-http-json-catch-all
+    id: 2164
+    port: 8808
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /b0gus-probe-{{rand}}/index.html HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\n.*\r\n\r\n\{"meth":"GET","msg":"ok"\}$'
+        invert_match: false
+    confidence: High
+    comment: "Every path that is not robots.txt or sitemap.xml returns 200 with the JSON body {\"meth\":\"<method>\",\"msg\":\"ok\"} and no Server header, so a random non-existent path succeeds. Web servers return 404 for it. Matched: b0gus 0.3.0 (2026-11)."
+  - name: b0gus-http-sitemap-log-data-php
+    id: 2165
+    port: 8808
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /sitemap.xml HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\n.*<urlset xmlns="http://www\.sitemaps\.org/schemas/sitemap/0\.9">\s*<url><loc>http://x/log/data\.php</loc></url>\s*</urlset>'
+        invert_match: false
+    confidence: High
+    comment: "The built-in sitemap lists a single URL, /log/data.php, on whatever host name the client sent, next to a robots.txt that disallows /admin, /login, /comment and /favicon.ico. The pairing is fixed in the code. Matched: b0gus 0.3.0 (2026-11)."
+  - name: b0gus-dns-version-bind-acme-txt
+    id: 2166
+    port: 2053
+    proto: udp
+    steps:
+      - input_type: hex
+        input: "b0a6010000010000000000000776657273696f6e0462696e640000100003"
+        output_match_type: regex
+        output: '(?s)\x07version\x04bind\x00\x00\x10\x00\x03.*_acme-challenge\.version\.bind\.'
+        invert_match: false
+    confidence: High
+    comment: "A CHAOS-class TXT query for version.bind is answered (as class IN, with the AA and AD flags set) with the text _acme-challenge.version.bind. (b0gus answers every TXT query with _acme-challenge. plus the queried name, every A or AAAA query with a random address, and sets the AD flag). BIND returns its version or REFUSED, and resolvers that hide the version do not invent an ACME challenge. Matched: b0gus 0.3.0 (2026-11)."
