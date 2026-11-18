@@ -5610,7 +5610,7 @@ signatures:
         output: '^[\x20-\x7e\t\r\n]+$'
         invert_match: false
     confidence: Medium
-    comment: "Port 23 stays silent until the client types, then returns only printable text (default 'login: ') and closes, with no Telnet option negotiation. Genuine telnetd and Telnet honeypots such as OpenCanary open with IAC (0xff) DO/WILL negotiation before any prompt. Medium: a minimal Telnet service without negotiation would also match. Matched: honeypot-ddos f288125 (2026-11)."
+    comment: "Port 23 stays silent until the client types, then returns only printable text (default 'login: ') and closes, with no Telnet option negotiation. Genuine telnetd and Telnet honeypots such as OpenCanary open with IAC (0xff) DO/WILL negotiation before any prompt. Medium: a minimal Telnet service without negotiation would also match. Matched: honeypot-ddos f288125 (2026-11). Also matches Shmakov Honeypot 1c3d5f3 (2026-11)."
   - name: honeypot-ddos-pentbox-smb-text-reply
     id: 715
     port: 445
@@ -5955,7 +5955,7 @@ signatures:
         output: ""
         invert_match: false
     confidence: Medium
-    comment: "DSHP configured with an SMTP greeting sends the 220 banner and closes, so EHLO gets no answer. A genuine mail server answers EHLO with 250 (or rejects it with a 4xx/5xx code) on the same connection. Medium: it applies only to DSHP configured with an SMTP banner on port 25. Matched: dshp 238aad4 (Docker Hub image) and dshp-ng 42cf488 (2026-11)."
+    comment: "DSHP configured with an SMTP greeting sends the 220 banner and closes, so EHLO gets no answer. A genuine mail server answers EHLO with 250 (or rejects it with a 4xx/5xx code) on the same connection. Medium: it applies only to DSHP configured with an SMTP banner on port 25. Matched: dshp 238aad4 (Docker Hub image) and dshp-ng 42cf488 (2026-11). Also matches Shmakov Honeypot 1c3d5f3 (2026-11)."
   - name: dshp-ssh-banner-then-close
     id: 744
     port: 22
@@ -6989,7 +6989,7 @@ signatures:
         output: ""
         invert_match: false
     confidence: High
-    comment: "The IMAP service greets with '* OK IMAP4rev1 Service Ready' (no capability list or host name) and closes the connection without a reply when the client sends its first command, CAPABILITY included. Genuine IMAP servers always answer CAPABILITY. Matched: Honeygrove 7dd9291 (v0.6.0) (2026-11)."
+    comment: "The IMAP service greets with '* OK IMAP4rev1 Service Ready' (no capability list or host name) and closes the connection without a reply when the client sends its first command, CAPABILITY included. Genuine IMAP servers always answer CAPABILITY. Matched: Honeygrove 7dd9291 (v0.6.0) (2026-11). Also matches Shmakov Honeypot 1c3d5f3 (2026-11)."
   - name: honeygrove-s7-snap7-server-identity
     id: 819
     port: 102
@@ -18388,7 +18388,7 @@ signatures:
         output: ""
         invert_match: false
     confidence: High
-    comment: "A server that greets with RFB 003.008 closes the connection at once, without a byte, when the client answers RFB 003.003 (FictusVNC refuses RFB 3.3 and older in server.go). RFB 3.3 is the baseline every VNC client and server supports, and genuine servers answer it with a security type: TigerVNC, x11vnc and TightVNC send 00000001 (no password) or 00000002 plus a random challenge. No login is attempted. Matched: FictusVNC 2.1.0 (0e4878e) (2026-11)."
+    comment: "A server that greets with RFB 003.008 closes the connection at once, without a byte, when the client answers RFB 003.003 (FictusVNC refuses RFB 3.3 and older in server.go). RFB 3.3 is the baseline every VNC client and server supports, and genuine servers answer it with a security type: TigerVNC, x11vnc and TightVNC send 00000001 (no password) or 00000002 plus a random challenge. No login is attempted. Matched: FictusVNC 2.1.0 (0e4878e) (2026-11). Also matches Shmakov Honeypot 1c3d5f3 (2026-11)."
   - name: fictusvnc-malformed-version-disconnected
     id: 2101
     port: 5900
@@ -18575,3 +18575,133 @@ signatures:
         invert_match: false
     confidence: High
     comment: "A legacy X.224 Connection Request, then a TLS 1.2 ClientHello: the Connection Confirm selects TLS and the server completes a TLS ServerHello, so the TLS layer really is started for a client that never asked for it. Genuine servers answer a legacy request with the 11-byte confirm (Windows, xrdp) or a negotiation failure (FreeRDP) and never start TLS. Matched: rdphoneypot 2.0.1 (e5cf78e, default TLS mode) (2026-11)."
+  - name: shmakov-honeypot-dashboard
+    id: 2130
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\n.*<title>Honeypot Dashboard</title>.*<script src="/static/app\.js"></script>'
+        invert_match: false
+    confidence: High
+    comment: "The web port serves the tool's own public attack dashboard: title 'Honeypot Dashboard', loading /static/app.js, which draws the live feed (from /events and /api/recent), map and statistics. The page is compiled into the binary (include_str!), so it is the same on every installation unless the source is edited before the build. Matched: Shmakov Honeypot 1c3d5f3 (0.1.0, Dec 2025) built with Rust 1.99.0 (2026-11)."
+  - name: shmakov-honeypot-api-hours-error
+    id: 2131
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /api/stats?hours=1 HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 400 Bad Request\r\n.*\r\n\r\n\{"error":"Invalid hours value ''1''\. Allowed: 24, 168, 720, 8760"\}$'
+        invert_match: false
+    confidence: High
+    comment: "The statistics API rejects any time range other than 24, 168, 720 or 8760 hours with a fixed JSON error naming the allowed values. Works even when the dashboard page has been re-skinned, because the API is in the Rust code. Genuine web servers return 404 for /api/stats. Matched: Shmakov Honeypot 1c3d5f3 (0.1.0, Dec 2025) built with Rust 1.99.0 (2026-11)."
+  - name: shmakov-honeypot-request-echo
+    id: 2132
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /{{rand}}.php HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\n.*<title>Request Received</title>.*<h1>Request Echo</h1>.*<pre>/{{rand}}\.php</pre>.*Redirecting to homepage in 3 seconds'
+        invert_match: false
+    confidence: High
+    comment: "Every unknown path (here a random one) answers 200 OK with a 'Request Echo' page that repeats the visitor's address, method, path and headers and redirects to the home page after three seconds. A genuine server returns 404 for a random path. Matched: Shmakov Honeypot 1c3d5f3 (0.1.0, Dec 2025) built with Rust 1.99.0 (2026-11)."
+  - name: shmakov-honeypot-russh-0.54-banner
+    id: 2133
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ''
+        output_match_type: regex
+        output: '^SSH-2\.0-russh_0\.54\.5$'
+        invert_match: false
+    confidence: Medium
+    comment: "The SSH service identifies itself as the russh 0.54.5 library's default 'SSH-2.0-russh_0.54.5'. The ssh_banner setting in config.toml (an OpenSSH 8.9p1 Ubuntu string) is read but never applied. russh is a general-purpose library also used by genuine products (Warpgate 0.30 sends SSH-2.0-russh_0.65.0), hence Medium. Genuine OpenSSH sends SSH-2.0-OpenSSH_<version> <distribution suffix>. Matched: Shmakov Honeypot 1c3d5f3 (0.1.0, Dec 2025) built with Rust 1.99.0 (2026-11)."
+  - name: shmakov-honeypot-ssh-fake-uname
+    id: 2134
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "uname -a"
+        output_match_type: regex
+        output: '^Linux honeypot 5\.15\.0-generic #1 SMP PREEMPT_DYNAMIC x86_64 GNU/Linux$'
+        invert_match: false
+    confidence: High
+    comment: "Needs -username/-password (any values: every password is accepted). The fake shell answers 'uname -a' with a fixed line naming the host 'honeypot' and a kernel string without a build number or date; 'hostname' answers 'honeypot'. A genuine server rejects a random password; a real kernel prints its build date. Without credentials the step goes over raw TCP and cannot match. Matched: Shmakov Honeypot 1c3d5f3 (0.1.0, Dec 2025) built with Rust 1.99.0 (2026-11)."
+  - name: shmakov-honeypot-mysql-truncated-greeting
+    id: 2135
+    port: 3306
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ''
+        output_match_type: regex
+        output: '(?s)^J\x00\x00\x00\x0a[0-9][^\x00]{0,60}\x00$'
+        invert_match: false
+    confidence: High
+    comment: "The MySQL port sends a handshake header copied from a genuine MySQL 5.7 greeting (length 74, sequence 0, protocol 10) followed only by the version string (5.7.42-0ubuntu0.18.04.1 by default, configurable) and its terminator: 29 bytes instead of the 78 the header announces, with no thread id, salt, capability flags or authentication plugin. A genuine MySQL or MariaDB greeting always carries them. Matched: Shmakov Honeypot 1c3d5f3 (0.1.0, Dec 2025) built with Rust 1.99.0 (2026-11)."
+  - name: shmakov-honeypot-redis-unsolicited-error
+    id: 2136
+    port: 6379
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ''
+        output_match_type: regex
+        output: '^-ERR unknown command$'
+        invert_match: false
+    confidence: High
+    comment: "The Redis port sends '-ERR unknown command' as soon as a client connects, before any command, and then closes after the first command without answering it. Genuine Redis is silent until a command arrives (and answers PING with +PONG). Matched: Shmakov Honeypot 1c3d5f3 (0.1.0, Dec 2025) built with Rust 1.99.0 (2026-11)."
+  - name: shmakov-honeypot-memcached-unsolicited-version
+    id: 2137
+    port: 11211
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ''
+        output_match_type: regex
+        output: '^VERSION 1\.6\.9$'
+        invert_match: false
+    confidence: High
+    comment: "The memcached port announces 'VERSION 1.6.9' on connect without being asked and closes after the first command. Genuine memcached never speaks first; it sends VERSION only in reply to the version command. Matched: Shmakov Honeypot 1c3d5f3 (0.1.0, Dec 2025) built with Rust 1.99.0 (2026-11)."
+  - name: shmakov-honeypot-ftp-any-login
+    id: 2138
+    port: 21
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ''
+        output_match_type: regex
+        output: '^220 '
+        invert_match: false
+      - input_type: string
+        input: "USER {{rand}}\r"
+        output_match_type: regex
+        output: '^331 Password required$'
+        invert_match: false
+      - input_type: string
+        input: "PASS {{rand}}\r"
+        output_match_type: regex
+        output: '^230 Login successful$'
+        invert_match: false
+    confidence: High
+    comment: "Any random user name and password are accepted: '331 Password required' then '230 Login successful' (without the full stop vsftpd uses), after which the server closes the connection. Genuine servers refuse an unknown account with 530 (vsftpd 3.0.3: '331 Please specify the password.' then '530 Login incorrect.'). The 220 banner ('220 FTP Server ready.') is configurable, so the signature does not depend on it. Matched: Shmakov Honeypot 1c3d5f3 (0.1.0, Dec 2025) built with Rust 1.99.0 (2026-11)."
+  - name: shmakov-honeypot-telnet-no-negotiation
+    id: 2139
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ''
+        output_match_type: regex
+        output: '^Ubuntu 20\.04 LTS\r\nlogin:$'
+        invert_match: false
+    confidence: High
+    comment: "The Telnet service prints 'Ubuntu 20.04 LTS' and 'login: ' straight away, with no Telnet option negotiation (no IAC bytes) and without the host name that Ubuntu's /etc/issue.net and login prompt include. Genuine telnetd (inetutils, netkit) opens with IAC DO/WILL negotiation. Matched: Shmakov Honeypot 1c3d5f3 (0.1.0, Dec 2025) built with Rust 1.99.0 (2026-11)."
