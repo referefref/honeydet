@@ -8367,7 +8367,7 @@ signatures:
         output: "0201010202fff8020102"
         invert_match: false
     confidence: High
-    comment: "A legacy X.224 Connection Request (standard RDP security) followed by an MCS Connect Initial recorded from xfreerdp 2.11 gets an MCS Connect Response whose domain parameters encode maxMCSPDUsize 65528 as the two-byte BER INTEGER 02 02 ff f8. PyRDP re-encodes the backend's Connect Response with its own BER writer; Windows (MS-RDPBCGR 4.1.4), xrdp and FreeRDP encode it as 02 03 00 ff f8. Seen in front of xrdp and FreeRDP backends alike. Needs a backend that accepts standard RDP security. Matched: PyRDP 2.1.1.dev0 b610809 (2026-11). Also matches RDPy 1.3.2 (as rdpy-nx 1b7ca3d), whose protocol code PyRDP derives from (2026-11)."
+    comment: "A legacy X.224 Connection Request (standard RDP security) followed by an MCS Connect Initial recorded from xfreerdp 2.11 gets an MCS Connect Response whose domain parameters encode maxMCSPDUsize 65528 as the two-byte BER INTEGER 02 02 ff f8. PyRDP re-encodes the backend's Connect Response with its own BER writer; Windows (MS-RDPBCGR 4.1.4), xrdp and FreeRDP encode it as 02 03 00 ff f8. Seen in front of xrdp and FreeRDP backends alike. Needs a backend that accepts standard RDP security. Matched: PyRDP 2.1.1.dev0 b610809 (2026-11). Also matches RDPy 1.3.2 (as rdpy-nx 1b7ca3d), whose protocol code PyRDP derives from (2026-11). Also matches RDPHoneypot (bontchev) 2.0.1 with no_ssl (2026-11)."
   - name: pyrdp-gcc-connectpdu-real-length
     id: 941
     port: 3389
@@ -8384,7 +8384,7 @@ signatures:
         output: "000500147c000181"
         invert_match: false
     confidence: Medium
-    comment: "In the same MCS Connect Response the PER-encoded GCC ConnectData carries the real length of the Conference Create Response as a two-byte length (0x81 ..), because PyRDP rebuilds the GCC layer around the modified server data. Windows sends the fixed value 0x2a in this field (MS-RDPBCGR 4.1.4: the length is ignored by the client), as do xrdp and FreeRDP; Glutton sends 0x3a. Medium because the field is ignored by clients and other implementations may write the real length; with a backend that sends no server certificate the length fits in one byte and this signature does not match. Needs a backend that accepts standard RDP security. Matched: PyRDP 2.1.1.dev0 b610809 (2026-11). Also matches RDPy 1.3.2 (as rdpy-nx 1b7ca3d), whose protocol code PyRDP derives from (2026-11)."
+    comment: "In the same MCS Connect Response the PER-encoded GCC ConnectData carries the real length of the Conference Create Response as a two-byte length (0x81 ..), because PyRDP rebuilds the GCC layer around the modified server data. Windows sends the fixed value 0x2a in this field (MS-RDPBCGR 4.1.4: the length is ignored by the client), as do xrdp and FreeRDP; Glutton sends 0x3a. Medium because the field is ignored by clients and other implementations may write the real length; with a backend that sends no server certificate the length fits in one byte and this signature does not match. Needs a backend that accepts standard RDP security. Matched: PyRDP 2.1.1.dev0 b610809 (2026-11). Also matches RDPy 1.3.2 (as rdpy-nx 1b7ca3d), whose protocol code PyRDP derives from (2026-11). Also matches RDPHoneypot (bontchev) 2.0.1 with no_ssl (2026-11)."
   - name: pyrdp-tls-confirm-without-flags
     id: 942
     port: 3389
@@ -8555,7 +8555,7 @@ signatures:
         output: "030000130ed000000000000200080000000000"
         invert_match: false
     confidence: High
-    comment: "A legacy X.224 Connection Request without an RDP Negotiation Request gets a 19-byte Connection Confirm that carries an RDP Negotiation Response (flags 0, PROTOCOL_RDP) with source reference 0. MS-RDPBCGR 2.2.1.2 sends the negotiation structure only when the client sent one: Windows and xrdp answer a legacy request with the 11-byte confirm 0300000b06d00000123400 (Glutton likewise, with reference 0); FreeRDP sends a negotiation response with flags 0x03. RDPy builds its confirm the same way for every request, in standard RDP security and in TLS mode. Matched: rdpy 1.3.2 (cef16a9) as rdpy-nx 1b7ca3d (2026-11)."
+    comment: "A legacy X.224 Connection Request without an RDP Negotiation Request gets a 19-byte Connection Confirm that carries an RDP Negotiation Response (flags 0, PROTOCOL_RDP) with source reference 0. MS-RDPBCGR 2.2.1.2 sends the negotiation structure only when the client sent one: Windows and xrdp answer a legacy request with the 11-byte confirm 0300000b06d00000123400 (Glutton likewise, with reference 0); FreeRDP sends a negotiation response with flags 0x03. RDPy builds its confirm the same way for every request, in standard RDP security and in TLS mode. Matched: rdpy 1.3.2 (cef16a9) as rdpy-nx 1b7ca3d (2026-11). Also matches RDPHoneypot (bontchev) 2.0.1 with no_ssl (2026-11)."
   - name: rdpy-credssp-request-gets-standard-security
     id: 961
     port: 3389
@@ -8567,7 +8567,7 @@ signatures:
         output: "030000130ed000000000000200080000000000"
         invert_match: false
     confidence: Medium
-    comment: "A Connection Request that offers only CredSSP (requestedProtocols 0x2) gets a Connection Confirm selecting standard RDP security with source reference 0 and response flags 0. RDPy has no CredSSP server and keeps only the TLS bit of the request, in its default mode and with -k/-c. xrdp answers with reference 0x1234 and flags 0x01, FreeRDP with flags 0x03; Glutton selects CredSSP. Medium because a minimal RDP stack that ignores CredSSP could build the same confirm. Matched: rdpy 1.3.2 (cef16a9) as rdpy-nx 1b7ca3d, standard RDP security and TLS modes (2026-11)."
+    comment: "A Connection Request that offers only CredSSP (requestedProtocols 0x2) gets a Connection Confirm selecting standard RDP security with source reference 0 and response flags 0. RDPy has no CredSSP server and keeps only the TLS bit of the request, in its default mode and with -k/-c. xrdp answers with reference 0x1234 and flags 0x01, FreeRDP with flags 0x03; Glutton selects CredSSP. Medium because a minimal RDP stack that ignores CredSSP could build the same confirm. Matched: rdpy 1.3.2 (cef16a9) as rdpy-nx 1b7ca3d, standard RDP security and TLS modes (2026-11). Also matches RDPHoneypot (bontchev) 2.0.1 with no_ssl (2026-11)."
   - name: rdpy-gcc-core-block-then-security-block
     id: 962
     port: 3389
@@ -8584,7 +8584,7 @@ signatures:
         output: "010c1000040008000000000000000000020cec00"
         invert_match: false
     confidence: High
-    comment: "A legacy X.224 Connection Request (standard RDP security) followed by an MCS Connect Initial recorded from xfreerdp 2.11 gets an MCS Connect Response whose GCC server data starts with a 16-byte core block (version 0x00080004, clientRequestedProtocols 0, earlyCapabilityFlags 0) followed directly by a 236-byte security block (RDPy's proprietary certificate with a 512-bit key). Windows sends the core block, then the network block, then the security block (MS-RDPBCGR 4.1.4), as does xrdp; PyRDP's core block is 12 bytes, and Glutton's identical core block is followed by a 12-byte security block without a certificate. The security block that follows carries a new 512-bit RSA key on every connection. Matched: rdpy 1.3.2 (cef16a9) as rdpy-nx 1b7ca3d, standard RDP security and TLS modes (2026-11)."
+    comment: "A legacy X.224 Connection Request (standard RDP security) followed by an MCS Connect Initial recorded from xfreerdp 2.11 gets an MCS Connect Response whose GCC server data starts with a 16-byte core block (version 0x00080004, clientRequestedProtocols 0, earlyCapabilityFlags 0) followed directly by a 236-byte security block (RDPy's proprietary certificate with a 512-bit key). Windows sends the core block, then the network block, then the security block (MS-RDPBCGR 4.1.4), as does xrdp; PyRDP's core block is 12 bytes, and Glutton's identical core block is followed by a 12-byte security block without a certificate. The security block that follows carries a new 512-bit RSA key on every connection. Matched: rdpy 1.3.2 (cef16a9) as rdpy-nx 1b7ca3d, standard RDP security and TLS modes (2026-11). Also matches RDPHoneypot (bontchev) 2.0.1 with no_ssl (2026-11)."
   - name: doloshoneypot-apache-error-page-claiming-jetty
     id: 970
     port: 8181
@@ -18510,3 +18510,68 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: "ServerInit announces a 500 x 220 framebuffer (the size of the bundled images/default.png) with 32 bits per pixel, depth 24, true colour and shifts 16/8/0. A real desktop has a screen resolution such as 1024 x 768 or 1920 x 1080. Medium: holds only while the sample image is served. Matched: FictusVNC 2.1.0 (0e4878e) (2026-11)."
+  - name: rdphoneypot-bontchev-legacy-request-gets-tls
+    id: 2120
+    port: 3389
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "0300000b06e00000000000"
+        output_match_type: hex
+        output: "030000130ed000000000000200080001000000"
+        invert_match: false
+    confidence: High
+    comment: "A legacy X.224 Connection Request without an RDP Negotiation Request gets a 19-byte Connection Confirm carrying an RDP Negotiation Response that selects TLS (PROTOCOL_SSL), with source reference 0 and flags 0. MS-RDPBCGR 2.2.1.2 sends a negotiation structure only if the client sent one, and a client that sent none cannot do TLS: Windows and xrdp answer with the 11-byte legacy confirm, FreeRDP with a negotiation failure (or standard security when it allows it). RDPy and RDPHoneypot with no_ssl answer with the same confirm selecting standard security (0). Matched: rdphoneypot 2.0.1 (e5cf78e, default TLS mode) (2026-11)."
+  - name: rdphoneypot-bontchev-rdp-only-request-gets-tls
+    id: 2121
+    port: 3389
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "030000130ee000000000000100080000000000"
+        output_match_type: hex
+        output: "030000130ed000000000000200080001000000"
+        invert_match: false
+    confidence: High
+    comment: "A Connection Request that offers only standard RDP security (requestedProtocols 0) gets a Connection Confirm that selects TLS anyway, with source reference 0 and flags 0. A server that requires TLS answers with a negotiation failure (SSL_REQUIRED_BY_SERVER, MS-RDPBCGR 2.2.1.2.2), as FreeRDP does; xrdp selects standard security (reference 0x1234, flags 0x01). Other honeypots that select an unoffered protocol answer differently (qeeqbox honeypots: reference 0x1234; Beelzebub: CredSSP). Matched: rdphoneypot 2.0.1 (e5cf78e, default TLS mode) (2026-11)."
+  - name: rdphoneypot-bontchev-hybrid-ex-only-gets-tls
+    id: 2122
+    port: 3389
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "030000130ee000000000000100080008000000"
+        output_match_type: hex
+        output: "030000130ed000000000000200080001000000"
+        invert_match: false
+    confidence: Medium
+    comment: "A Connection Request that offers only PROTOCOL_HYBRID_EX (0x8, without the TLS or CredSSP bits) gets a Connection Confirm selecting TLS with reference 0 and flags 0: RDPHoneypot falls back to TLS for every request that does not include CredSSP. xrdp selects standard security, FreeRDP answers with a negotiation failure. Medium because the request is unusual and a server could legitimately choose TLS. Matched: rdphoneypot 2.0.1 (e5cf78e, default TLS mode) (2026-11)."
+  - name: rdphoneypot-bontchev-credssp-confirm-without-flags
+    id: 2123
+    port: 3389
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "030000130ee000000000000100080003000000"
+        output_match_type: hex
+        output: "030000130ed000000000000200080002000000"
+        invert_match: false
+    confidence: Medium
+    comment: "A Connection Request offering TLS and CredSSP (0x3, what most clients send) gets a Connection Confirm selecting CredSSP with source reference 0 and response flags 0. Windows Server 2012 and later set negotiation response flags (EXTENDED_CLIENT_DATA_SUPPORTED and others), FreeRDP with NLA sets flags 0x03, xrdp selects TLS (reference 0x1234, flags 0x01), PyRDP uses reference 0x1234 and Glutton selects TLS. Medium because older Windows versions send no flags. Matched: rdphoneypot 2.0.1 (e5cf78e, default TLS mode) (2026-11)."
+  - name: rdphoneypot-bontchev-legacy-client-tls-handshake
+    id: 2124
+    port: 3389
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "0300000b06e00000000000"
+        output_match_type: hex
+        output: "030000130ed000000000000200080001000000"
+        invert_match: false
+      - input_type: hex
+        input: "1603010076010000720303000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f000018c030c02fc028c027c014c013009d009c003d003c0035002f01000031000a00080006001d00170018000b00020100000d001600140401050106010201040305030603080408050806ff01000100"
+        output_match_type: regex
+        output: '(?s)^\x16\x03\x03..\x02'
+        invert_match: false
+    confidence: High
+    comment: "A legacy X.224 Connection Request, then a TLS 1.2 ClientHello: the Connection Confirm selects TLS and the server completes a TLS ServerHello, so the TLS layer really is started for a client that never asked for it. Genuine servers answer a legacy request with the 11-byte confirm (Windows, xrdp) or a negotiation failure (FreeRDP) and never start TLS. Matched: rdphoneypot 2.0.1 (e5cf78e, default TLS mode) (2026-11)."
