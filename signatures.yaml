@@ -5598,7 +5598,7 @@ signatures:
         output: '^(?:[^S]|S[^S]|SS[^H]|SSH[^-])[\x20-\x7e\t\r\n]*$'
         invert_match: false
     confidence: Medium
-    comment: "Port 22 answers an SSH client identification with plain text that is not an SSH identification string: the PenTBox honeypot's configured false message (for example 'Access denied'). Covers operator-chosen messages that do not imitate an SSH banner. Matched: honeypot-ddos f288125 (2026-11). With a honeydet timeout over 10 seconds it also matches the endlessh tarpit on port 22 (commit dfe44eb, 2026-11). Also matches endlessh-go 2026.0730.0 (2026-11). Also matches sshcont 744d506 (2026-11)."
+    comment: "Port 22 answers an SSH client identification with plain text that is not an SSH identification string: the PenTBox honeypot's configured false message (for example 'Access denied'). Covers operator-chosen messages that do not imitate an SSH banner. Matched: honeypot-ddos f288125 (2026-11). With a honeydet timeout over 10 seconds it also matches the endlessh tarpit on port 22 (commit dfe44eb, 2026-11). Also matches endlessh-go 2026.0730.0 (2026-11). Also matches sshcont 744d506 (2026-11). Also matches the bagel 1.0.0 SSH tarpit (2026-11)."
   - name: honeypot-ddos-pentbox-telnet-no-negotiation
     id: 714
     port: 23
@@ -19003,3 +19003,108 @@ signatures:
         invert_match: false
     confidence: High
     comment: "A CHAOS-class TXT query for version.bind is answered (as class IN, with the AA and AD flags set) with the text _acme-challenge.version.bind. (b0gus answers every TXT query with _acme-challenge. plus the queried name, every A or AAAA query with a random address, and sets the AD flag). BIND returns its version or REFUSED, and resolvers that hide the version do not invent an ACME challenge. Matched: b0gus 0.3.0 (2026-11)."
+  - name: bagel-proxy-via-header
+    id: 2170
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] \d{3} [^\r\n]*\r\n(?:[^\r\n]+\r\n)*via: bagel/[0-9.]+\r\n'
+        invert_match: false
+    confidence: High
+    comment: "Every response bagel proxies from its backend carries a lower-case 'via: bagel/0.1' header, set in the proxy code whatever the backend, the host or the configuration, so the page itself can be the genuine application. Genuine web servers send no Via header; reverse proxies that add one name themselves (Caddy sends 'Via: 1.1 Caddy'), and nginx, Apache and Traefik add none. Matched: bagel 1.0.0 (2026-11)."
+  - name: bagel-missing-host-invalid-request-authority
+    id: 2171
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 400 Bad Request\r\ncontent-type: text/plain; charset=utf-8\r\n(?:[^\r\n]+\r\n)*content-length: 26\r\n(?:[^\r\n]+\r\n)*\r\ninvalid request authority$'
+        invert_match: false
+    confidence: High
+    comment: "An HTTP/1.1 request without a Host header is refused by bagel itself, before any backend or rule is consulted, with a 400 whose plain-text body is 'invalid request authority' (lower-case hyper headers). nginx and Apache answer with their own HTML 400 page; Caddy and Traefik with the reason '400 Bad Request: missing required Host header'. Matched: bagel 1.0.0 (2026-11)."
+  - name: bagel-http10-without-host-refused
+    id: 2172
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.0\r\nUser-Agent: Mozilla/5.0\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 400 Bad Request\r\ncontent-type: text/plain; charset=utf-8\r\n(?:[^\r\n]+\r\n)*\r\ninvalid request authority$'
+        invert_match: false
+    confidence: High
+    comment: "HTTP/1.0 does not require a Host header and genuine servers answer a Host-less HTTP/1.0 request normally (nginx, Apache, Caddy and Traefik all return the default site with 200). bagel needs a request authority for every request and refuses it with 400 'invalid request authority'. Matched: bagel 1.0.0 (2026-11)."
+  - name: bagel-merged-vary-header
+    id: 2173
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /hd-{{rand}} HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] \d{3} [^\r\n]*\r\n(?:[^\r\n]+\r\n)*vary: (?:[^\r\n]*, )?Cookie, Accept, Accept-Encoding, Accept-Language, User-Agent\r\n'
+        invert_match: false
+    confidence: High
+    comment: "bagel appends the five request fields it varies on (Cookie, Accept, Accept-Encoding, Accept-Language, User-Agent, in that order) to the Vary header of every response it evaluates, proxied pages, backend error pages and its own deception pages alike, and sends the header in lower case. Genuine servers and the nginx, Caddy and Traefik proxies send no such Vary header on a static page or a 404. Independent of 2170, so it still matches if something in front of bagel removes the Via header. Matched: bagel 1.0.0 (2026-11)."
+  - name: bagel-smear-env-deception-page
+    id: 2174
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /.env HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\nserver: [^\r\n]+\r\ndate: [^\r\n]+\r\ncontent-type: text/plain; charset=utf-8\r\nlast-modified: [^\r\n]+\r\netag: "[0-9a-f]+-2c0"\r\naccept-ranges: bytes\r\ncontent-length: 704\r\nvary: [^\r\n]*User-Agent\r\n(?:[^\r\n]+\r\n)*\r\nAPP_ENV=production\nAPP_DEBUG=false\nAPP_KEY=base64:'
+        invert_match: false
+    confidence: Medium
+    comment: "With the starter rule that smears /.env, bagel answers with a generated Laravel-style .env file of exactly 704 bytes (fixed-length fake secrets, an ETag ending in -2c0), paid out in pieces of 64 to 1400 bytes with pauses of 1 to 15 s, under a lower-case 'server:' header that copies nginx (nginx/1.24.0 by default) and without the Via header of the proxied pages; the probe reads the headers and the first piece. A genuine nginx sends 'Server:' in title case and, if a .env file is exposed at all, a real one. Medium: depends on the operator's rules (the starter configuration and README smear /.env). Note: in an enforcing deployment this request also counts as an offence and can get the scanning address banned, so run it last. Matched: bagel 1.0.0 (2026-11)."
+  - name: bagel-ssh-tarpit-immediate-random-line
+    id: 2175
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^(?:[ -/:-RT-~][ -~]{0,31}|S(?:[ -RT-~][ -~]{0,30})?|SS(?:[ -GI-~][ -~]{0,29})?|SSH(?:[ -,.-~][ -~]{0,28})?|[0-9](?:[ -/:-~][ -~]{0,30})?|[0-9]{2}(?:[ -/:-~][ -~]{0,29})?|[0-9]{3}(?:[!-,.-~][ -~]{0,28})?)$'
+        invert_match: false
+        max_response_ms: 700
+    confidence: Medium
+    comment: "bagel's SSH tarpit endpoint sends its first line the moment a connection is accepted: 1 to 32 random printable ASCII characters ending in a bare LF, never starting with SSH-, then one more such line every 1 to 15 seconds for up to 10 minutes. The pattern excludes SSH- identification lines and FTP- or SMTP-style numeric greetings ('220 ...'). A genuine SSH server's first line is its SSH-2.0- identification; endlessh waits 10 s and endlessh-go 1 s before their first line, so neither answers within 700 ms. Only reaches clients outside bagel's whitelist, which by default also covers the private ranges 10/8, 172.16/12 and 192.168/16 (connections from there are closed at once). Medium: any service on port 22 that greets with one short printable non-SSH line would match. Matched: bagel 1.0.0 (2026-11)."
+  - name: bagel-h2c-prior-knowledge-hyper-settings
+    id: 2176
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "505249202a20485454502f322e300d0a0d0a534d0d0a0d0a000000040000000000"
+        output_match_type: hex
+        output: "0000180400000000000003000000c8000400100000000500004000000600004000"
+        invert_match: false
+    confidence: Medium
+    comment: "On its plain-HTTP port bagel accepts HTTP/2 with prior knowledge (h2c) and answers the connection preface with a 24-byte SETTINGS frame: MAX_CONCURRENT_STREAMS 200, INITIAL_WINDOW_SIZE 1048576, MAX_FRAME_SIZE 16384 and MAX_HEADER_LIST_SIZE 16384, the hyper server's settings. nginx and Apache answer the preface on port 80 with an HTTP/1.1 400 page; Caddy and Traefik accept h2c but send Go's different SETTINGS frame. Medium: other hyper-based servers that enable h2c with the same settings would match. Matched: bagel 1.0.0 (2026-11)."
+  - name: bagel-ssh-tarpit-immediate-then-paced-lines
+    id: 2177
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^(?:[ -/:-RT-~][ -~]{0,31}|S(?:[ -RT-~][ -~]{0,30})?|SS(?:[ -GI-~][ -~]{0,29})?|SSH(?:[ -,.-~][ -~]{0,28})?|[0-9](?:[ -/:-~][ -~]{0,30})?|[0-9]{2}(?:[ -/:-~][ -~]{0,29})?|[0-9]{3}(?:[!-,.-~][ -~]{0,28})?)$'
+        invert_match: false
+        max_response_ms: 700
+      - input_type: string
+        input: "SSH-2.0-OpenSSH_9.6
+"
+        output_match_type: regex
+        output: '^(?:[ -/:-RT-~][ -~]{0,31}|S(?:[ -RT-~][ -~]{0,30})?|SS(?:[ -GI-~][ -~]{0,29})?|SSH(?:[ -,.-~][ -~]{0,28})?|[0-9](?:[ -/:-~][ -~]{0,30})?|[0-9]{2}(?:[ -/:-~][ -~]{0,29})?|[0-9]{3}(?:[!-,.-~][ -~]{0,28})?)$'
+        invert_match: false
+        min_response_ms: 500
+    confidence: High
+    comment: "Stronger form of 2175 for scans that can wait: the first random line arrives at once, the client's SSH identification is ignored, and the next random printable line (never SSH-) follows only after bagel's pause of 1 to 15 seconds on the still-open connection. A genuine SSH server answers the identification at once with a binary key exchange, line-based services reply at once, and endlessh and endlessh-go send nothing within the first 700 ms. Needs honeydet -timeout 16 or more (at the default 5 the second line usually arrives too late and the signature does not match). Matched: bagel 1.0.0 (2026-11)."
