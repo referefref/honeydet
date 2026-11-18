@@ -17768,3 +17768,75 @@ signatures:
         invert_match: false
     confidence: High
     comment: "Login as LabVisitor with protocol 754 (1.16.5). With no encryption and no compression the honeypot sends Login Success and then a Join Game packet with entity id 0, creative mode, a single world named 'world' and a flat level (minecraft/server.go joinGame). A vanilla 1.16.5 server in online mode answers with an Encryption Request; in offline mode it sends Set Compression first and a Join Game with three namespaced worlds (minecraft:overworld, minecraft:the_nether, minecraft:the_end) and survival mode; newer servers refuse the old protocol. Matched: minecraft-log4j-honeypot 88918dc (2026-11)."
+  - name: mizuna-ciscoasa-honeypot-health-json
+    id: 2030
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /health HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 [^\r\n]*\r\n.*\{"honeypot":"Cisco ASA/FTD Emulator","status":"running","target_cves":\["CVE-2025-20333"'
+        invert_match: false
+    confidence: High
+    comment: 'GET /health returns a JSON status document that names the product ({"honeypot":"Cisco ASA/FTD Emulator","status":"running"}) and lists its three target CVEs (CVE-2025-20333, CVE-2025-20362, CVE-2025-20363) with a timestamp. A genuine Cisco ASA or FTD has no /health page. High: hard-coded in honeypot.py (health route, lines 255-263). Matched: mizuna-honeypot CiscoASA_Honeypot 38574f9 (2026-11).'
+  - name: mizuna-ciscoasa-honeypot-cscoe-basic-auth-stub
+    id: 2031
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /+CSCOE+/logon.html HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 401 [^\r\n]*\r\n(?:[^\r\n]+\r\n)*?Server: Cisco ASA\r\n(?:[^\r\n]+\r\n)*?WWW-Authenticate: Basic realm="SSL VPN Service"\r\n.*<title>SSL VPN Service</title></head><body><h1>Cisco Systems, Inc\.</h1>'
+        invert_match: false
+    confidence: High
+    comment: 'Any path containing /+CSCOE+/ or /+CSCOU+/, including the standard WebVPN logon page /+CSCOE+/logon.html, returns 401 with ''Server: Cisco ASA'', a Basic authentication challenge for realm "SSL VPN Service" and a 212-byte page (title SSL VPN Service, heading Cisco Systems, Inc., bare username and password fields). A genuine ASA serves its full WebVPN logon page (forms, scripts and style sheets) with 200 and does not ask for HTTP Basic authentication there. High: hard-coded in honeypot.py (lines 196-207). Matched: mizuna-honeypot CiscoASA_Honeypot 38574f9 (2026-11).'
+  - name: mizuna-ciscoasa-honeypot-xml-not-found
+    id: 2032
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 404 [^\r\n]*\r\n(?:[^\r\n]+\r\n)*?Server: Cisco-ASA\r\n.*\r\n\r\n<\?xml version="1\.0" encoding="UTF-8"\?><error><message>Not Found</message></error>$'
+        invert_match: false
+    confidence: High
+    comment: 'Every path outside /+CSCOE+/, /+CSCOU+/, /health and /admin/dashboard, the root page included, answers 404 with ''Server: Cisco-ASA'' and the 81-byte body <?xml version="1.0" encoding="UTF-8"?><error><message>Not Found</message></error> sent as text/html, for any method. A genuine ASA redirects / to its WebVPN logon page (/+CSCOE+/logon.html) and sends no such XML error. High: hard-coded in honeypot.py (lines 209-215). Matched: mizuna-honeypot CiscoASA_Honeypot 38574f9 (2026-11).'
+  - name: mizuna-ciscoasa-honeypot-werkzeug-and-cisco-server-headers
+    id: 2033
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /favicon.ico HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] [0-9]{3} [^\r\n]*\r\nServer: Werkzeug/[^\r\n]*\r\n(?:[^\r\n]+\r\n)*?Server: Cisco[ -]ASA\r\n'
+        invert_match: false
+    confidence: Medium
+    comment: 'Run as documented (python honeypot.py under systemd), the honeypot is served by Flask''s development server, which with current Werkzeug sends its own ''Server: Werkzeug/x Python/y'' header first and the application''s ''Server: Cisco-ASA'' (or ''Cisco ASA'') second, so answers carry two Server headers. A genuine ASA does not run Werkzeug. Medium: a different WSGI server or a reverse proxy in front changes the headers. Matched: mizuna-honeypot CiscoASA_Honeypot 38574f9 (2026-11).'
+  - name: mizuna-ciscoasa-honeypot-open-admin-dashboard
+    id: 2034
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /admin/dashboard HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 [^\r\n]*\r\n(?:[^\r\n]+\r\n)*?Content-Type: application/json\r\n.*\r\n\r\n\{"(?:cve_distribution|message)":.*"total_attacks":[0-9]+'
+        invert_match: false
+    confidence: High
+    comment: 'GET /admin/dashboard, without authentication, returns the honeypot''s statistics as JSON: total_attacks, cve_distribution, top_attackers (source addresses) and the ten most recent recorded events, or {"message":"No attacks recorded yet","total_attacks":0} on a fresh install. A genuine ASA has no such page. High: hard-coded in honeypot.py (lines 217-253). Matched: mizuna-honeypot CiscoASA_Honeypot 38574f9 (2026-11).'
+  - name: mizuna-ciscoasa-honeypot-loki-job-label
+    id: 2035
+    port: 3100
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /loki/api/v1/label/job/values HTTP/1.1\r\nHost: loki\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\n.*\{"status":"success","data":\[[^\]]*"cisco-asa-honeypot"'
+        invert_match: false
+    confidence: High
+    comment: 'The grafana-stack compose file publishes Loki 2.9.3 on port 3100 without authentication (auth_enabled: false), and Promtail ships attacks.json under the label job=cisco-asa-honeypot. Asking Loki for the values of the job label returns cisco-asa-honeypot, and the honeypot''s own event log can be read the same way. Loki lists labels seen in the last six hours by default, so the label appears once the honeypot has recorded an event in that window (any /+CSCOE+/ request, as 2031 sends). A genuine ASA runs no Loki; a genuine Loki holds its owner''s streams. High: the job label is hard-coded in promtail-config.yaml. Matched: mizuna-honeypot CiscoASA_Honeypot 38574f9 (2026-11).'
