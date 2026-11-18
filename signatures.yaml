@@ -17594,3 +17594,63 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: "The certificate alone, whatever TLS stack serves it (for example a reverse proxy placed in front of the honeypot with the same key pair): a TLS 1.2 ClientHello returns a self-signed certificate whose issuer and subject are both exactly CN=sharepoint.local, the README's example (openssl req -x509 ... -subj /CN=sharepoint.local). A genuine SharePoint server presents a certificate for its own host name, and an internal sharepoint.local certificate is normally issued by an enterprise CA with a different issuer. Medium: the certificate is the operator's choice. Matched: ToolShell-Honeypot e304971 (2026-11)."
+  - name: wsus-decoy-catch-all-soap-ok
+    id: 2000
+    port: 8530
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /hd-{{rand}}.aspx HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\nServer: nginx[^\r]*\r\n.*Content-Type: text/xml\r\n.*\r\n\r\n<soap:Envelope xmlns:soap=.http://schemas\.xmlsoap\.org/soap/envelope/.><soap:Body><GetStatusResponse>OK</GetStatusResponse></soap:Body></soap:Envelope>$'
+        invert_match: false
+    confidence: High
+    comment: "A request for a random page that cannot exist answers 200 OK from nginx with the decoy's fixed SOAP envelope '<GetStatusResponse>OK</GetStatusResponse>' (the catch-all location / in the repository's nginx.conf), as does every other path and method outside the two capture locations. GetStatusResponse is not a WSUS operation; a genuine WSUS server runs on IIS and answers an unknown path with 404. Matched: WSUS CVE-2025-59287 decoy cf17c31 (2026-11)."
+  - name: wsus-decoy-capture-subpath-flask-404
+    id: 2001
+    port: 8530
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /ReportWebService/ReportWebService.asmx/hd-{{rand}} HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 404 NOT FOUND\r\nServer: nginx[^\r]*\r\n.*<title>404 Not Found</title>\n<h1>Not Found</h1>'
+        invert_match: false
+      - input_type: string
+        input: "GET /hd-{{rand}}.aspx HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        reconnect: true
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\nServer: nginx[^\r]*\r\n.*Content-Type: text/xml'
+        invert_match: false
+    confidence: High
+    comment: "Two requests on new connections. A path below the decoy's capture endpoint ReportWebService.asmx is passed by nginx to the Flask capture service, which has no such route: 404 with Werkzeug's upper-case reason phrase 'NOT FOUND' and Flask's 'Not Found' page behind a Server: nginx header; yet a random page anywhere else answers 200 OK with text/xml. Independent of the canned SOAP text. IIS sends '404 Not Found' with an IIS or ASP.NET page and answers unknown paths with 404; a generic Flask application behind nginx answers both requests with 404. Matched: WSUS CVE-2025-59287 decoy cf17c31 (2026-11)."
+  - name: wsus-decoy-capture-put-flask-405
+    id: 2002
+    port: 8530
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "PUT /ReportWebService/ReportWebService.asmx HTTP/1.1\r\nHost: x\r\nContent-Length: 0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 405 METHOD NOT ALLOWED\r\nServer: nginx[^\r]*\r\n.*Allow: (?:(?:OPTIONS|POST|HEAD|GET)(?:, )?){4}\r\n.*<title>405 Method Not Allowed</title>'
+        invert_match: false
+      - input_type: string
+        input: "DELETE /hd-{{rand}} HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        reconnect: true
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\nServer: nginx[^\r]*\r\n.*Content-Type: text/xml'
+        invert_match: false
+    confidence: Medium
+    comment: "PUT to the capture endpoint ReportWebService.asmx returns Werkzeug's '405 METHOD NOT ALLOWED' with an Allow header listing exactly OPTIONS, POST, HEAD and GET (the Flask route's methods, in an order that changes when the service restarts) behind a Server: nginx header, while DELETE of a random path elsewhere is accepted with 200 OK and text/xml. An ASP.NET web service on IIS answers with IIS status texts; generic nginx and nginx-fronted Flask applications do not answer DELETE of an unknown path with 200. Medium: depends on the Flask route and nginx catch-all staying as shipped. Matched: WSUS CVE-2025-59287 decoy cf17c31 (2026-11)."
+  - name: wsus-decoy-client-asmx-wsdl-not-wsdl
+    id: 2003
+    port: 8530
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /ClientWebService/Client.asmx?wsdl HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\nServer: nginx[^\r]*\r\n.*Content-Type: text/xml\r\n.*\r\n\r\n<soap:Envelope [^>]*><soap:Body><GetStatusResponse>'
+        invert_match: false
+    confidence: High
+    comment: "A request for the service description of the WSUS client web service (ClientWebService/Client.asmx, the path Microsoft's MS-WUSP specification mandates and the one public CVE-2025-59287 checks use) returns the decoy's fixed SOAP envelope with GetStatusResponse from nginx instead of a WSDL document or an IIS/ASP.NET page. The decoy's own capture locations use other paths (ClientWebService/ClientWebService.asmx, ReportWebService/ReportWebService.asmx), so this genuine path falls through to the catch-all. Matched: WSUS CVE-2025-59287 decoy cf17c31 (2026-11)."
