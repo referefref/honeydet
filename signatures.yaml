@@ -17876,3 +17876,75 @@ signatures:
         invert_match: false
     confidence: High
     comment: "The stack publishes Loki 2.9.2 on port 3100 without authentication (auth_enabled: false), and Promtail labels every Docker container's log stream with its container name. Asking Loki for the values of the container label lists the compose stack's fixed name fortinet-honeypot (with grafana, loki and promtail); anyone can read the honeypot's own event log the same way. A genuine FortiGate runs no Loki, and a genuine Loki holds its owner's streams. High: the container name is hard-coded in docker-compose.yml. Needs at least one honeypot log line within Loki's label window (startup lines or any request, for example 2040). Matched: mizuna-honeypot Fortinet_Honeypot 3ec3b3e (2026-11)."
+  - name: react2shell-honeypot-action-redirect-marker
+    id: 2050
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST / HTTP/1.1\r\nHost: x\r\nConnection: close\r\nContent-Type: multipart/form-data; boundary=r2sb\r\nContent-Length: 131\r\n\r\n--r2sb\r\nContent-Disposition: form-data; name=\"note\"\r\n\r\nhello\r\n--r2sb\r\nContent-Disposition: form-data; name=\"lang\"\r\n\r\nen\r\n--r2sb--\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 500 Internal Server Error\r\n.*X-Action-Redirect: /login\?a=11111\r\n'
+        invert_match: false
+    confidence: High
+    comment: "A multipart POST to / with two harmless form fields (no Next-Action header, no action id) is answered 500 with X-Action-Redirect: /login?a=11111, the fixed marker that a public React2Shell scanner looks for, whatever the fields contain. Genuine Next.js rejects a multipart POST without a valid action id (Next.js 16.4.6: 400 'Invalid Server Action request.' with x-nextjs-action-not-found: 1) and never redirects to a fixed /login?a=11111. Matched: react2shell-honeypot commit 8b41715 (2026-11)."
+  - name: react2shell-honeypot-static-rsc-error
+    id: 2051
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST / HTTP/1.1\r\nHost: x\r\nConnection: close\r\nContent-Type: multipart/form-data; boundary=r2sb\r\nContent-Length: 131\r\n\r\n--r2sb\r\nContent-Disposition: form-data; name=\"note\"\r\n\r\nhello\r\n--r2sb\r\nContent-Disposition: form-data; name=\"lang\"\r\n\r\nen\r\n--r2sb--\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 500 Internal Server Error\r\nContent-Type: text/plain; charset=utf-8\r\n.*X-Action-Revalidated: aaaaaaaa\r\n.*\r\n\r\nE\{"digest": "1", "aaa":"NEXT_REDIRECT ReactServerComponentsError\|RSCError createActionProxy"\}$'
+        invert_match: false
+    confidence: High
+    comment: "The same harmless multipart POST returns a fixed text/plain body E{\"digest\": \"1\", \"aaa\":\"NEXT_REDIRECT ReactServerComponentsError|RSCError createActionProxy\"} with X-Action-Revalidated: aaaaaaaa. Genuine React Server Components errors are text/x-component streams with numbered rows and a numeric digest (for example 1:E{\"digest\":\"3913355158\"}); the genuine x-action-revalidated header is a JSON array, never the letters aaaaaaaa. Matched: react2shell-honeypot commit 8b41715 (2026-11)."
+  - name: react2shell-honeypot-next-action-json-404
+    id: 2052
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST / HTTP/1.1\r\nHost: x\r\nConnection: close\r\nNext-Action: 00000000000000000000000000000000000000000a\r\nContent-Type: text/plain;charset=UTF-8\r\nContent-Length: 2\r\n\r\n[]"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 404 Not Found\r\nContent-Type: application/json; charset=utf-8\r\n.*\r\n\r\n"Not found"$'
+        invert_match: false
+    confidence: High
+    comment: "A server action call shaped as a browser sends it (Next-Action header, text/plain body []) to / is answered 404 with Content-Type: application/json and the JSON string \"Not found\", because the handler only accepts multipart bodies. Genuine Next.js 16.4.6 answers an unknown action id with 409 text/plain 'Server Action unavailable.' and x-nextjs-action-not-found: 1, and a known id with a text/x-component stream. Matched: react2shell-honeypot commit 8b41715 (2026-11)."
+  - name: react2shell-honeypot-root-post-and-hello
+    id: 2053
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST / HTTP/1.1\r\nHost: x\r\nConnection: close\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: 7\r\n\r\nq=hello"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 404 Not Found\r\nContent-Type: application/json; charset=utf-8\r\n.*\r\n\r\n"Not found"$'
+        invert_match: false
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        reconnect: true
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\nContent-Type: text/plain; charset=utf-8\r\n.*Content-Length: 6\r\n(?:Connection: close\r\n)?\r\nHello!$'
+        invert_match: false
+    confidence: High
+    comment: "An ordinary URL-encoded form POST to / returns 404 with the JSON string \"Not found\", and the home page (new connection) is the six-byte text/plain 'Hello!'. Genuine Next.js renders the page (200 text/html, X-Powered-By: Next.js) for a plain form POST to a page route and serves HTML at /. Matched: react2shell-honeypot commit 8b41715 (2026-11)."
+  - name: react2shell-honeypot-hello-root-head-404
+    id: 2054
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\nContent-Type: text/plain; charset=utf-8\r\nDate: [^\r\n]+\r\nContent-Length: 6\r\n(?:Connection: close\r\n)?\r\nHello!$'
+        invert_match: false
+      - input_type: string
+        input: "HEAD / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        reconnect: true
+        output_match_type: regex
+        output: '^HTTP/1\.1 404 Not Found\r\nContent-Type: text/plain\r\nDate: [^\r\n]+\r\nContent-Length: 18(?:\r\nConnection: close)?$'
+        invert_match: false
+    confidence: Medium
+    comment: "GET / returns exactly three headers and the body 'Hello!', while HEAD / returns Gin's 404 (Content-Length: 18) because only GET and POST are routed. A Next.js site serves HTML at / and answers HEAD like GET. Medium: any minimal Gin 'Hello!' application looks the same; the stronger signatures are 2050 to 2053. Matched: react2shell-honeypot commit 8b41715 (2026-11)."
