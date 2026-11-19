@@ -20262,3 +20262,168 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: "GET /Decoify/ runs the management interface's index.php, which checks the Users table and redirects with a bare relative Location to setupView.php (Engine before first set-up), registerView.php (Console before first set-up) or loginView.php (either, once an administrator exists); those pages carry the title 'DejaVu | Engine' or 'DejaVu | Console'. Generic web servers answer 404 for /Decoify/, and HTTP-to-HTTPS redirects carry an absolute https:// Location. This identifies a reachable DejaVU management interface (the Engine shares its physical interface with the decoys it creates), not a decoy. Medium: it needs Apache to answer plain HTTP on port 80, which the appliance's own HTTPS redirect in template/header.php implies but which could not be checked on the appliance. Matched: DejaVU 15.0 (2026-11)."
+  - name: ehoney-console-index-page
+    id: 2300
+    port: 8082
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /decept-defense/ HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\n.*<link rel="icon" href="/decept-defense//static/favicon\.png">.*We''re sorry but decept-defense doesn''t work properly without JavaScript enabled'
+        invert_match: false
+    confidence: High
+    comment: "The Ehoney management console (decept-defense, Gin) serves its Vue single-page application at /decept-defense/ on port 8082: the page title is the Chinese for 'deception defence', the favicon path has a double slash and the noscript text names the decept-defense build. This identifies an Ehoney management server, not a decoy. Matched: Ehoney v3.0.0, master 3712e64 (2026-11)."
+  - name: ehoney-console-health-heartbeat
+    id: 2301
+    port: 8082
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /api/public/health HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\nContent-Type: application/json; charset=utf-8\r\n.*\r\n\r\n\{"code":1001,"msg":"[^"]+","data":null\}$'
+        invert_match: false
+    confidence: High
+    comment: "The unauthenticated health check of the Ehoney management server (used by quick-start.sh and the probes) answers with the application's own JSON envelope and code 1001 (message: heartbeat normal, in Chinese). Matched: Ehoney v3.0.0, master 3712e64 (2026-11)."
+  - name: ehoney-console-agent-download-listing
+    id: 2302
+    port: 8082
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /agent/ HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\n.*<pre>\n(?:<a href="[^"]+">[^<]+</a>\n)*<a href="decept-agent\.tar\.gz">decept-agent\.tar\.gz</a>'
+        invert_match: false
+    confidence: High
+    comment: "The management server publishes its agent directory without authentication (Gin StaticFS directory listing), so /agent/ lists the Linux and Windows probe packages decept-agent.tar.gz and decept-agent-win.tar.gz. Matched: Ehoney v3.0.0, master 3712e64 (2026-11)."
+  - name: ehoney-ftp-honeypot-fixed-pasv-address
+    id: 2303
+    port: 21
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^220 \(vsFTPd 3\.0\.2\)'
+        invert_match: false
+      - input_type: string
+        input: "USER admin\r"
+        output_match_type: regex
+        output: '^331 '
+        invert_match: false
+      - input_type: string
+        input: "PASS admin\r"
+        output_match_type: regex
+        output: '^230 '
+        invert_match: false
+      - input_type: string
+        input: "PASV\r"
+        output_match_type: regex
+        output: '^(?:227 Entering Passive Mode \(192,168,240,160,82,(?:10[89]|11[0-9]|12[0-6])\)|500 OOPS: vsf_sysutil_bind, maximum number of attempts to find a listening port exceeded)'
+        invert_match: false
+    confidence: High
+    comment: "Ehoney's FTP honeypot (ehoney/ftp:v1, vsftpd 3.0.2) is deployed with hostPort 21 and the fixed account admin:admin, and the management server hard-codes PASV_ADDRESS 192.168.240.160 (a vendor lab address), so after login every PASV reply points at 192.168.240.160 port 21100 to 21110, whatever the honeypot's real address. A genuine vsftpd reports its own address. The deployment also sets PASV_MIN_PORT and PASV_MAX_PORT to 21100, a single passive port, so while another session holds it (sessions that never send QUIT stay open for minutes) PASV fails with vsftpd's bind error instead; the signature accepts either answer, and a default vsftpd, which picks any free port, gives neither. Logs in with the honeypot's default account. Matched: Ehoney v3.0.0, master 3712e64 (2026-11)."
+  - name: ehoney-ftpproxy-fixed-pasv-address
+    id: 2304
+    port: 10021
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^220 \(vsFTPd 3\.0\.2\)'
+        invert_match: false
+      - input_type: string
+        input: "USER admin\r"
+        output_match_type: regex
+        output: '^331 '
+        invert_match: false
+      - input_type: string
+        input: "PASS admin\r"
+        output_match_type: regex
+        output: '^230 '
+        invert_match: false
+      - input_type: string
+        input: "PASV\r"
+        output_match_type: regex
+        output: '^(?:227 Entering Passive Mode \(192,168,240,160,82,(?:10[89]|11[0-9]|12[0-6])\)|500 OOPS: vsf_sysutil_bind, maximum number of attempts to find a listening port exceeded)'
+        invert_match: false
+    confidence: High
+    comment: "As 2303, through Ehoney's FTP protocol proxy (tool/protocol/ftpproxy) on the first port of its default range: the proxied vsftpd 3.0.2 honeypot accepts admin:admin and its PASV reply carries the hard-coded address 192.168.240.160. Matched: Ehoney v3.0.0, master 3712e64 (2026-11)."
+  - name: ehoney-httpproxy-tomcat-sorted-headers-cors
+    id: 2305
+    port: 18080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\nAccess-Control-Allow-Origin: \*\r\nContent-Type: text/html;charset=UTF-8\r\nDate: [^\r]+\r\nServer: Apache-Coyote/1\.1\r\n'
+        invert_match: false
+    confidence: High
+    comment: "Ehoney's HTTP protocol proxy (tool/protocol/httpproxy, Go) in front of the Tomcat 8.0.23 honeypot (ehoney/tomcat:v1) re-sorts the response headers alphabetically and adds Access-Control-Allow-Origin: * to every response, so a Tomcat Coyote Server header arrives after Date and behind a wildcard CORS header. Genuine Tomcat sends Server first and no CORS header unless a CORS filter is configured and the request carries an Origin. Matched: Ehoney v3.0.0, master 3712e64 (2026-11)."
+  - name: ehoney-mysqlproxy-k3s-pod-gateway-client
+    id: 2306
+    port: 13306
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '(?s)^.\x00\x00\x00\x0a5\.5\.5-10\.1\.19-MariaDB\x00'
+        invert_match: false
+      - input_type: hex
+        input: "24000001058200000000000121000000000000000000000000000000000000000000000068640000"
+        output_match_type: regex
+        output: 'Access denied for user ''hd''@''10\.42\.\d{1,3}\.1'' \(using password: NO\)'
+        invert_match: false
+    confidence: High
+    comment: "Ehoney's MySQL protocol proxy relays to the MariaDB 10.1.19 honeypot (ehoney/mysql:v1) inside the k3s cluster, so the honeypot sees every client as the pod network gateway: a failed login is refused for user@'10.42.0.1' (k3s's default pod network) instead of the client's own address. Sends a login for user hd with an empty password. Matched: Ehoney v3.0.0, master 3712e64 (2026-11)."
+  - name: ehoney-redis-honeypot-default-password
+    id: 2307
+    port: 16379
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "AUTH 123\r"
+        output_match_type: regex
+        output: '^\+OK$'
+        invert_match: false
+      - input_type: string
+        input: "INFO server\r"
+        output_match_type: regex
+        output: '(?s)redis_version:6\.0\.10\r\n.*redis_build_id:66898bb7acd47e81'
+        invert_match: false
+    confidence: Medium
+    comment: "Ehoney's Redis honeypot (ehoney/redis:v1) runs Redis 6.0.10 with the password 123 baked into the image command, published through the Redis protocol proxy on the first port of its default range. A Redis without a password refuses AUTH, and one with another password answers WRONGPASS. Medium: an operator who rebuilds the image changes both. Matched: Ehoney v3.0.0, master 3712e64 (2026-11)."
+  - name: ehoney-sshproxy-go-mitm-rsa-only
+    id: 2308
+    port: 10022
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^SSH-2\.0-Go$'
+        invert_match: false
+      - input_type: string
+        input: "SSH-2.0-OpenSSH_9.2p1\r"
+        output_match_type: regex
+        output: '(?s)curve25519-sha256@libssh\.org,ecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521,diffie-hellman-group14-sha1\x00\x00\x00\x07ssh-rsa\x00\x00\x00.aes128-gcm@openssh\.com,chacha20-poly1305@openssh\.com,aes128-ctr,aes192-ctr,aes256-ctr\x00\x00\x00.aes128-gcm@openssh\.com,chacha20-poly1305@openssh\.com,aes128-ctr,aes192-ctr,aes256-ctr\x00\x00\x00.hmac-sha2-256-etm@openssh\.com,hmac-sha2-256,hmac-sha1,hmac-sha1-96\x00'
+        invert_match: false
+    confidence: Medium
+    comment: "Ehoney's SSH protocol proxy (tool/protocol/sshproxy) terminates SSH itself with an older golang.org/x/crypto server in front of the OpenSSH 7.1p2 honeypot (ehoney/ssh:v1): banner SSH-2.0-Go and a KEXINIT that offers only the ssh-rsa (SHA-1) host key algorithm, which current OpenSSH clients refuse by default. Medium: other Go SSH servers built with x/crypto of 2019 to 2021 offer the same lists; the default proxy port narrows it. Matched: Ehoney v3.0.0, master 3712e64 (2026-11)."
+  - name: ehoney-mysqlproxy-k3s-pod-gateway-blocked
+    id: 2309
+    port: 13306
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: 'Host ''10\.42\.\d{1,3}\.1'' is blocked because of many connection errors'
+        invert_match: false
+    confidence: High
+    comment: "Companion to 2306. Because Ehoney's MySQL honeypot sees every client as the k3s pod gateway (10.42.0.1 by default), MariaDB's max_connect_errors limit counts all scanners and visitors together: after about a hundred interrupted handshakes from anyone the honeypot refuses every new connection, before the greeting, with Host '10.42.0.1' is blocked because of many connection errors. A genuine server blocks only the offending client's own address. Matched: Ehoney v3.0.0, master 3712e64 (2026-11)."
