@@ -20250,3 +20250,15 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: "The login API at /auth/login/ accepts only POST, so a GET gets Werkzeug 0.16's '405 METHOD NOT ALLOWED' with 'Allow: OPTIONS, POST' behind 'Server: nginx'. Medium because any Flask application on an old Werkzeug behind nginx with a POST-only /auth/login/ route would answer the same way. Matched: CHN 1.9.1 (stingar/chn-server:1.9.1) (2026-11)."
+  - name: dejavu-decoify-console-index-redirect
+    id: 2290
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /Decoify/ HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 302 Found\r\n.*\r\nLocation: (?:setupView|registerView|loginView)\.php\r\n'
+        invert_match: false
+    confidence: Medium
+    comment: "GET /Decoify/ runs the management interface's index.php, which checks the Users table and redirects with a bare relative Location to setupView.php (Engine before first set-up), registerView.php (Console before first set-up) or loginView.php (either, once an administrator exists); those pages carry the title 'DejaVu | Engine' or 'DejaVu | Console'. Generic web servers answer 404 for /Decoify/, and HTTP-to-HTTPS redirects carry an absolute https:// Location. This identifies a reachable DejaVU management interface (the Engine shares its physical interface with the decoys it creates), not a decoy. Medium: it needs Apache to answer plain HTTP on port 80, which the appliance's own HTTPS redirect in template/header.php implies but which could not be checked on the appliance. Matched: DejaVU 15.0 (2026-11)."
