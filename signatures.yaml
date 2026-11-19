@@ -842,7 +842,7 @@ signatures:
         output: '^\$\$$'
         invert_match: false
     confidence: High
-    comment: "Requires -u/-pw (Cowrie accepts any root password except root/123456). Cowrie's shell does not expand $$; a real shell prints its PID. Behavioural, survives config changes. Also fires on sshesame v0.0.39 when credentials are supplied (2026-11)."
+    comment: "Requires -u/-pw (Cowrie accepts any root password except root/123456). Cowrie's shell does not expand $$; a real shell prints its PID. Behavioural, survives config changes. Also fires on sshesame v0.0.39 when credentials are supplied (2026-11). Also matches Cyanide 1.1.2 (2026-11)."
   - name: cowrie-no-arithmetic-expansion
     id: 44
     port: 22
@@ -1027,7 +1027,7 @@ signatures:
         output: '^SSH-2\.0-[^\r\n]*$'
         invert_match: false
     confidence: High
-    comment: "After the client identification, OpenCanary sends only its banner and never its KEXINIT. Genuine SSH servers send KEXINIT immediately. Run without -u/-pw (raw mode). Also matches MockSSH 2.0.0 (4cb930c, 2026-11). Also fires on sshesame v0.0.39 when credentials are supplied (2026-11). Also matches masscanned 0.2.0 (2026-11)."
+    comment: "After the client identification, OpenCanary sends only its banner and never its KEXINIT. Genuine SSH servers send KEXINIT immediately. Run without -u/-pw (raw mode). Also matches MockSSH 2.0.0 (4cb930c, 2026-11). Also fires on sshesame v0.0.39 when credentials are supplied (2026-11). Also matches masscanned 0.2.0 (2026-11). Also matches Cyanide 1.1.2 (2026-11)."
   - name: opencanary-ssh-default-banner
     id: 59
     port: 22
@@ -9026,7 +9026,7 @@ signatures:
         output: '^250 \S+ Hello \d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$'
         invert_match: false
     confidence: High
-    comment: "HELO is answered with '250 <name> Hello <client IP>': the bare address, without the HELO name or brackets. Exim, OpenSMTPD and Sendmail bracket the address ('Hello name [IP]' or 'Hello [IP], pleased to meet you'); Postfix, aiosmtpd and maddy do not show it. Matched: Honeymail ce62f66 (2026-11)."
+    comment: "HELO is answered with '250 <name> Hello <client IP>': the bare address, without the HELO name or brackets. Exim, OpenSMTPD and Sendmail bracket the address ('Hello name [IP]' or 'Hello [IP], pleased to meet you'); Postfix, aiosmtpd and maddy do not show it. Matched: Honeymail ce62f66 (2026-11). Also matches Cyanide 1.1.2 (2026-11)."
   - name: honeymail-noop-default-text
     id: 1017
     port: 25
@@ -19108,3 +19108,169 @@ signatures:
         min_response_ms: 500
     confidence: High
     comment: "Stronger form of 2175 for scans that can wait: the first random line arrives at once, the client's SSH identification is ignored, and the next random printable line (never SSH-) follows only after bagel's pause of 1 to 15 seconds on the still-open connection. A genuine SSH server answers the identification at once with a binary key exchange, line-based services reply at once, and endlessh and endlessh-go send nothing within the first 700 ms. Needs honeydet -timeout 16 or more (at the default 5 the second line usually arrives too late and the signature does not match). Matched: bagel 1.0.0 (2026-11)."
+  - name: cyanide-telnet-default-banner
+    id: 2180
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: hex
+        output: "fffb01fffb035265642048617420456e7465727072697365204c696e757820392e332028506c6f77290d0a4b65726e656c205c72206f6e20616e205c6d0d0a4c6f67696e3a"
+        invert_match: false
+    confidence: High
+    comment: "Without waiting for the client, the Telnet service sends WILL ECHO and WILL SGA and then its default banner with the getty escapes left unexpanded: 'Red Hat Enterprise Linux 9.3 (Plow)', 'Kernel \\r on an \\m' and a capitalised 'Login: ' prompt. agetty expands \\r and \\m to the kernel release and machine, and Linux telnetd negotiates terminal type first and prompts '<host> login:'. The same RHEL banner is sent with the Debian profile. Medium if telnet.banner is changed (the escapes are still not expanded). Matched: Cyanide 1.1.2 (33db6ce) (2026-11)."
+  - name: cyanide-telnet-login-incorrect-close
+    id: 2181
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: 'Login:$'
+        invert_match: false
+      - input_type: string
+        input: "admin\r"
+        output_match_type: regex
+        output: 'Password:$'
+        invert_match: false
+      - input_type: string
+        input: "hd{{rand}}\r"
+        output_match_type: regex
+        output: '^Login incorrect$'
+        max_response_ms: 1500
+        invert_match: false
+    confidence: High
+    comment: "A wrong password is answered at once with 'Login incorrect' and the connection is closed, after a capitalised 'Login:' prompt. login(1) on Linux waits about three seconds after a failure (2.7 s from inetutils telnetd in the lab) and prompts '<host> login:' again, up to its retry limit. Matched: Cyanide 1.1.2 (33db6ce) (2026-11)."
+  - name: cyanide-smtp-postfix-banner-one-line-ehlo
+    id: 2182
+    port: 25
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^220 \S+ ESMTP Postfix$'
+        invert_match: false
+      - input_type: string
+        input: "EHLO probe.example\r"
+        output_match_type: regex
+        output: '^250 \S+ Hello \d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$'
+        invert_match: false
+    confidence: High
+    comment: "The emulated SMTP service greets as '220 <hostname> ESMTP Postfix' but answers EHLO with a single line '250 <hostname> Hello <client address>' and no extensions. Postfix answers EHLO with a multi-line reply listing PIPELINING, SIZE, VRFY, ETRN, STARTTLS, ENHANCEDSTATUSCODES, 8BITMIME, DSN and SMTPUTF8 and never says Hello. Matched: Cyanide 1.1.2 (33db6ce) (2026-11)."
+  - name: cyanide-smtp-fixed-queue-id
+    id: 2183
+    port: 25
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^220 \S+ ESMTP Postfix$'
+        invert_match: false
+      - input_type: string
+        input: "HELO probe.example\r"
+        output_match_type: regex
+        output: '^250 '
+        invert_match: false
+      - input_type: string
+        input: "MAIL FROM:<probe@example.org>\r"
+        output_match_type: regex
+        output: '^250 2\.1\.0 Ok$'
+        invert_match: false
+      - input_type: string
+        input: "RCPT TO:<probe@example.net>\r"
+        output_match_type: regex
+        output: '^250 2\.1\.5 Ok$'
+        invert_match: false
+      - input_type: string
+        input: "DATA\r"
+        output_match_type: regex
+        output: '^354 '
+        invert_match: false
+      - input_type: string
+        input: "Subject: probe\r\n\r\nprobe\r\n.\r"
+        output_match_type: regex
+        output: '^250 2\.0\.0 Ok: queued as 12345$'
+        invert_match: false
+    confidence: High
+    comment: "Mail for any domain is accepted from anyone (an open relay) and every message is 'queued as 12345'. Postfix refuses relaying for outside domains ('454 4.7.1 <address>: Relay access denied' in the lab, 554 with some settings) and its queue IDs are 10 to 12 hexadecimal characters (or longer long-format IDs), different for every message. Matched: Cyanide 1.1.2 (33db6ce) (2026-11)."
+  - name: cyanide-metrics-health
+    id: 2184
+    port: 9090
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /health HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: \d+\r\nConnection: close\r\n\r\n\{"status": "(?:un)?healthy", "uptime": \d+, "services": \{"ssh": (?:true|false), "telnet": (?:true|false), "smtp": (?:true|false)\}\}$'
+        invert_match: false
+    confidence: High
+    comment: "The metrics service (on by default, all addresses in the upstream docker-compose.yml) answers /health without authentication with Cyanide's status record: status, uptime and whether its ssh, telnet and smtp services are up, from a minimal HTTP responder with no Date or Server header. Matched: Cyanide 1.1.2 (33db6ce) (2026-11)."
+  - name: cyanide-metrics-control-plane
+    id: 2185
+    port: 9090
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 (?:401 Unauthorized\r\nContent-Type: text/plain\r\nContent-Length: 12\r\nConnection: close\r\n\r\nUnauthorized|200 OK\r\nContent-Type: application/json\r\n.*"cyanide_control_plane")$'
+        invert_match: false
+    confidence: Medium
+    comment: "Without a token the metrics service's index names itself ('cyanide_control_plane' with its log and STIX/MISP report paths); with a token it refuses with exactly four headers and the 12-byte body 'Unauthorized', no Date, Server or WWW-Authenticate header. Prometheus exporters and web servers send Date and, for 401, a WWW-Authenticate challenge. Medium: the 401 form alone is a generic minimal responder. Matched: Cyanide 1.1.2 (33db6ce) (2026-11)."
+  - name: cyanide-ssh-asyncssh-kex-list
+    id: 2186
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^SSH-2\.0-'
+        invert_match: false
+      - input_type: string
+        input: "SSH-2.0-OpenSSH_9.2p1\r"
+        output_match_type: regex
+        output: '(?s)curve25519-sha256,curve25519-sha256@libssh\.org,ecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521,diffie-hellman-group-exchange-sha256,diffie-hellman-group16-sha512,diffie-hellman-group18-sha512,diffie-hellman-group14-sha256,ext-info-s,kex-strict-s-v00@openssh\.com.{4}rsa-sha2-256,rsa-sha2-512,ssh-rsa-sha224@ssh\.com'
+        invert_match: false
+    confidence: High
+    comment: "The SSH service is asyncssh behind an OpenSSH banner. Its key exchange offer is Cyanide's configured list (curve25519 to diffie-hellman-group14-sha256, then ext-info-s and kex-strict-s-v00@openssh.com) followed by asyncssh's host key list with the ssh.com names ssh-rsa-sha224@ssh.com and friends, which no OpenSSH release offers. The list order is Debian 11's OpenSSH 8.4p1 plus ext-info-s; OpenSSH 8.7p1 (RHEL 9.3), 8.4p1 (Debian 11), 9.9p1 (Rocky 9.9) and 9.2p1 (Debian 12) all list rsa-sha2-512 first and never offer the ssh.com names. Matched: Cyanide 1.1.2 (33db6ce), asyncssh 2.24.1 (2026-11)."
+  - name: cyanide-ssh-rhel-banner-with-release
+    id: 2187
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^SSH-2\.0-OpenSSH_8\.7p1-0\.el9$'
+        invert_match: false
+    confidence: Medium
+    comment: "The RHEL profile's banner 'SSH-2.0-OpenSSH_8.7p1-0.el9' carries a package release suffix that Red Hat's OpenSSH never sends: OpenSSH 8.7p1 from the Rocky Linux 9.3 packages announces 'SSH-2.0-OpenSSH_8.7' and current Rocky Linux 9.9 'SSH-2.0-OpenSSH_9.9'. Medium: the banner comes from the profile and ssh.version can replace it. Matched: Cyanide 1.1.2 (33db6ce) (2026-11)."
+  - name: cyanide-shell-uname-placeholder
+    id: 2188
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "uname -a"
+        output_match_type: regex
+        output: '^Linux \S+ 5\.15\.0-91-generic\.\.\.$'
+        invert_match: false
+    confidence: High
+    comment: "Authenticated (run with -username/-password): 'uname -a' prints the placeholder 'Linux server 5.15.0-91-generic...' with a literal ellipsis and an Ubuntu kernel, while /proc/version shows the profile's kernel (5.14.0-362.8.1.el9_3 on RHEL) and hostname prints the profile's host name. A real uname -a prints kernel release, version, machine and operating system. The bundled profiles do not set uname_a. Matched: Cyanide 1.1.2 (33db6ce) (2026-11)."
+  - name: cyanide-shell-head-dash-n
+    id: 2189
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "head -3 /etc/passwd"
+        output_match_type: regex
+        output: "^head: cannot open '-3' for reading: No such file or directory$"
+        invert_match: false
+    confidence: High
+    comment: "Authenticated (run with -username/-password): the emulated head treats the common short form '-3' as a file name ('head: cannot open '-3' for reading'). GNU coreutils and BusyBox head accept -NUM and print the first lines. Matched: Cyanide 1.1.2 (33db6ce) (2026-11)."
