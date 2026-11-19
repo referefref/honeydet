@@ -842,7 +842,7 @@ signatures:
         output: '^\$\$$'
         invert_match: false
     confidence: High
-    comment: "Requires -u/-pw (Cowrie accepts any root password except root/123456). Cowrie's shell does not expand $$; a real shell prints its PID. Behavioural, survives config changes. Also fires on sshesame v0.0.39 when credentials are supplied (2026-11). Also matches Cyanide 1.1.2 (2026-11)."
+    comment: "Requires -u/-pw (Cowrie accepts any root password except root/123456). Cowrie's shell does not expand $$; a real shell prints its PID. Behavioural, survives config changes. Also fires on sshesame v0.0.39 when credentials are supplied (2026-11). Also matches Cyanide 1.1.2 (2026-11). Matched: Cowrie 3.1.3; not Cowrie 3.1.7 (2026-11)."
   - name: cowrie-no-arithmetic-expansion
     id: 44
     port: 22
@@ -854,7 +854,7 @@ signatures:
         output: "6*7: command not found"
         invert_match: false
     confidence: High
-    comment: "Requires -u/-pw (Cowrie accepts any root password except root/123456). Cowrie treats $((6*7)) as a command; a real POSIX shell prints 42. Behavioural."
+    comment: "Requires -u/-pw (Cowrie accepts any root password except root/123456). Cowrie treats $((6*7)) as a command; a real POSIX shell prints 42. Behavioural. Matched: Cowrie 3.1.3; not Cowrie 3.1.7 (2026-11)."
   - name: cowrie-exec-format-error
     id: 45
     port: 22
@@ -866,7 +866,7 @@ signatures:
         output: "cannot execute binary file: Exec format error"
         invert_match: false
     confidence: High
-    comment: "Requires -u/-pw (Cowrie accepts any root password except root/123456). Binaries present in the fake filesystem but not implemented as commands return Exec format error (shell/protocol.py)."
+    comment: "Requires -u/-pw (Cowrie accepts any root password except root/123456). Binaries present in the fake filesystem but not implemented as commands return Exec format error (shell/protocol.py). Also matches the Cowrie 3.1.7 bundled with DShield Sensor 9064593 (2026-11)."
   - name: cowrie-invalid-ipv6-link-local
     id: 46
     port: 22
@@ -878,7 +878,7 @@ signatures:
         output: 'inet6 addr: fe([0-7][0-9a-f]|8[1-9a-f]|9[0-9a-f]|[a-f][0-9a-f])::'
         invert_match: false
     confidence: High
-    comment: "Requires -u/-pw (Cowrie accepts any root password except root/123456). commands/ifconfig.py builds the link-local address as fe<random byte>::; real link-local is always fe80::. Wrong in 255 of 256 process starts."
+    comment: "Requires -u/-pw (Cowrie accepts any root password except root/123456). commands/ifconfig.py builds the link-local address as fe<random byte>::; real link-local is always fe80::. Wrong in 255 of 256 process starts. Also matches the Cowrie 3.1.7 bundled with DShield Sensor 9064593 (2026-11)."
   - name: cowrie-default-user-phil
     id: 47
     port: 22
@@ -890,7 +890,7 @@ signatures:
         output: "Phil California"
         invert_match: false
     confidence: Medium
-    comment: "Requires -u/-pw (Cowrie accepts any root password except root/123456). Default fake /etc/passwd contains user phil (Phil California). Removed if the operator rebuilds fs.pickle."
+    comment: "Requires -u/-pw (Cowrie accepts any root password except root/123456). Default fake /etc/passwd contains user phil (Phil California). Removed if the operator rebuilds fs.pickle. Also matches the Cowrie 3.1.7 bundled with DShield Sensor 9064593 (2026-11)."
   - name: cowrie-default-hostname
     id: 48
     port: 22
@@ -914,7 +914,7 @@ signatures:
         output: "BusyBox v1.20.2 (Debian 1:1.20.0-7)"
         invert_match: false
     confidence: Medium
-    comment: "Requires -u/-pw (Cowrie accepts any root password except root/123456). Hard-coded BusyBox 1.20.2 banner (2012) on a host claiming a 2024 Debian 12 kernel."
+    comment: "Requires -u/-pw (Cowrie accepts any root password except root/123456). Hard-coded BusyBox 1.20.2 banner (2012) on a host claiming a 2024 Debian 12 kernel. Also matches the Cowrie 3.1.7 bundled with DShield Sensor 9064593 (2026-11)."
   - name: dionaea-mysql-static-greeting
     id: 50
     port: 3306
@@ -4459,7 +4459,7 @@ signatures:
         output: '(?s)^HTTP/1\.[01] 200 .*<meta name="generator" content="WordPress '
         invert_match: false
     confidence: Medium
-    comment: "A plugin folder that cannot exist returns 200 with the blog's home page (Wordpot reports every plugin as installed unless PLUGINS is set). Genuine WordPress returns 404 for a missing plugin folder (and an empty page or 403 for an installed one, never the home page). Medium: a PLUGINS list in wordpot.conf turns unknown plugins into 404."
+    comment: "A plugin folder that cannot exist returns 200 with the blog's home page (Wordpot reports every plugin as installed unless PLUGINS is set). Genuine WordPress returns 404 for a missing plugin folder (and an empty page or 403 for an installed one, never the home page). Medium: a PLUGINS list in wordpot.conf turns unknown plugins into 404. Also matches the DShield Sensor 9064593 web honeypot (2026-11)."
   - name: wordpot-flask-static-admin-css
     id: 543
     port: 80
@@ -19935,3 +19935,109 @@ signatures:
         max_response_ms: 10500
     confidence: High
     comment: "tarssh SSH tarpit on its default port 2222 at its default --delay 10. Two client idents get back, 9 to 10.5 s later, exactly the first line of tarssh's compiled-in banner, 'My name is Yon Yonson,', and with nothing more sent the second line, 'I live in Wisconsin.', follows 9.5 to 10.5 s after that on the still-open connection. This confirms both the fixed text and tarssh's default pace of one line every 10 seconds, with the client's SSH identification ignored. Genuine SSH servers answer at once with SSH-2.0- and a binary key exchange; endlessh's random lines and endlessh-go's one-second lines do not match. Needs honeydet -timeout 12 or more at the default delay (honeydet must send the second step, at about 10.3 s, before -timeout runs out; about 20 s per probe; matched at -timeout 12 and 25). Matched: tarssh 0.7.0 (2026-11)."
+  - name: dshield-sensor-web-apache-3-2-3
+    id: 2260
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /index-dsh.html HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.0 200 OK\r\nServer: Apache/3\.2\.3\r\nAccess-Control-Allow-Origin: \*\r\n'
+        invert_match: false
+    confidence: High
+    comment: "The DShield web honeypot (isc_agent, Python http.server) answers a request without a User-Agent with DShield's default response 1: an HTTP/1.0 status line followed directly by 'Server: Apache/3.2.3' and no Date header. There is no Apache 3.x (the current series is 2.4), and Apache always answers HTTP/1.1 requests with HTTP/1.1 and a Date header. The response comes from the rule set that online sensors download from DShield every hour, so a change there changes the Server value. Matched: DShield Sensor 9064593 (install.sh v102) with the November 2026 rule set (2026-11)."
+  - name: dshield-sensor-web-unrendered-wordpress-template
+    id: 2261
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /index-dsh.html HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: "(?s)^HTTP/1\\.0 200 OK\r\n.*<title>TurnKey Linux &#8211; Just another WordPress \\{\\{datetime\\.strftime\\('%Y-%m-%d'\\)\\}\\} site</title>.*%%target%%"
+        invert_match: false
+    confidence: High
+    comment: "Default response 1 is a saved WordPress 5.6.7 (TurnKey Linux) home page whose template markers were never filled in: the title still reads 'Just another WordPress {{datetime.strftime('%Y-%m-%d')}} site' and the links point at '%%target%%/...'. A real WordPress site renders both. Matched: DShield Sensor 9064593 (install.sh v102) with the November 2026 rule set (2026-11)."
+  - name: dshield-sensor-web-python-client-fixed-lan-link
+    id: 2262
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /index-dsh.html HTTP/1.1\r\nHost: x\r\nUser-Agent: python-requests/2.32.3\r\nAccept-Encoding: gzip, deflate\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.0 200 OK\r\nServer: Apache\r\nDate: [^\r\n]+\r\nLink: <http://10\.5\.1\.224/index\.php\?rest_route=/>; rel="https://api\.w\.org/"\r\n'
+        invert_match: false
+    confidence: High
+    comment: "A request with a python User-Agent and an Accept-Encoding header scores rule 1 of DShield's web rule set and gets response 2: an empty HTTP/1.0 200 with a WordPress REST API Link header that names the private address 10.5.1.224 whatever the sensor's own address, and 'Connection: Keep-Alive' on an HTTP/1.0 reply (the server then holds the connection open). A genuine WordPress site links to its own host name. Matched: DShield Sensor 9064593 (install.sh v102) with the November 2026 rule set (2026-11)."
+  - name: dshield-sensor-web-apache-3-2-3-port-8000
+    id: 2263
+    port: 8000
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /index-dsh.html HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.0 200 OK\r\nServer: Apache/3\.2\.3\r\nAccess-Control-Allow-Origin: \*\r\n'
+        invert_match: false
+    confidence: High
+    comment: "As 2260 on port 8000, where the web honeypot listens and which the sensor's firewall opens directly. Matched: DShield Sensor 9064593 (install.sh v102) with the November 2026 rule set (2026-11)."
+  - name: dshield-sensor-web-apache-3-2-3-port-8080
+    id: 2264
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /index-dsh.html HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.0 200 OK\r\nServer: Apache/3\.2\.3\r\nAccess-Control-Allow-Origin: \*\r\n'
+        invert_match: false
+    confidence: High
+    comment: "As 2260 on port 8080, which the sensor redirects to the web honeypot (as it does 7547, 5555 and 9000). Matched: DShield Sensor 9064593 (install.sh v102) with the November 2026 rule set (2026-11)."
+  - name: dshield-sensor-web-apache-3-2-3-port-7547
+    id: 2265
+    port: 7547
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /index-dsh.html HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.0 200 OK\r\nServer: Apache/3\.2\.3\r\nAccess-Control-Allow-Origin: \*\r\n'
+        invert_match: false
+    confidence: High
+    comment: "As 2260 on the TR-069 (CWMP) port 7547, which the sensor redirects to the web honeypot: a WordPress page from a non-existent Apache 3.2.3 where a home router's management agent would answer. Matched: DShield Sensor 9064593 (install.sh v102) with the November 2026 rule set (2026-11)."
+  - name: dshield-sensor-cowrie-debian7-banner-modern-kex
+    id: 2266
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^SSH-2\.0-OpenSSH_6\.0p1 Debian-4\+deb7u2'
+        invert_match: false
+      - input_type: string
+        input: "SSH-2.0-OpenSSH_9.2p1\r"
+        output_match_type: regex
+        output: '(?s)curve25519-sha256.*ssh-ed25519.{4}aes128-ctr,aes192-ctr,aes256-ctr,aes256-cbc,aes192-cbc,aes128-cbc,3des-cbc,cast128-cbc.{4}aes128-ctr,aes192-ctr,aes256-ctr,aes256-cbc,aes192-cbc,aes128-cbc,3des-cbc,cast128-cbc.{4}hmac-sha2-512,hmac-sha2-384,hmac-sha2-256,hmac-sha1,hmac-md5.{4}'
+        invert_match: false
+    confidence: High
+    comment: "The DShield installer configures its Cowrie with the identification of Debian 7's OpenSSH 6.0p1 (2012) and a fixed cipher list (aes-ctr, aes-cbc, 3des-cbc, cast128-cbc) and MAC list, while Cowrie's Twisted key exchange still offers curve25519-sha256 (and mlkem768x25519-sha256) and an ssh-ed25519 host key, which OpenSSH gained only in 6.5 and 9.9. Genuine OpenSSH 6.0p1 offers neither; stock Cowrie uses a 9.2p1 identification; T-Pot's personas offer blowfish-cbc and hmac-sha2-56; sshForShits (same identification, Go) starts its ciphers with AES-GCM. The algorithm lists are stock Cowrie's, so any Cowrie given this identification (for years it was Cowrie's own default) also matches, which is still a Cowrie detection. Steps: read the identification; send a client identification and read the server KEXINIT. Matched: DShield Sensor 9064593 (install.sh v102), Cowrie 3.1.7 (2026-11)."
+  - name: dshield-sensor-cowrie-debian7-banner-modern-kex-2222
+    id: 2267
+    port: 2222
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^SSH-2\.0-OpenSSH_6\.0p1 Debian-4\+deb7u2'
+        invert_match: false
+      - input_type: string
+        input: "SSH-2.0-OpenSSH_9.2p1\r"
+        output_match_type: regex
+        output: '(?s)curve25519-sha256.*ssh-ed25519.{4}aes128-ctr,aes192-ctr,aes256-ctr,aes256-cbc,aes192-cbc,aes128-cbc,3des-cbc,cast128-cbc.{4}aes128-ctr,aes192-ctr,aes256-ctr,aes256-cbc,aes192-cbc,aes128-cbc,3des-cbc,cast128-cbc.{4}hmac-sha2-512,hmac-sha2-384,hmac-sha2-256,hmac-sha1,hmac-md5.{4}'
+        invert_match: false
+    confidence: High
+    comment: "As 2266 on port 2222, where the sensor's Cowrie listens and which its firewall opens directly. Matched: DShield Sensor 9064593 (install.sh v102), Cowrie 3.1.7 (2026-11)."
