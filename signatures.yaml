@@ -266,7 +266,7 @@ signatures:
         output: "500 Syntax error: PASS requires an argument"
         invert_match: false
     confidence: High
-    comment: "Also matches Honeygrove 7dd9291 FTP (Twisted FTP); clean on genuine twistd ftp and vsftpd (2026-11)."
+    comment: "Also matches Honeygrove 7dd9291 FTP (Twisted FTP); clean on genuine twistd ftp and vsftpd (2026-11). Also matches the Dionaea 0.8.0 sensor bundled with CHN 1.9.1 (2026-11)."
   - name: dionaea-mongodb
     id: 11
     port: 27017
@@ -842,7 +842,7 @@ signatures:
         output: '^\$\$$'
         invert_match: false
     confidence: High
-    comment: "Requires -u/-pw (Cowrie accepts any root password except root/123456). Cowrie's shell does not expand $$; a real shell prints its PID. Behavioural, survives config changes. Also fires on sshesame v0.0.39 when credentials are supplied (2026-11). Also matches Cyanide 1.1.2 (2026-11). Matched: Cowrie 3.1.3; not Cowrie 3.1.7 (2026-11)."
+    comment: "Requires -u/-pw (Cowrie accepts any root password except root/123456). Cowrie's shell does not expand $$; a real shell prints its PID. Behavioural, survives config changes. Also fires on sshesame v0.0.39 when credentials are supplied (2026-11). Also matches Cyanide 1.1.2 (2026-11). Matched: Cowrie 3.1.3; not Cowrie 3.1.7 (2026-11). Also matches the Cowrie 2.2.0 sensor bundled with CHN 1.9.1 (2026-11)."
   - name: cowrie-no-arithmetic-expansion
     id: 44
     port: 22
@@ -878,7 +878,7 @@ signatures:
         output: 'inet6 addr: fe([0-7][0-9a-f]|8[1-9a-f]|9[0-9a-f]|[a-f][0-9a-f])::'
         invert_match: false
     confidence: High
-    comment: "Requires -u/-pw (Cowrie accepts any root password except root/123456). commands/ifconfig.py builds the link-local address as fe<random byte>::; real link-local is always fe80::. Wrong in 255 of 256 process starts. Also matches the Cowrie 3.1.7 bundled with DShield Sensor 9064593 (2026-11)."
+    comment: "Requires -u/-pw (Cowrie accepts any root password except root/123456). commands/ifconfig.py builds the link-local address as fe<random byte>::; real link-local is always fe80::. Wrong in 255 of 256 process starts. Also matches the Cowrie 3.1.7 bundled with DShield Sensor 9064593 (2026-11). Also matches the Cowrie 2.2.0 sensor bundled with CHN 1.9.1 (2026-11)."
   - name: cowrie-default-user-phil
     id: 47
     port: 22
@@ -890,7 +890,7 @@ signatures:
         output: "Phil California"
         invert_match: false
     confidence: Medium
-    comment: "Requires -u/-pw (Cowrie accepts any root password except root/123456). Default fake /etc/passwd contains user phil (Phil California). Removed if the operator rebuilds fs.pickle. Also matches the Cowrie 3.1.7 bundled with DShield Sensor 9064593 (2026-11)."
+    comment: "Requires -u/-pw (Cowrie accepts any root password except root/123456). Default fake /etc/passwd contains user phil (Phil California). Removed if the operator rebuilds fs.pickle. Also matches the Cowrie 3.1.7 bundled with DShield Sensor 9064593 (2026-11). Also matches the Cowrie 2.2.0 sensor bundled with CHN 1.9.1 (2026-11)."
   - name: cowrie-default-hostname
     id: 48
     port: 22
@@ -914,7 +914,7 @@ signatures:
         output: "BusyBox v1.20.2 (Debian 1:1.20.0-7)"
         invert_match: false
     confidence: Medium
-    comment: "Requires -u/-pw (Cowrie accepts any root password except root/123456). Hard-coded BusyBox 1.20.2 banner (2012) on a host claiming a 2024 Debian 12 kernel. Also matches the Cowrie 3.1.7 bundled with DShield Sensor 9064593 (2026-11)."
+    comment: "Requires -u/-pw (Cowrie accepts any root password except root/123456). Hard-coded BusyBox 1.20.2 banner (2012) on a host claiming a 2024 Debian 12 kernel. Also matches the Cowrie 3.1.7 bundled with DShield Sensor 9064593 (2026-11). Also matches the Cowrie 2.2.0 sensor bundled with CHN 1.9.1 (2026-11)."
   - name: dionaea-mysql-static-greeting
     id: 50
     port: 3306
@@ -926,7 +926,7 @@ signatures:
         output: "352e372e313600000012676161616161616161"
         invert_match: false
     confidence: High
-    comment: "MySQL greeting is identical on every connection: version 5.7.16, connection id 18, scramble 'gaaaaaaaa'. Real servers increment the id and randomise the scramble."
+    comment: "MySQL greeting is identical on every connection: version 5.7.16, connection id 18, scramble 'gaaaaaaaa'. Real servers increment the id and randomise the scramble. Also matches the Dionaea 0.8.0 sensor bundled with CHN 1.9.1 (2026-11)."
   - name: dionaea-memcached-no-version-command
     id: 51
     port: 11211
@@ -943,7 +943,7 @@ signatures:
         output: "ERROR"
         invert_match: false
     confidence: High
-    comment: "stats claims memcached 1.4.25, but the version command (supported by every real memcached) returns ERROR."
+    comment: "stats claims memcached 1.4.25, but the version command (supported by every real memcached) returns ERROR. Also matches the Dionaea 0.8.0 sensor bundled with CHN 1.9.1 (2026-11)."
   - name: dionaea-memcached-static-rusage
     id: 52
     port: 11211
@@ -955,7 +955,7 @@ signatures:
         output: 'STAT rusage_user 0\.550000\r?\nSTAT rusage_system 0\.253000\r?\n'
         invert_match: false
     confidence: High
-    comment: "Dionaea's memcached stats always report the same CPU usage, rusage_user 0.550000 and rusage_system 0.253000, from a fixed table. On real memcached these are the process CPU seconds and grow while the server runs. Dionaea's item and connection counters are randomised at each start, so they are not used here."
+    comment: "Dionaea's memcached stats always report the same CPU usage, rusage_user 0.550000 and rusage_system 0.253000, from a fixed table. On real memcached these are the process CPU seconds and grow while the server runs. Dionaea's item and connection counters are randomised at each start, so they are not used here. Also matches the Dionaea 0.8.0 sensor bundled with CHN 1.9.1 (2026-11)."
   - name: dionaea-http-ascii-no-date
     id: 53
     port: 80
@@ -979,7 +979,7 @@ signatures:
         output: "220 DiskStation FTP server ready."
         invert_match: false
     confidence: Medium
-    comment: "Default Dionaea FTP banner imitating a Synology DiskStation. Configurable."
+    comment: "Default Dionaea FTP banner imitating a Synology DiskStation. Configurable. Also matches the Dionaea 0.8.0 sensor bundled with CHN 1.9.1 (2026-11)."
   - name: dionaea-smb-homeuser
     id: 55
     port: 445
@@ -991,7 +991,7 @@ signatures:
         output: "48004f004d00450055005300450052002d003300410046003600460045"
         invert_match: false
     confidence: High
-    comment: "SMB1 negotiate is accepted and the reply names the default server HOMEUSER-3AF6FE in domain WORKGROUP. Modern Samba and Windows reject SMB1."
+    comment: "SMB1 negotiate is accepted and the reply names the default server HOMEUSER-3AF6FE in domain WORKGROUP. Modern Samba and Windows reject SMB1. Also matches the Dionaea 0.8.0 sensor bundled with CHN 1.9.1 (2026-11)."
   - name: dionaea-mssql-static-prelogin
     id: 56
     port: 1433
@@ -1003,7 +1003,7 @@ signatures:
         output: "0401002b0000000000001a00060100200001020021000103002200000400220001ff080002100000020000"
         invert_match: false
     confidence: High
-    comment: "Fixed 43-byte TDS pre-login reply (SQL Server 8.0 version field) regardless of the request."
+    comment: "Fixed 43-byte TDS pre-login reply (SQL Server 8.0 version field) regardless of the request. Also matches the Dionaea 0.8.0 sensor bundled with CHN 1.9.1 (2026-11)."
   - name: dionaea-pjl-laserjet-4ml
     id: 57
     port: 9100
@@ -11300,7 +11300,7 @@ signatures:
         output: "030000130ed00001000000c1020100c2020102"
         invert_match: false
     confidence: High
-    comment: "ISO-on-TCP: a COTP Connection Request that offers a TPDU size (C0 01 0A) is confirmed with a 19-byte Connection Confirm that drops the TPDU size parameter and carries a zero source reference. Siemens CPUs and Snap7 confirm with 22 bytes, a non-zero source reference and the TPDU size. Matched: Conpot 40cee33 and v1.0.0 (2026-11)."
+    comment: "ISO-on-TCP: a COTP Connection Request that offers a TPDU size (C0 01 0A) is confirmed with a 19-byte Connection Confirm that drops the TPDU size parameter and carries a zero source reference. Siemens CPUs and Snap7 confirm with 22 bytes, a non-zero source reference and the TPDU size. Matched: Conpot 40cee33 and v1.0.0 (2026-11). Also matches the Conpot 0.6.0 sensor bundled with CHN 1.9.1 (2026-11)."
   - name: conpot-s7-szl-0011-index0-empty
     id: 1291
     port: 102
@@ -11344,7 +11344,7 @@ signatures:
         output: "0001120812840101ff09"
         invert_match: false
     confidence: High
-    comment: "S7comm: the Read SZL 0x001C (component identification) response carries an 8-byte userdata parameter block, which announces 8 following bytes but stops after 4, so the data block (FF 09) starts where the data unit reference, last-unit flag and error code should be. Siemens CPUs and Snap7 send the full 12-byte block (...84 01 01 00 00 00 00). Independent of the template's identity strings. Matched: Conpot 40cee33 and v1.0.0 (2026-11)."
+    comment: "S7comm: the Read SZL 0x001C (component identification) response carries an 8-byte userdata parameter block, which announces 8 following bytes but stops after 4, so the data block (FF 09) starts where the data unit reference, last-unit flag and error code should be. Siemens CPUs and Snap7 send the full 12-byte block (...84 01 01 00 00 00 00). Independent of the template's identity strings. Matched: Conpot 40cee33 and v1.0.0 (2026-11). Also matches the Conpot 0.6.0 sensor bundled with CHN 1.9.1 (2026-11)."
   - name: conpot-enip-unsupported-command-closes
     id: 1293
     port: 44818
@@ -11361,7 +11361,7 @@ signatures:
         output: ""
         invert_match: false
     confidence: Medium
-    comment: "EtherNet/IP: after a normal ListIdentity exchange, an encapsulation command the server does not support (0x99) is met by closing the connection without a reply. The EtherNet/IP specification requires a reply with encapsulation status 0x0001 (invalid or unsupported command), which OpENer and Rockwell controllers send. Medium: a firewall or proxy that drops the reply also matches. Matched: Conpot 40cee33 and v1.0.0 (2026-11)."
+    comment: "EtherNet/IP: after a normal ListIdentity exchange, an encapsulation command the server does not support (0x99) is met by closing the connection without a reply. The EtherNet/IP specification requires a reply with encapsulation status 0x0001 (invalid or unsupported command), which OpENer and Rockwell controllers send. Medium: a firewall or proxy that drops the reply also matches. Matched: Conpot 40cee33 and v1.0.0 (2026-11). Also matches the Conpot 0.6.0 sensor bundled with CHN 1.9.1 (2026-11)."
   - name: conpot-modbus-unknown-unit-device-failure
     id: 1294
     port: 5020
@@ -11407,7 +11407,7 @@ signatures:
         output: "1a066c0014313735362d4c36312f42204c4f47495835353631"
         invert_match: false
     confidence: Medium
-    comment: "EtherNet/IP ListIdentity returns the default template's identity: product name '1756-L61/B LOGIX5561' with serial number 0x006C061A (7079450), the same on every default deployment. Template values. Matched: Conpot 40cee33 and v1.0.0 (2026-11)."
+    comment: "EtherNet/IP ListIdentity returns the default template's identity: product name '1756-L61/B LOGIX5561' with serial number 0x006C061A (7079450), the same on every default deployment. Template values. Matched: Conpot 40cee33 and v1.0.0 (2026-11). Also matches the Conpot 0.6.0 sensor bundled with CHN 1.9.1 (2026-11)."
   - name: conpot-bacnet-object-name-literal-key
     id: 1297
     port: 47808
@@ -11431,7 +11431,7 @@ signatures:
         output: '(?s)<TITLE>Overview - Siemens, SIMATIC, S7-200</TITLE>.*System uptime:.*timeticks \(deciseconds\)'
         invert_match: false
     confidence: Medium
-    comment: "HTTP: the default template's status page, 'Overview - Siemens, SIMATIC, S7-200', reports the system uptime as 'timeticks (deciseconds)' (the value counts seconds); / redirects to /index.html. Siemens S7-200 CPUs have no web server. Successor of signature 25, which requests / and no longer matches. Template values. Matched: Conpot 40cee33 and v1.0.0 (2026-11)."
+    comment: "HTTP: the default template's status page, 'Overview - Siemens, SIMATIC, S7-200', reports the system uptime as 'timeticks (deciseconds)' (the value counts seconds); / redirects to /index.html. Siemens S7-200 CPUs have no web server. Successor of signature 25, which requests / and no longer matches. Template values. Matched: Conpot 40cee33 and v1.0.0 (2026-11). Also matches the Conpot 0.6.0 sensor bundled with CHN 1.9.1 (2026-11)."
   - name: conpot-snmp-default-identity
     id: 1299
     port: 161
@@ -15222,7 +15222,7 @@ signatures:
         output: '(?s)aes128-ctr,aes192-ctr,aes256-ctr,aes256-cbc,aes192-cbc,aes128-cbc,3des-cbc,blowfish-cbc,cast128-cbc.{4}aes128-ctr.*hmac-sha2-512,hmac-sha2-384,hmac-sha2-56,hmac-sha1,hmac-md5.{4}hmac-sha2-512,hmac-sha2-384,hmac-sha2-56,hmac-sha1,hmac-md5'
         invert_match: false
     confidence: High
-    comment: "T-Pot's Cowrie picks one of eleven personas at each start (Debian, Ubuntu, RHEL and Fedora servers, OpenWrt, D-Link, TP-Link and Ubiquiti routers, QNAP, Synology and Zyxel NAS), each with its own SSH banner (OpenSSH 7.4 to 9.2 or dropbear 2012.55 to 2017.75) and hostname, so banner and shell signatures written for Cowrie's defaults miss it. Every persona's cowrie.cfg sets the same algorithm lists, and the KEXINIT gives them away whatever the banner: a MAC list that offers 'hmac-sha2-56', which is not an SSH algorithm (a typo for hmac-sha2-256), and ciphers that still include blowfish-cbc and cast128-cbc. OpenSSH and dropbear never offer a non-existent MAC; Cowrie with its default configuration (cowrie/cowrie image) offers hmac-sha2-256 and no blowfish. Matched: T-Pot 24.04.1 images (Cowrie 3.0.1 with personas), tpotce 6792236 (2026-11)."
+    comment: "T-Pot's Cowrie picks one of eleven personas at each start (Debian, Ubuntu, RHEL and Fedora servers, OpenWrt, D-Link, TP-Link and Ubiquiti routers, QNAP, Synology and Zyxel NAS), each with its own SSH banner (OpenSSH 7.4 to 9.2 or dropbear 2012.55 to 2017.75) and hostname, so banner and shell signatures written for Cowrie's defaults miss it. Every persona's cowrie.cfg sets the same algorithm lists, and the KEXINIT gives them away whatever the banner: a MAC list that offers 'hmac-sha2-56', which is not an SSH algorithm (a typo for hmac-sha2-256), and ciphers that still include blowfish-cbc and cast128-cbc. OpenSSH and dropbear never offer a non-existent MAC; Cowrie with its default configuration (cowrie/cowrie image) offers hmac-sha2-256 and no blowfish. Matched: T-Pot 24.04.1 images (Cowrie 3.0.1 with personas), tpotce 6792236 (2026-11). Also matches the Cowrie 2.2.0 sensor bundled with CHN 1.9.1 (2026-11)."
   - name: tpot-mailoney-schizo-relay-container-hostname
     id: 1473
     port: 25
@@ -20161,3 +20161,92 @@ signatures:
         invert_match: false
     confidence: High
     comment: 'Reads the MySQL server greeting without sending anything. HFish''s MySQL decoy sends an identical handshake on every connection: version 5.5.53, connection id 1 and the same 20-byte authentication salt (uQsoT6Pp + d&+Gb95<l0EJ). A genuine MySQL or MariaDB server increments the connection id and generates a fresh random salt for every connection. Matched: HFish 3.3.6 (2026-11).'
+  - name: chn-hpfeeds3-broker-info
+    id: 2280
+    port: 10000
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^\x00\x00\x00\x11\x01\x07hpfeeds'
+        invert_match: false
+    confidence: High
+    comment: "An hpfeeds broker greets every client, before it sends anything, with an OP_INFO message: total length 17, opcode 1 and the broker name 'hpfeeds' (length 7) followed by a four-byte random nonce. CHN's hpfeeds3 broker uses the name 'hpfeeds'; the Modern Honey Network's feedbroker.py announces '@hp2' (source). hpfeeds is used almost only to carry honeypot events, so an open broker marks a honeynet collector; the upstream hpfeeds3 broker that CHN packages sends the same greeting. Matched: CHN 1.9.1 (stingar/hpfeeds3:1.9.1) (2026-11)."
+  - name: chn-hpfeeds3-authfail-echo
+    id: 2281
+    port: 10000
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^\x00\x00\x00\x11\x01\x07hpfeeds'
+        invert_match: false
+      - input_type: hex
+        input: "000000220208686f6e65796465740000000000000000000000000000000000000000"
+        output_match_type: regex
+        output: '^\x00\x00\x00\x27\x00Authentication failed for honeydet$'
+        invert_match: false
+    confidence: High
+    comment: "After the greeting, an OP_AUTH for the unknown identifier 'honeydet' with a dummy 20-byte hash gets an OP_ERROR whose text, 'Authentication failed for honeydet', repeats the identifier. This is the hpfeeds3 broker's wording; the Modern Honey Network's feedbroker.py answers 'authfail.' (source). Matched: CHN 1.9.1 (stingar/hpfeeds3:1.9.1) (2026-11)."
+  - name: chn-server-login-page
+    id: 2282
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /ui/login/ HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*<title>Login</title>.*<h1>Welcome to the Community Honeypot Network Server</h1>.*id="passwd"'
+        invert_match: false
+    confidence: High
+    comment: "The CHN web console's login page at /ui/login/ carries the heading 'Welcome to the Community Honeypot Network Server' above an e-mail and password form (field id passwd). The Modern Honey Network's page says 'Modern Honeypot Network Server' instead. Matched: CHN 1.9.1 (stingar/chn-server:1.9.1) (2026-11)."
+  - name: chn-server-root-redirect-login
+    id: 2283
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 302 FOUND\r\nServer: nginx\r\n.*Location: http://x/ui/login/\?next=%2F\r\n.*<title>Redirecting\.\.\.</title>'
+        invert_match: false
+    confidence: High
+    comment: "GET / is redirected by Flask-Login to /ui/login/?next=%2F with Werkzeug 0.16's upper-case '302 FOUND', an absolute Location built from the Host header and Flask's 'Redirecting...' page, behind 'Server: nginx' with no version. nginx itself writes '302 Moved Temporarily'. The Modern Honey Network uses the same application layout. Matched: CHN 1.9.1 (stingar/chn-server:1.9.1) (2026-11)."
+  - name: chn-server-api-unauthorised-json
+    id: 2284
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /api/sensor/ HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 401 UNAUTHORIZED\r\n.*Content-Type: application/json\r\n.*\{"error":"Not authorized to perform this request\."\}$'
+        invert_match: false
+    confidence: High
+    comment: "The sensor API answers an anonymous GET /api/sensor/ with '401 UNAUTHORIZED' and the JSON body {\"error\":\"Not authorized to perform this request.\"}. The same API and message exist in the Modern Honey Network (source). Matched: CHN 1.9.1 (stingar/chn-server:1.9.1) (2026-11)."
+  - name: chn-server-public-deploy-script
+    id: 2285
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /api/script/?text=true&script_id=1 HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*\r\n\r\n#!/bin/bash\n\nURL=\$1\nDEPLOY=\$2\nARCH=\$3\nSERVER=.*VERSION=1\.\d+(?:\.\d+)?\n.*image: stingar/'
+        invert_match: false
+    confidence: High
+    comment: "Deploy scripts are served without authentication: GET /api/script/?text=true&script_id=1 returns the first default script (BigHP in 1.9.1) as plain text, a bash script that takes the server URL, deploy key and architecture and writes a docker-compose file for a stingar/ image. The deploy key itself is not in the script. Medium for servers where the operator has deleted or replaced the default scripts. Matched: CHN 1.9.1 (stingar/chn-server:1.9.1) (2026-11)."
+  - name: chn-server-auth-login-get-405
+    id: 2286
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /auth/login/ HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 405 METHOD NOT ALLOWED\r\nServer: nginx\r\n.*Allow: OPTIONS, POST\r\n.*<title>405 Method Not Allowed</title>'
+        invert_match: false
+    confidence: Medium
+    comment: "The login API at /auth/login/ accepts only POST, so a GET gets Werkzeug 0.16's '405 METHOD NOT ALLOWED' with 'Allow: OPTIONS, POST' behind 'Server: nginx'. Medium because any Flask application on an old Werkzeug behind nginx with a POST-only /auth/login/ route would answer the same way. Matched: CHN 1.9.1 (stingar/chn-server:1.9.1) (2026-11)."
