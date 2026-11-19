@@ -6025,7 +6025,7 @@ signatures:
         output: '(?s)rsa-sha2-256,rsa-sha2-512,ssh-rsa.{4}aes128-gcm@openssh\.com,aes256-gcm@openssh\.com,chacha20-poly1305@openssh\.com,aes128-ctr,aes192-ctr,aes256-ctr.{4}aes128-gcm@openssh\.com'
         invert_match: false
     confidence: High
-    comment: "A server that announces itself as OpenSSH but whose KEXINIT is that of Go's golang.org/x/crypto/ssh (via gliderlabs/ssh): a single RSA host key offered as rsa-sha2-256,rsa-sha2-512,ssh-rsa and Go's cipher order beginning aes128-gcm@openssh.com,aes256-gcm@openssh.com,chacha20-poly1305@openssh.com. OpenSSH puts chacha20-poly1305 first, offers ed25519 and ECDSA host keys and zlib@openssh.com. Holds whatever serverVersion is set to, as long as it claims OpenSSH. Matched: Beelzebub v3.10.0 (2026-11). Also matches ssh-auth-logger f53dddc (2026-11). Also matches sshForShits 4a2bef3 built with x/crypto v0.58.0 (2026-11). Also matches sshhipot master 089cad6 built with x/crypto v0.58.0 (2026-11). Also matches sshlowpot 67717d9 built with x/crypto v0.58.0 (2026-11). Also matches fakessh 148bec3 (2026-11)."
+    comment: "A server that announces itself as OpenSSH but whose KEXINIT is that of Go's golang.org/x/crypto/ssh (via gliderlabs/ssh): a single RSA host key offered as rsa-sha2-256,rsa-sha2-512,ssh-rsa and Go's cipher order beginning aes128-gcm@openssh.com,aes256-gcm@openssh.com,chacha20-poly1305@openssh.com. OpenSSH puts chacha20-poly1305 first, offers ed25519 and ECDSA host keys and zlib@openssh.com. Holds whatever serverVersion is set to, as long as it claims OpenSSH. Matched: Beelzebub v3.10.0 (2026-11). Also matches ssh-auth-logger f53dddc (2026-11). Also matches sshForShits 4a2bef3 built with x/crypto v0.58.0 (2026-11). Also matches sshhipot master 089cad6 built with x/crypto v0.58.0 (2026-11). Also matches sshlowpot 67717d9 built with x/crypto v0.58.0 (2026-11). Also matches fakessh 148bec3 (2026-11). Also matches fakessh (iBug) 8d175d6 (2026-11)."
   - name: beelzebub-telnet-login-without-negotiation
     id: 752
     port: 23
@@ -8350,7 +8350,7 @@ signatures:
         output: '(?s)rsa-sha2-256,rsa-sha2-512,ssh-rsa.{4}aes128-gcm@openssh\.com,aes256-gcm@openssh\.com,chacha20-poly1305@openssh\.com,aes128-ctr,aes192-ctr,aes256-ctr.{4}aes128-gcm@openssh\.com'
         invert_match: false
     confidence: High
-    comment: "Port 2222 form of signature 751 for Beelzebub's LLM SSH example (ssh-2222), which listens there: the identification string claims OpenSSH but the key exchange is Go's golang.org/x/crypto/ssh (a single RSA host key offered as rsa-sha2-256,rsa-sha2-512,ssh-rsa, AES-GCM before ChaCha20-Poly1305). Protocol behaviour, independent of the model; no model call is made before login. Matched: Beelzebub v3.10.0 with claude-haiku-5-5 via an OpenAI-compatible endpoint (2026-11). Also matches ssh-auth-logger f53dddc (2026-11). Also matches sshForShits 4a2bef3 built with x/crypto v0.58.0 (2026-11). Also matches sshhipot master 089cad6 built with x/crypto v0.58.0 (2026-11). Also matches sshlowpot 67717d9 built with x/crypto v0.58.0 (2026-11). Also matches fakessh 148bec3 (2026-11)."
+    comment: "Port 2222 form of signature 751 for Beelzebub's LLM SSH example (ssh-2222), which listens there: the identification string claims OpenSSH but the key exchange is Go's golang.org/x/crypto/ssh (a single RSA host key offered as rsa-sha2-256,rsa-sha2-512,ssh-rsa, AES-GCM before ChaCha20-Poly1305). Protocol behaviour, independent of the model; no model call is made before login. Matched: Beelzebub v3.10.0 with claude-haiku-5-5 via an OpenAI-compatible endpoint (2026-11). Also matches ssh-auth-logger f53dddc (2026-11). Also matches sshForShits 4a2bef3 built with x/crypto v0.58.0 (2026-11). Also matches sshhipot master 089cad6 built with x/crypto v0.58.0 (2026-11). Also matches sshlowpot 67717d9 built with x/crypto v0.58.0 (2026-11). Also matches fakessh 148bec3 (2026-11). Also matches fakessh (iBug) 8d175d6 (2026-11)."
   - name: pyrdp-mcs-maxpdusize-short-integer
     id: 940
     port: 3389
@@ -19290,10 +19290,7 @@ signatures:
       output: (?s)\x00\x00\x00\x21rsa-sha2-256,rsa-sha2-512,ssh-rsa\x00\x00\x00.aes128-gcm@openssh\.com,aes256-gcm@openssh\.com,chacha20-poly1305@openssh\.com,aes128-ctr,aes192-ctr,aes256-ctr\x00
       invert_match: false
     confidence: High
-    comment: 'fakessh picks its SSH identification string at start from a hard-coded list of eight OpenSSH 6.6 to 8.9 Ubuntu and Debian versions (v0.0.1 always sends the first), but the key exchange is that
-      of Go''s golang.org/x/crypto/ssh with the single 2048-bit RSA host key it generates at every start: host key algorithms exactly rsa-sha2-256,rsa-sha2-512,ssh-rsa and Go''s cipher order with AES-GCM
-      before ChaCha20-Poly1305. Genuine OpenSSH puts chacha20-poly1305 first and offers Ed25519 and ECDSA host keys and zlib@openssh.com. Independent of the x/crypto version. Matched: fakessh 148bec3 (v0.0.2+,
-      July 2026) built with Go 1.27.3 and x/crypto v0.52.0 (2026-11).'
+    comment: "fakessh picks its SSH identification string at start from a hard-coded list of eight OpenSSH 6.6 to 8.9 Ubuntu and Debian versions (v0.0.1 always sends the first), but the key exchange is that of Go's golang.org/x/crypto/ssh with the single 2048-bit RSA host key it generates at every start: host key algorithms exactly rsa-sha2-256,rsa-sha2-512,ssh-rsa and Go's cipher order with AES-GCM before ChaCha20-Poly1305. Genuine OpenSSH puts chacha20-poly1305 first and offers Ed25519 and ECDSA host keys and zlib@openssh.com. Independent of the x/crypto version. Matched: fakessh 148bec3 (v0.0.2+, July 2026) built with Go 1.27.3 and x/crypto v0.52.0 (2026-11). Also matches fakessh (iBug) 8d175d6 (2026-11). Also matches fakessh (iBug) dev aad1c69 (2026-11)."
   - name: fakessh-ssh-old-openssh-banner-mlkem-kex
     id: 2191
     port: 22
@@ -19310,10 +19307,7 @@ signatures:
       output: (?s)\x00\x00\x00.mlkem768x25519-sha256,curve25519-sha256,curve25519-sha256@libssh\.org,ecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521,diffie-hellman-group14-sha256,diffie-hellman-group14-sha1,kex-strict-s-v00@openssh\.com\x00\x00\x00\x21rsa-sha2-256,rsa-sha2-512,ssh-rsa\x00
       invert_match: false
     confidence: High
-    comment: 'One of fakessh''s eight hard-coded identification strings (OpenSSH 6.6 to 8.9) followed by the key exchange list of current golang.org/x/crypto/ssh: mlkem768x25519-sha256 first, which OpenSSH
-      added in 9.9 (2024), then curve25519, ECDH, diffie-hellman-group14-sha256 and group14-sha1 and kex-strict-s-v00, with no sntrup761, group16/18 or group-exchange, and only RSA host key names. No OpenSSH
-      release claimed by the banner offers ML-KEM or the strict key exchange extension (OpenSSH 9.6). Specific to builds with x/crypto v0.38 or later (the upstream go.mod since 2025). Matched: fakessh 148bec3
-      (v0.0.2+, July 2026) built with Go 1.27.3 and x/crypto v0.52.0 (2026-11).'
+    comment: "One of fakessh's eight hard-coded identification strings (OpenSSH 6.6 to 8.9) followed by the key exchange list of current golang.org/x/crypto/ssh: mlkem768x25519-sha256 first, which OpenSSH added in 9.9 (2024), then curve25519, ECDH, diffie-hellman-group14-sha256 and group14-sha1 and kex-strict-s-v00, with no sntrup761, group16/18 or group-exchange, and only RSA host key names. No OpenSSH release claimed by the banner offers ML-KEM or the strict key exchange extension (OpenSSH 9.6). Specific to builds with x/crypto v0.38 or later (the upstream go.mod since 2025). Matched: fakessh 148bec3 (v0.0.2+, July 2026) built with Go 1.27.3 and x/crypto v0.52.0 (2026-11). Also matches fakessh (iBug) dev aad1c69 (2026-11)."
   - name: fakessh-ssh-accepts-junk-line-before-client-version
     id: 2192
     port: 22
@@ -19330,7 +19324,62 @@ signatures:
       output: (?s)\x14.{16}.*\x00\x00\x00\x21rsa-sha2-256,rsa-sha2-512,ssh-rsa\x00
       invert_match: false
     confidence: Medium
-    comment: 'After one of fakessh''s hard-coded OpenSSH identification strings, a client that sends a non-SSH line (here an HTTP request line) before its own version string still gets a key exchange: golang.org/x/crypto/ssh
-      skips lines that do not start with SSH- (up to 255 bytes), and fakessh answers with its RSA-only KEXINIT. Genuine OpenSSH answers ''Protocol mismatch.'' (seen on OpenSSH 7.2p2 Ubuntu-4ubuntu2.10 and
-      7.4) or ''Invalid SSH identification string.'' (current releases, seen on 9.2p1) and closes. Any Go SSH server with one of these banners and a single RSA key behaves the same, hence Medium. Matched:
-      fakessh 148bec3 (v0.0.2+, July 2026) built with Go 1.27.3 and x/crypto v0.52.0 (2026-11).'
+    comment: "After one of fakessh's hard-coded OpenSSH identification strings, a client that sends a non-SSH line (here an HTTP request line) before its own version string still gets a key exchange: golang.org/x/crypto/ssh skips lines that do not start with SSH- (up to 255 bytes), and fakessh answers with its RSA-only KEXINIT. Genuine OpenSSH answers 'Protocol mismatch.' (seen on OpenSSH 7.2p2 Ubuntu-4ubuntu2.10 and 7.4) or 'Invalid SSH identification string.' (current releases, seen on 9.2p1) and closes. Any Go SSH server with one of these banners and a single RSA key behaves the same, hence Medium. Matched: fakessh 148bec3 (v0.0.2+, July 2026) built with Go 1.27.3 and x/crypto v0.52.0 (2026-11). Also matches fakessh (iBug) 8d175d6 (2026-11). Also matches fakessh (iBug) dev aad1c69 (2026-11)."
+  - name: fakessh-ibug-ssh-ubuntu1404-banner-go-kexinit
+    id: 2200
+    port: 22
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^SSH-2\.0-OpenSSH_6\.6\.1p1 Ubuntu-2ubuntu2\.3(?:\r?\n|$)'
+      invert_match: false
+    - input_type: string
+      input: "SSH-2.0-OpenSSH_9.2p1 Debian-2+deb12u3\r\n"
+      output_match_type: regex
+      output: '(?s)\x00\x00\x00.curve25519-sha256,curve25519-sha256@libssh\.org,ecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521,diffie-hellman-group14-sha256,diffie-hellman-group14-sha1,kex-strict-s-v00@openssh\.com\x00\x00\x00\x21rsa-sha2-256,rsa-sha2-512,ssh-rsa\x00\x00\x00.aes128-gcm@openssh\.com,aes256-gcm@openssh\.com,chacha20-poly1305@openssh\.com,aes128-ctr,aes192-ctr,aes256-ctr\x00'
+      invert_match: false
+    confidence: High
+    comment: 'fakessh (iBug, master branch) always sends the identification string of Ubuntu 14.04''s OpenSSH 6.6.1p1, but its key exchange is that of golang.org/x/crypto/ssh v0.17 to v0.37 with the single 2048-bit RSA host key it generates at every start: kex list curve25519-sha256 first (a name OpenSSH added in 7.4) through diffie-hellman-group14-sha1 and kex-strict-s-v00 (OpenSSH 9.6), host keys exactly rsa-sha2-256,rsa-sha2-512,ssh-rsa and Go''s cipher order with AES-GCM before ChaCha20-Poly1305. Genuine OpenSSH 6.6.1p1 (Ubuntu-2ubuntu2.13 seen) offers curve25519-sha256@libssh.org first, diffie-hellman-group-exchange and group1, ssh-rsa, ssh-dss, ECDSA and Ed25519 host keys and AES-CTR first. Also matches fakessh (fffaraz) v0.0.1, which sends the same banner on the same library version range. The iBug dev branch (random banner, x/crypto v0.45.0) is matched by 2190 to 2192 instead. Matched: fakessh (iBug) 8d175d6 (February 2024, x/crypto v0.17.0) built with Go 1.27.3 (2026-11).'
+  - name: fakessh-ibug-ssh-ubuntu1404-banner-go-kexinit-2222
+    id: 2201
+    port: 2222
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ''
+      output_match_type: regex
+      output: '^SSH-2\.0-OpenSSH_6\.6\.1p1 Ubuntu-2ubuntu2\.3(?:\r?\n|$)'
+      invert_match: false
+    - input_type: string
+      input: "SSH-2.0-OpenSSH_9.2p1 Debian-2+deb12u3\r\n"
+      output_match_type: regex
+      output: '(?s)\x00\x00\x00.curve25519-sha256,curve25519-sha256@libssh\.org,ecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521,diffie-hellman-group14-sha256,diffie-hellman-group14-sha1,kex-strict-s-v00@openssh\.com\x00\x00\x00\x21rsa-sha2-256,rsa-sha2-512,ssh-rsa\x00\x00\x00.aes128-gcm@openssh\.com,aes256-gcm@openssh\.com,chacha20-poly1305@openssh\.com,aes128-ctr,aes192-ctr,aes256-ctr\x00'
+      invert_match: false
+    confidence: Medium
+    comment: 'Same as the port 22 form on port 2222: fakessh (iBug) has a -listen option, and container deployments often publish port 2222. Medium because the port is the operator''s choice. Matched: fakessh (iBug) 8d175d6 (February 2024, x/crypto v0.17.0) built with Go 1.27.3 (2026-11).'
+  - name: fakessh-ibug-dev-ssh-auth-help-message
+    id: 2202
+    port: 22
+    proto: tcp
+    steps:
+    - input_type: string
+      input: help
+      output_match_type: regex
+      output: '^Glad you asked\. This is https://github\.com/iBug/fakessh, go and read the code by yourself\.'
+      invert_match: false
+    confidence: High
+    comment: 'Authenticated (run with -username and -password; any password works): on the dev branch of fakessh (iBug), the command help, sent as an exec request, is answered with a fixed message naming the project''s repository instead of a shell''s output. The message is handled before the output generator, so it is the same in the default (random bytes) and the optional language-model output modes. The master branch (8d175d6) refuses logins from Go clients such as honeydet, so this signature does not apply to it. A genuine server refuses the random password (reported as SSH login refused). Matched: fakessh (iBug) dev branch aad1c69 (June 2026, x/crypto v0.45.0) built with Go 1.27.3, default output mode (2026-11).'
+  - name: fakessh-ibug-dev-ssh-auth-help-message-2222
+    id: 2203
+    port: 2222
+    proto: tcp
+    steps:
+    - input_type: string
+      input: help
+      output_match_type: regex
+      output: '^Glad you asked\. This is https://github\.com/iBug/fakessh, go and read the code by yourself\.'
+      invert_match: false
+    confidence: Medium
+    comment: 'Same as the port 22 form on port 2222 (fakessh -listen option, or a container publishing 2222). Medium because the port is the operator''s choice. Matched: fakessh (iBug) dev branch aad1c69 (June 2026, x/crypto v0.45.0) built with Go 1.27.3, default output mode (2026-11).'
