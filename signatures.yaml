@@ -5921,7 +5921,7 @@ signatures:
         output: ""
         invert_match: false
     confidence: Medium
-    comment: "DSHP mapped to the MySQL port (the README's own example, -p 3306:8888) accepts and closes without data. MySQL and MariaDB always send a greeting packet, or an error packet when the host is not allowed or the server is busy, before closing. TCP wrappers or a forwarder with no backend give the same silent close, hence Medium. Matched: dshp 238aad4 (Docker Hub image) and dshp-ng 42cf488 (2026-11)."
+    comment: "DSHP mapped to the MySQL port (the README's own example, -p 3306:8888) accepts and closes without data. MySQL and MariaDB always send a greeting packet, or an error packet when the host is not allowed or the server is busy, before closing. TCP wrappers or a forwarder with no backend give the same silent close, hence Medium. Matched: dshp 238aad4 (Docker Hub image) and dshp-ng 42cf488 (2026-11). Also matches Icarus 59d48a7 (2026-11)."
   - name: dshp-ftp-banner-then-close
     id: 742
     port: 21
@@ -5984,7 +5984,7 @@ signatures:
         output: ""
         invert_match: false
     confidence: Medium
-    comment: "DSHP with its default empty reply on the FTP port accepts and closes without a greeting. FTP servers always send a 220 greeting (or 421 when busy) first. TCP wrappers or a forwarder with no backend give the same silent close, hence Medium. Matched: dshp 238aad4 (Docker Hub image) and dshp-ng 42cf488 (2026-11). Also matches BearFTP 0.4.1 once BearFTP has banned the scanning address (2026-11)."
+    comment: "DSHP with its default empty reply on the FTP port accepts and closes without a greeting. FTP servers always send a 220 greeting (or 421 when busy) first. TCP wrappers or a forwarder with no backend give the same silent close, hence Medium. Matched: dshp 238aad4 (Docker Hub image) and dshp-ng 42cf488 (2026-11). Also matches BearFTP 0.4.1 once BearFTP has banned the scanning address (2026-11). Also matches Icarus 59d48a7 (2026-11)."
   - name: dshp-smtp-port-silent-close
     id: 746
     port: 25
@@ -5996,7 +5996,7 @@ signatures:
         output: ""
         invert_match: false
     confidence: Medium
-    comment: "DSHP with its default empty reply on the SMTP port accepts and closes without a greeting. Mail servers always send a 220 greeting (or a 421/554 refusal) first. TCP wrappers or a forwarder with no backend give the same silent close, hence Medium. Matched: dshp 238aad4 (Docker Hub image) and dshp-ng 42cf488 (2026-11)."
+    comment: "DSHP with its default empty reply on the SMTP port accepts and closes without a greeting. Mail servers always send a 220 greeting (or a 421/554 refusal) first. TCP wrappers or a forwarder with no backend give the same silent close, hence Medium. Matched: dshp 238aad4 (Docker Hub image) and dshp-ng 42cf488 (2026-11). Also matches Icarus 59d48a7 (2026-11)."
   - name: beelzebub-ssh-banner-without-version
     id: 750
     port: 22
@@ -7363,7 +7363,7 @@ signatures:
         output: ''
         invert_match: false
     confidence: Medium
-    comment: "The port accepts the connection and closes it at once without sending anything: Oh-my-honeypot's generic TCP listener only records the connection. A genuine FTP server sends a 220 greeting. A service behind TCP wrappers or a connection limit can also close at once, hence Medium. Matched: oh-my-honeypot c8c45b7 (2026-11). Also matches BearFTP 0.4.1 once BearFTP has banned the scanning address (2026-11)."
+    comment: "The port accepts the connection and closes it at once without sending anything: Oh-my-honeypot's generic TCP listener only records the connection. A genuine FTP server sends a 220 greeting. A service behind TCP wrappers or a connection limit can also close at once, hence Medium. Matched: oh-my-honeypot c8c45b7 (2026-11). Also matches BearFTP 0.4.1 once BearFTP has banned the scanning address (2026-11). Also matches Icarus 59d48a7 (2026-11)."
   - name: oh-my-honeypot-telnet-silent-close
     id: 847
     port: '23'
@@ -7375,7 +7375,7 @@ signatures:
         output: ''
         invert_match: false
     confidence: Medium
-    comment: 'The port accepts the connection and closes it at once without sending anything: Oh-my-honeypot''s generic TCP listener only records the connection. A genuine Telnet server starts option negotiation (IAC DO/WILL) or sends a login banner. A service behind TCP wrappers can also close at once, hence Medium. Matched: oh-my-honeypot c8c45b7 (2026-11).'
+    comment: "The port accepts the connection and closes it at once without sending anything: Oh-my-honeypot's generic TCP listener only records the connection. A genuine Telnet server starts option negotiation (IAC DO/WILL) or sends a login banner. A service behind TCP wrappers can also close at once, hence Medium. Matched: oh-my-honeypot c8c45b7 (2026-11). Also matches Icarus 59d48a7 (2026-11)."
   - name: oh-my-honeypot-smb-silent-close
     id: 848
     port: '445'
@@ -7387,7 +7387,7 @@ signatures:
         output: ''
         invert_match: false
     confidence: Medium
-    comment: 'The port accepts the connection and closes it at once without sending anything: Oh-my-honeypot''s generic TCP listener only records the connection. A genuine SMB server (Windows or Samba) keeps the connection open and waits for the client''s Negotiate request. A host that drops SMB from untrusted networks can also close at once, hence Medium. Matched: oh-my-honeypot c8c45b7 (2026-11).'
+    comment: "The port accepts the connection and closes it at once without sending anything: Oh-my-honeypot's generic TCP listener only records the connection. A genuine SMB server (Windows or Samba) keeps the connection open and waits for the client's Negotiate request. A host that drops SMB from untrusted networks can also close at once, hence Medium. Matched: oh-my-honeypot c8c45b7 (2026-11). Also matches Icarus 59d48a7 (2026-11)."
   - name: oh-my-honeypot-rdp-silent-close
     id: 849
     port: '3389'
@@ -7399,7 +7399,7 @@ signatures:
         output: ''
         invert_match: false
     confidence: Medium
-    comment: 'The port accepts the connection and closes it at once without sending anything: Oh-my-honeypot''s generic TCP listener only records the connection. A genuine RDP server (Windows or xrdp) keeps the connection open and waits for the client''s X.224 Connection Request. A gateway that rejects the source can also close at once, hence Medium. Matched: oh-my-honeypot c8c45b7 (2026-11).'
+    comment: "The port accepts the connection and closes it at once without sending anything: Oh-my-honeypot's generic TCP listener only records the connection. A genuine RDP server (Windows or xrdp) keeps the connection open and waits for the client's X.224 Connection Request. A gateway that rejects the source can also close at once, hence Medium. Matched: oh-my-honeypot c8c45b7 (2026-11). Also matches Icarus 59d48a7 (2026-11)."
   - name: troje-ng-clone-hostname
     id: 850
     port: 22
@@ -9758,7 +9758,7 @@ signatures:
         invert_match: false
         max_response_ms: 2000
     confidence: Medium
-    comment: "The SSH port sends no identification string, and when the client sends its own (SSH-2.0-OpenSSH_9.2p1) the server closes the connection at once without a byte: go-HoneyPot's TCP listener waits for the first data, records it and closes. A genuine SSH server (OpenSSH, Dropbear, Go x/crypto servers) sends its SSH-2.0 identification first. Any listener that closes a connection without replying (a port forwarder with no backend, TCP wrappers, a server shedding load) gives the same result, hence Medium. Matched: go-HoneyPot d98cff6 (2026-11). Also fires on potd 11bebb9, which closes extra scan connections (2026-11)."
+    comment: "The SSH port sends no identification string, and when the client sends its own (SSH-2.0-OpenSSH_9.2p1) the server closes the connection at once without a byte: go-HoneyPot's TCP listener waits for the first data, records it and closes. A genuine SSH server (OpenSSH, Dropbear, Go x/crypto servers) sends its SSH-2.0 identification first. Any listener that closes a connection without replying (a port forwarder with no backend, TCP wrappers, a server shedding load) gives the same result, hence Medium. Matched: go-HoneyPot d98cff6 (2026-11). Also fires on potd 11bebb9, which closes extra scan connections (2026-11). Also matches Icarus 59d48a7 (2026-11)."
   - name: go-honeypot-ssh-alt-port-silent-close-after-data
     id: 1141
     port: 2222
@@ -19383,3 +19383,203 @@ signatures:
       invert_match: false
     confidence: Medium
     comment: 'Same as the port 22 form on port 2222 (fakessh -listen option, or a container publishing 2222). Medium because the port is the operator''s choice. Matched: fakessh (iBug) dev branch aad1c69 (June 2026, x/crypto v0.45.0) built with Go 1.27.3, default output mode (2026-11).'
+  - name: icarus-vnc-silent-close
+    id: 2210
+    port: 5900
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+        max_response_ms: 500
+      - input_type: hex
+        input: ""
+        reconnect: true
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+        max_response_ms: 500
+    confidence: Medium
+    comment: "Icarus accepts a TCP connection on the VNC port 5900 and closes it at once without sending or reading a byte (its handler only records the source address), and does the same on a second connection. A genuine VNC server always speaks first with an 'RFB 003.00x' protocol version string. A TCP-wrapped service, a port forwarder with no backend or another connect-and-close sensor can also close silently, hence Medium. Matched: Icarus 59d48a7 (2026-11)."
+  - name: icarus-mssql-silent-close
+    id: 2211
+    port: 1433
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+        max_response_ms: 500
+      - input_type: hex
+        input: ""
+        reconnect: true
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+        max_response_ms: 500
+    confidence: Medium
+    comment: "Icarus accepts a TCP connection on the SQL Server port 1433 and closes it at once without sending or reading a byte (its handler only records the source address), and does the same on a second connection. A genuine SQL Server keeps the connection open and waits for the client's TDS PRELOGIN packet. A TCP-wrapped service, a port forwarder with no backend or another connect-and-close sensor can also close silently, hence Medium. Matched: Icarus 59d48a7 (2026-11)."
+  - name: icarus-pptp-silent-close
+    id: 2212
+    port: 1723
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+        max_response_ms: 500
+      - input_type: hex
+        input: ""
+        reconnect: true
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+        max_response_ms: 500
+    confidence: Medium
+    comment: "Icarus accepts a TCP connection on the PPTP port 1723 and closes it at once without sending or reading a byte (its handler only records the source address), and does the same on a second connection. A genuine PPTP server (pptpd, Windows RRAS) keeps the control connection open and waits for a Start-Control-Connection-Request. A TCP-wrapped service, a port forwarder with no backend or another connect-and-close sensor can also close silently, hence Medium. Matched: Icarus 59d48a7 (2026-11)."
+  - name: icarus-ssh-silent-close
+    id: 2213
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+        max_response_ms: 500
+      - input_type: hex
+        input: ""
+        reconnect: true
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+        max_response_ms: 500
+    confidence: Medium
+    comment: "Icarus accepts a TCP connection on the SSH port 22 (published from container port 2022 by Icarus's start.sh), without the client sending anything and closes it at once without sending or reading a byte (its handler only records the source address), and does the same on a second connection. A genuine SSH server sends its 'SSH-2.0-' identification string first. A TCP-wrapped service, a port forwarder with no backend or another connect-and-close sensor can also close silently, hence Medium. Matched: Icarus 59d48a7 (2026-11)."
+  - name: icarus-port2022-silent-close
+    id: 2214
+    port: 2022
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+        max_response_ms: 500
+      - input_type: hex
+        input: ""
+        reconnect: true
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+        max_response_ms: 500
+    confidence: Medium
+    comment: "Icarus accepts a TCP connection on port 2022, the container-side port that Icarus's own start.sh publishes as 22; Icarus listens on it directly when it runs without Docker port mapping, and nothing else uses it by default and closes it at once without sending or reading a byte (its handler only records the source address), and does the same on a second connection. A genuine SSH server on 2022 sends its 'SSH-2.0-' identification string first. A TCP-wrapped service, a port forwarder with no backend or another connect-and-close sensor can also close silently, hence Medium. Matched: Icarus 59d48a7 (2026-11)."
+  - name: icarus-port2021-silent-close
+    id: 2215
+    port: 2021
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+        max_response_ms: 500
+      - input_type: hex
+        input: ""
+        reconnect: true
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+        max_response_ms: 500
+    confidence: Medium
+    comment: "Icarus accepts a TCP connection on port 2021, the container-side port that Icarus's own start.sh publishes as 21; Icarus listens on it directly when it runs without Docker port mapping, and nothing else uses it by default and closes it at once without sending or reading a byte (its handler only records the source address), and does the same on a second connection. A genuine FTP server on 2021 sends a 220 greeting first. A TCP-wrapped service, a port forwarder with no backend or another connect-and-close sensor can also close silently, hence Medium. Matched: Icarus 59d48a7 (2026-11)."
+  - name: icarus-port2023-silent-close
+    id: 2216
+    port: 2023
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+        max_response_ms: 500
+      - input_type: hex
+        input: ""
+        reconnect: true
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+        max_response_ms: 500
+    confidence: Medium
+    comment: "Icarus accepts a TCP connection on port 2023, the container-side port that Icarus's own start.sh publishes as 23; Icarus listens on it directly when it runs without Docker port mapping, and nothing else uses it by default and closes it at once without sending or reading a byte (its handler only records the source address), and does the same on a second connection. A genuine Telnet server on 2023 starts option negotiation or sends a login banner. A TCP-wrapped service, a port forwarder with no backend or another connect-and-close sensor can also close silently, hence Medium. Matched: Icarus 59d48a7 (2026-11)."
+  - name: icarus-port2025-silent-close
+    id: 2217
+    port: 2025
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+        max_response_ms: 500
+      - input_type: hex
+        input: ""
+        reconnect: true
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+        max_response_ms: 500
+    confidence: Medium
+    comment: "Icarus accepts a TCP connection on port 2025, the container-side port that Icarus's own start.sh publishes as 25; Icarus listens on it directly when it runs without Docker port mapping, and nothing else uses it by default and closes it at once without sending or reading a byte (its handler only records the source address), and does the same on a second connection. A genuine SMTP server on 2025 sends a 220 greeting first (RFC 5321). A TCP-wrapped service, a port forwarder with no backend or another connect-and-close sensor can also close silently, hence Medium. Matched: Icarus 59d48a7 (2026-11)."
+  - name: icarus-port20445-silent-close
+    id: 2218
+    port: 20445
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+        max_response_ms: 500
+      - input_type: hex
+        input: ""
+        reconnect: true
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+        max_response_ms: 500
+    confidence: Medium
+    comment: "Icarus accepts a TCP connection on port 20445, the container-side port that Icarus's own start.sh publishes as 445; Icarus listens on it directly when it runs without Docker port mapping, and nothing else uses it by default and closes it at once without sending or reading a byte (its handler only records the source address), and does the same on a second connection. A genuine SMB server keeps the connection open and waits for a NEGOTIATE request. A TCP-wrapped service, a port forwarder with no backend or another connect-and-close sensor can also close silently, hence Medium. Matched: Icarus 59d48a7 (2026-11)."
+  - name: icarus-port20139-silent-close
+    id: 2219
+    port: 20139
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+        max_response_ms: 500
+      - input_type: hex
+        input: ""
+        reconnect: true
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+        max_response_ms: 500
+    confidence: Medium
+    comment: "Icarus accepts a TCP connection on port 20139, the container-side port that Icarus's own start.sh publishes as 139; Icarus listens on it directly when it runs without Docker port mapping, and nothing else uses it by default and closes it at once without sending or reading a byte (its handler only records the source address), and does the same on a second connection. A genuine NetBIOS session service keeps the connection open and waits for a session request. A TCP-wrapped service, a port forwarder with no backend or another connect-and-close sensor can also close silently, hence Medium. Matched: Icarus 59d48a7 (2026-11)."
