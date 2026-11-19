@@ -6571,7 +6571,7 @@ signatures:
         output: "030000130ed000001234000200080001000000"
         invert_match: false
     confidence: High
-    comment: "An X.224 Connection Request that offers only standard RDP security (requestedProtocols 0) is answered with a fixed Connection Confirm that selects TLS (selectedProtocol 1), a protocol the client did not offer, with no flags. The reply is the same 19 bytes whatever the client asks for. A server that will not use standard RDP security sends an RDP Negotiation Failure (Windows: SSL_REQUIRED_BY_SERVER); xrdp selected standard RDP security here, as the client asked. Matched: honeypots 0.66 (2026-11)."
+    comment: "An X.224 Connection Request that offers only standard RDP security (requestedProtocols 0) is answered with a fixed Connection Confirm that selects TLS (selectedProtocol 1), a protocol the client did not offer, with no flags. The reply is the same 19 bytes whatever the client asks for. A server that will not use standard RDP security sends an RDP Negotiation Failure (Windows: SSL_REQUIRED_BY_SERVER); xrdp selected standard RDP security here, as the client asked. Matched: honeypots 0.66 (2026-11). Also matches RDPHoneyPot (dmitryporotnikov) e0c3694 (2026-11)."
   - name: honeytrap-ssh-simulator-banner
     id: 790
     port: 22
@@ -8401,7 +8401,7 @@ signatures:
         output: "c03000000dff01000100000b000403000102"
         invert_match: false
     confidence: Medium
-    comment: "A Connection Request offering TLS and CredSSP gets a Connection Confirm with source reference 0x1234, RDP_NEG_RSP flags 0x00 and TLS selected, then, for a fixed TLS 1.2 ClientHello, a ServerHello choosing ECDHE-RSA-AES256-GCM-SHA384 with only the renegotiation_info and ec_point_formats extensions (OpenSSL through pyOpenSSL). PyRDP writes its own Connection Confirm with the flags cleared and strips CredSSP from the request it relays, whatever the backend sends; Windows Server 2012 and later set EXTENDED_CLIENT_DATA_SUPPORTED and further flags (and select CredSSP when NLA is on), xrdp sets flags 0x01 and FreeRDP 0x03 (source reference 0); the honeypots library (qeeqbox) sends the same confirm but chooses AES256-GCM-SHA384 without ECDHE. Medium because older Windows versions also clear the flags. Needs a backend that offers TLS without enforcing NLA. Matched: PyRDP 2.1.1.dev0 b610809 (2026-11)."
+    comment: "A Connection Request offering TLS and CredSSP gets a Connection Confirm with source reference 0x1234, RDP_NEG_RSP flags 0x00 and TLS selected, then, for a fixed TLS 1.2 ClientHello, a ServerHello choosing ECDHE-RSA-AES256-GCM-SHA384 with only the renegotiation_info and ec_point_formats extensions (OpenSSL through pyOpenSSL). PyRDP writes its own Connection Confirm with the flags cleared and strips CredSSP from the request it relays, whatever the backend sends; Windows Server 2012 and later set EXTENDED_CLIENT_DATA_SUPPORTED and further flags (and select CredSSP when NLA is on), xrdp sets flags 0x01 and FreeRDP 0x03 (source reference 0); the honeypots library (qeeqbox) sends the same confirm but chooses AES256-GCM-SHA384 without ECDHE. Medium because older Windows versions also clear the flags. Needs a backend that offers TLS without enforcing NLA. Matched: PyRDP 2.1.1.dev0 b610809 (2026-11). Also matches RDPHoneyPot (dmitryporotnikov) e0c3694 (2026-11)."
   - name: pyrdp-ntlm-capture-selects-credssp
     id: 943
     port: 3389
@@ -19804,3 +19804,68 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: "An empty user name at the bare 'login:' prompt closes the connection without a reply; BusyBox login prompts again and inetutils login asks for a password. Behaviour shared by any telnet service that hangs up on an empty user name. Matched: oxipot 0.6.0 (2026-11)."
+  - name: rdphoneypot-dmitryporotnikov-legacy-cr-mcs-text
+    id: 2240
+    port: 3389
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "0300000b06e00000000000"
+        output_match_type: hex
+        output: "0300001b02f0804d435320436f6e6e65637420526573706f6e7365"
+        invert_match: false
+    confidence: High
+    comment: "A legacy X.224 Connection Request without an RDP Negotiation Request is answered with a 27-byte TPKT/X.224 Data TPDU whose payload is the ASCII text 'MCS Connect Response': the honeypot treats every client that sends no negotiation request as a port scanner and sends this placeholder instead of an X.224 Connection Confirm. Windows and xrdp answer with the 11-byte legacy confirm, FreeRDP with a negotiation response or failure; no RDP server sends text. Matched: RDPHoneyPot (dmitryporotnikov) git e0c3694 (2026-11)."
+  - name: rdphoneypot-dmitryporotnikov-http-get-mcs-text
+    id: 2241
+    port: 3389
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.0\r\n\r\n"
+        output_match_type: string
+        output: "MCS Connect Response"
+        invert_match: false
+    confidence: High
+    comment: "An HTTP request sent to the RDP port gets the same 'MCS Connect Response' text inside a TPKT/X.224 Data TPDU: any input of four bytes or more without an RDP Negotiation Request is answered with it. xrdp, FreeRDP and Windows send nothing back to non-RDP input. Matched: RDPHoneyPot (dmitryporotnikov) git e0c3694 (2026-11)."
+  - name: rdphoneypot-dmitryporotnikov-rdp-only-tls-echo-ref
+    id: 2242
+    port: 3389
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "030000130ee000004a7b000100080000000000"
+        output_match_type: hex
+        output: "030000130ed04a7b1234000200080001000000"
+        invert_match: false
+    confidence: High
+    comment: "A Connection Request that offers only standard RDP security (requestedProtocols 0) with X.224 source reference 0x4a7b gets a Connection Confirm that copies 0x4a7b into the destination reference, uses source reference 0x1234 and selects TLS with flags 0, a protocol the client did not offer. xrdp selects standard security (destination reference 0, flags 0x01), FreeRDP standard security with flags 0x03 or a negotiation failure, and a Windows server that requires TLS sends a negotiation failure (MS-RDPBCGR 2.2.1.2.2). Matched: RDPHoneyPot (dmitryporotnikov) git e0c3694 (2026-11)."
+  - name: rdphoneypot-dmitryporotnikov-credssp-only-tls-echo-ref
+    id: 2243
+    port: 3389
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "030000130ee000004a7b000100080002000000"
+        output_match_type: hex
+        output: "030000130ed04a7b1234000200080001000000"
+        invert_match: false
+    confidence: Medium
+    comment: "A Connection Request that offers only CredSSP (requestedProtocols 2) with source reference 0x4a7b gets a Connection Confirm selecting TLS with flags 0 and the client's reference echoed as destination reference: the honeypot selects TLS whatever the client asks for. FreeRDP selects CredSSP (flags 0x03) or fails, xrdp selects standard security with flags 0x01. Medium because a minimal server could plausibly fall back to TLS. Matched: RDPHoneyPot (dmitryporotnikov) git e0c3694 (2026-11)."
+  - name: rdphoneypot-dmitryporotnikov-tls-cert-win-srv-2019
+    id: 2244
+    port: 3389
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "030000130ee000000000000100080003000000"
+        output_match_type: hex
+        output: "030000130ed000001234000200080001000000"
+        invert_match: false
+      - input_type: hex
+        input: "1603010076010000720303000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f000018c030c02fc028c027c014c013009d009c003d003c0035002f01000031000a00080006001d00170018000b00020100000d001600140401050106010201040305030603080408050806ff01000100"
+        output_match_type: regex
+        output: '(?s)^\x16\x03\x03.*WIN-SRV-2019.*localhost'
+        invert_match: false
+    confidence: High
+    comment: "A Connection Request offering TLS and CredSSP, then a TLS 1.2 ClientHello: the Connection Confirm selects TLS (reference 0x1234, flags 0) and the server's certificate, sent in clear under TLS 1.2, is the hard-coded self-signed certificate with common name WIN-SRV-2019 and subject alternative names WIN-SRV-2019, localhost, 127.0.0.1 and ::1 (valid five years), generated in memory at each start whatever the host is called. Windows names its Remote Desktop certificate after the computer's DNS name. Matched: RDPHoneyPot (dmitryporotnikov) git e0c3694 (2026-11)."
