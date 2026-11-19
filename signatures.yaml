@@ -1596,7 +1596,7 @@ signatures:
         output: '^HTTP/1\.1 200 OK\r\n[\s\S]*?\r\n\r\n[\s\S]*"tagline" ?: ?"You Know, for Search"'
         invert_match: false
     confidence: High
-    comment: "Handlers ignore the HTTP method, so PUT / (also DELETE, OPTIONS and invented methods) returns the banner with 200. Genuine Elasticsearch answers PUT / with 400 'No handler found' (1.x) or 405 (7.x, 8.x)."
+    comment: "Handlers ignore the HTTP method, so PUT / (also DELETE, OPTIONS and invented methods) returns the banner with 200. Genuine Elasticsearch answers PUT / with 400 'No handler found' (1.x) or 405 (7.x, 8.x). Also matches HFish 3.3.6 (2026-11)."
   - name: elastichoney-nodes-invalid-json
     id: 143
     port: 9200
@@ -1620,7 +1620,7 @@ signatures:
         output: '"x1JG6g9PRHy6ClCOO2-C4g"[\s\S]*"host" ?: ?"elk"[\s\S]*"ip" ?: ?"127\.0\.1\.1"[\s\S]*"mac_address" ?: ?"08:01:c7:3F:15:DD"'
         invert_match: false
     confidence: High
-    comment: "Hard-coded /_nodes details in the code: node id x1JG6g9PRHy6ClCOO2-C4g, host 'elk', ip 127.0.1.1, JVM 1.7.0_65, 24 cores in 48 sockets and MAC address 08:01:c7:3F:15:DD. None of these can be changed in the configuration. Also matches HoneyPy 0.7.0 / HoneyPy-nx d30c00b, whose Elasticsearch plugin reuses this reply (2026-11)."
+    comment: "Hard-coded /_nodes details in the code: node id x1JG6g9PRHy6ClCOO2-C4g, host 'elk', ip 127.0.1.1, JVM 1.7.0_65, 24 cores in 48 sockets and MAC address 08:01:c7:3F:15:DD. None of these can be changed in the configuration. Also matches HoneyPy 0.7.0 / HoneyPy-nx d30c00b, whose Elasticsearch plugin reuses this reply (2026-11). Also matches HFish 3.3.6 (2026-11)."
   - name: elastichoney-nodes-anonymous-address
     id: 145
     port: 9200
@@ -1656,7 +1656,7 @@ signatures:
         output: '"build_hash" ?: ?"89d3241d670db65f994242c8e838b169779e2d4",\n +"build_snapshot" ?: ?false,\n +"lucene_version" ?: ?"4\.10\.2"'
         invert_match: false
     confidence: High
-    comment: "Hard-coded banner build details: a 39-character build hash (genuine build hashes are 40-character git commit IDs) with no build_timestamp and Lucene 4.10.2, whatever version is configured. Genuine 1.x banners carry a 40-character hash and a build_timestamp."
+    comment: "Hard-coded banner build details: a 39-character build hash (genuine build hashes are 40-character git commit IDs) with no build_timestamp and Lucene 4.10.2, whatever version is configured. Genuine 1.x banners carry a 40-character hash and a build_timestamp. Also matches HFish 3.3.6 (2026-11)."
   - name: elastichoney-default-identity
     id: 148
     port: 9200
@@ -5610,7 +5610,7 @@ signatures:
         output: '^[\x20-\x7e\t\r\n]+$'
         invert_match: false
     confidence: Medium
-    comment: "Port 23 stays silent until the client types, then returns only printable text (default 'login: ') and closes, with no Telnet option negotiation. Genuine telnetd and Telnet honeypots such as OpenCanary open with IAC (0xff) DO/WILL negotiation before any prompt. Medium: a minimal Telnet service without negotiation would also match. Matched: honeypot-ddos f288125 (2026-11). Also matches Shmakov Honeypot 1c3d5f3 (2026-11). Also matches oxipot 0.6.0 (2026-11)."
+    comment: "Port 23 stays silent until the client types, then returns only printable text (default 'login: ') and closes, with no Telnet option negotiation. Genuine telnetd and Telnet honeypots such as OpenCanary open with IAC (0xff) DO/WILL negotiation before any prompt. Medium: a minimal Telnet service without negotiation would also match. Matched: honeypot-ddos f288125 (2026-11). Also matches Shmakov Honeypot 1c3d5f3 (2026-11). Also matches oxipot 0.6.0 (2026-11). Also matches HFish 3.3.6 (2026-11)."
   - name: honeypot-ddos-pentbox-smb-text-reply
     id: 715
     port: 445
@@ -9916,7 +9916,7 @@ signatures:
       output: '(?s)\x00\x00\x00.(?:mlkem768x25519-sha256,)?curve25519-sha256,curve25519-sha256@libssh\.org,(?:ecdh\-sha2\-nistp256,ecdh\-sha2\-nistp384,ecdh\-sha2\-nistp521,diffie\-hellman\-group14\-sha256|(?:e(?:c(?:d(?:h(?:\-(?:s(?:h(?:a(?:2(?:\-(?:n(?:i(?:s(?:t(?:p(?:2(?:5(?:6(?:,(?:e(?:c(?:d(?:h(?:\-(?:s(?:h(?:a(?:2(?:\-(?:n(?:i(?:s(?:t(?:p(?:3(?:8(?:4(?:,(?:e(?:c(?:d(?:h(?:\-(?:s(?:h(?:a(?:2(?:\-(?:n(?:i(?:s(?:t(?:p(?:5(?:2(?:1(?:,(?:d(?:i(?:f(?:f(?:i(?:e(?:\-(?:h(?:e(?:l(?:l(?:m(?:a(?:n(?:\-(?:g(?:r(?:o(?:u(?:p(?:1(?:4(?:\-(?:s(?:h(?:a(?:2(?:5)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?\z)'
       invert_match: false
     confidence: High
-    comment: 'ssh-auth-logger (2025-12 onwards) picks one of six fixed server profiles per listening address (or per client address) and announces its version string: OpenSSH_7.4, OpenSSH_7.9p1 Debian-10, OpenSSH_8.2p1 Ubuntu-4ubuntu0.5, OpenSSH_9.6p1 Ubuntu-3ubuntu13.14 (since 2026-03), OpenSSH_8.4 or dropbear_2019.78. The key exchange underneath is golang.org/x/crypto/ssh, whose KEXINIT lists (mlkem768x25519-sha256,) curve25519-sha256, curve25519-sha256@libssh.org, the three ECDH curves and then diffie-hellman-group14-sha256. OpenSSH 7.4 to 8.4 follow the ECDH curves with diffie-hellman-group-exchange-sha256, OpenSSH 8.5 and later start with sntrup761x25519 or mlkem768x25519 followed by sntrup, and Dropbear has its own list, so a genuine server with one of these version strings never sends this list. Steps: the version string; a client identification and KEXINIT (no authentication), answered by the Go key exchange list (the honeypot''s bandwidth throttle can cut its first write inside the list, so the data may also end part-way through that order). A Go SSH program configured with one of the same six strings would also match. Matched: ssh-auth-logger commit f53dddc (2026-05-29; golang.org/x/crypto v0.51.0, Go 1.27.3), commit 6f127c0 (2026-01-08, the code of the Docker Hub image of 2026-01-04; x/crypto v0.1.0) (2026-11).'
+    comment: "ssh-auth-logger (2025-12 onwards) picks one of six fixed server profiles per listening address (or per client address) and announces its version string: OpenSSH_7.4, OpenSSH_7.9p1 Debian-10, OpenSSH_8.2p1 Ubuntu-4ubuntu0.5, OpenSSH_9.6p1 Ubuntu-3ubuntu13.14 (since 2026-03), OpenSSH_8.4 or dropbear_2019.78. The key exchange underneath is golang.org/x/crypto/ssh, whose KEXINIT lists (mlkem768x25519-sha256,) curve25519-sha256, curve25519-sha256@libssh.org, the three ECDH curves and then diffie-hellman-group14-sha256. OpenSSH 7.4 to 8.4 follow the ECDH curves with diffie-hellman-group-exchange-sha256, OpenSSH 8.5 and later start with sntrup761x25519 or mlkem768x25519 followed by sntrup, and Dropbear has its own list, so a genuine server with one of these version strings never sends this list. Steps: the version string; a client identification and KEXINIT (no authentication), answered by the Go key exchange list (the honeypot's bandwidth throttle can cut its first write inside the list, so the data may also end part-way through that order). A Go SSH program configured with one of the same six strings would also match. Matched: ssh-auth-logger commit f53dddc (2026-05-29; golang.org/x/crypto v0.51.0, Go 1.27.3), commit 6f127c0 (2026-01-08, the code of the Docker Hub image of 2026-01-04; x/crypto v0.1.0) (2026-11). Also matches HFish 3.3.6 (2026-11)."
   - name: ssh-auth-logger-openssh-profile-go-kex-alt-port
     id: 1171
     port: 2222
@@ -19324,7 +19324,7 @@ signatures:
       output: (?s)\x14.{16}.*\x00\x00\x00\x21rsa-sha2-256,rsa-sha2-512,ssh-rsa\x00
       invert_match: false
     confidence: Medium
-    comment: "After one of fakessh's hard-coded OpenSSH identification strings, a client that sends a non-SSH line (here an HTTP request line) before its own version string still gets a key exchange: golang.org/x/crypto/ssh skips lines that do not start with SSH- (up to 255 bytes), and fakessh answers with its RSA-only KEXINIT. Genuine OpenSSH answers 'Protocol mismatch.' (seen on OpenSSH 7.2p2 Ubuntu-4ubuntu2.10 and 7.4) or 'Invalid SSH identification string.' (current releases, seen on 9.2p1) and closes. Any Go SSH server with one of these banners and a single RSA key behaves the same, hence Medium. Matched: fakessh 148bec3 (v0.0.2+, July 2026) built with Go 1.27.3 and x/crypto v0.52.0 (2026-11). Also matches fakessh (iBug) 8d175d6 (2026-11). Also matches fakessh (iBug) dev aad1c69 (2026-11)."
+    comment: "After one of fakessh's hard-coded OpenSSH identification strings, a client that sends a non-SSH line (here an HTTP request line) before its own version string still gets a key exchange: golang.org/x/crypto/ssh skips lines that do not start with SSH- (up to 255 bytes), and fakessh answers with its RSA-only KEXINIT. Genuine OpenSSH answers 'Protocol mismatch.' (seen on OpenSSH 7.2p2 Ubuntu-4ubuntu2.10 and 7.4) or 'Invalid SSH identification string.' (current releases, seen on 9.2p1) and closes. Any Go SSH server with one of these banners and a single RSA key behaves the same, hence Medium. Matched: fakessh 148bec3 (v0.0.2+, July 2026) built with Go 1.27.3 and x/crypto v0.52.0 (2026-11). Also matches fakessh (iBug) 8d175d6 (2026-11). Also matches fakessh (iBug) dev aad1c69 (2026-11). Also matches HFish 3.3.6 (2026-11)."
   - name: fakessh-ibug-ssh-ubuntu1404-banner-go-kexinit
     id: 2200
     port: 22
@@ -20041,3 +20041,123 @@ signatures:
         invert_match: false
     confidence: High
     comment: "As 2266 on port 2222, where the sensor's Cowrie listens and which its firewall opens directly. Matched: DShield Sensor 9064593 (install.sh v102), Cowrie 3.1.7 (2026-11)."
+  - name: hfish-web-template-tomcat-decoy-headers
+    id: 2270
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\nContent-Md5: [A-Za-z]{20}\r\nContent-Type: text/html; charset=utf-8\r\nOhc-Cache-Hit: [A-Za-z]{5}\r\nServer: JSP3/2\.0\.14\r\nSet-Cookie: session=[0-9a-f]{32}; Expires=[^\r\n]+; HttpOnly\r\nTiming-Allow-Origin: \*\r\n.*<title>Apache Tomcat/8\.5\.15</title>.*<link href="favicon\.ico" rel="icon" type="image/x-icon" class="tomcat"/>'
+        invert_match: false
+    confidence: High
+    comment: 'GET / on the default Tomcat decoy (built-in node, port 80). HFish''s web templates answer with a fixed set of decoy headers in alphabetical order: a Content-Md5 of 20 random letters (a genuine Content-MD5 is the base64 of a 16-byte digest, 24 characters ending in ==), an Ohc-Cache-Hit of 5 random letters, Server: JSP3/2.0.14, a 32-hex session cookie valid for one day and Timing-Allow-Origin: *, then the Tomcat 8.5.15 welcome page with an extra favicon link of class ''tomcat'' that the genuine page does not have. Genuine Tomcat 8.5 sends no Server header and no session cookie on its welcome page, and a status line without a reason phrase (''HTTP/1.1 200 ''). Matched: HFish 3.3.6 (2026-11).'
+  - name: hfish-web-template-hikvision-decoy
+    id: 2271
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\nContent-Md5: [A-Za-z]{20}\r\nContent-Type: text/html; charset=utf-8\r\nOhc-Cache-Hit: [A-Za-z]{5}\r\nServer: JSP3/2\.0\.14\r\nSet-Cookie: session=[0-9a-f]{32}; Expires=[^\r\n]+; HttpOnly\r\nTiming-Allow-Origin: \*\r\n.*saved from url=\(0057\)http://www\.musickid\.org/doc/page/login\.asp'
+        invert_match: false
+    confidence: High
+    comment: 'GET / on the default Hikvision camera decoy (IOT-HIKCAM, port 8080): the HFish decoy header set (Content-Md5 of 20 random letters, Ohc-Cache-Hit, Server: JSP3/2.0.14, one-day session cookie, Timing-Allow-Origin) and a saved copy of a Hikvision web login page that still carries the browser''s ''saved from url'' comment for the site it was copied from. A genuine Hikvision camera serves its page from its own web server without that comment or these headers. Matched: HFish 3.3.6 (2026-11).'
+  - name: hfish-web-template-esxi-decoy
+    id: 2272
+    port: 8081
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\nContent-Md5: [A-Za-z]{20}\r\nContent-Type: text/html; charset=utf-8\r\nOhc-Cache-Hit: [A-Za-z]{5}\r\nServer: JSP3/2\.0\.14\r\nSet-Cookie: session=[0-9a-f]{32}; Expires=[^\r\n]+; HttpOnly\r\nTiming-Allow-Origin: \*\r\n.*ng-app="esxUiApp".*VMware ESXi</title>'
+        invert_match: false
+    confidence: High
+    comment: 'GET / on the default VMware ESXi decoy (ESXI, port 8081): the HFish decoy header set and a copy of the ESXi host client page (ng-app esxUiApp). A genuine ESXi host serves the host client over HTTPS behind its reverse proxy, redirects plain HTTP to HTTPS and never sends Server: JSP3/2.0.14 or an Ohc-Cache-Hit header. Matched: HFish 3.3.6 (2026-11).'
+  - name: hfish-web-template-coremail-decoy
+    id: 2273
+    port: 9000
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\nContent-Md5: [A-Za-z]{20}\r\nContent-Type: text/html; charset=utf-8\r\nOhc-Cache-Hit: [A-Za-z]{5}\r\nServer: JSP3/2\.0\.14\r\nSet-Cookie: session=[0-9a-f]{32}; Expires=[^\r\n]+; HttpOnly\r\nTiming-Allow-Origin: \*\r\n.*<title>Coremail[^<]*</title>.*data:image/ico;base64,aWNv'
+        invert_match: false
+    confidence: High
+    comment: 'GET / on the default Coremail webmail decoy (COREMAIL, port 9000): the HFish decoy header set and a copy of the Coremail XT login page with the placeholder favicon whose data URI decodes to ''ico''. A genuine Coremail server is a Java application with its own headers and a real favicon. Matched: HFish 3.3.6 (2026-11).'
+  - name: hfish-web-template-go-404-with-session-cookie
+    id: 2274
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /hfish-{{rand}} HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 404 Not Found\r\nContent-Type: text/plain\r\nSet-Cookie: session=[0-9a-f]{32}; Expires=[^\r\n]+; HttpOnly\r\nDate: [^\r\n]+\r\nContent-Length: 18\r\n(?:Connection: close\r\n)?\r\n404 page not found$'
+        invert_match: false
+    confidence: Medium
+    comment: 'GET of a random missing path on an HFish web template: the Go router''s plain-text ''404 page not found'' (18 bytes) with a 32-hex session cookie set even on the error. The imitated products (Tomcat, IIS, nginx, Jenkins, WebLogic and the rest) return their own HTML error pages; generic Go servers return the same text but without the session cookie. Medium: it identifies the framework combination rather than a decoy page; it applies to the HFish web templates on any port. Matched: HFish 3.3.6 (2026-11).'
+  - name: hfish-elasticsearch-empty-version
+    id: 2275
+    port: 9200
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\nContent-Type: text/plain; charset=utf-8\r\nSet-Cookie: session=[0-9a-f]{32};.*"status" : 200,\s*"name" : "",\s*"cluster_name" : "elasticsearch",\s*"version" : \{\s*"number" : "",\s*"build_hash" : "89d3241d670db65f994242c8e838b169779e2d4"'
+        invert_match: false
+    confidence: High
+    comment: 'GET / on the Elasticsearch decoy (ES, port 9200): a 1.x-style banner served as text/plain with a session cookie, an empty node name, an empty version number and a 39-character build_hash (a git hash has 40) next to lucene_version 4.10.2. Genuine Elasticsearch answers application/json with no cookie, a node name, a version number and a 40-character build hash. Matched: HFish 3.3.6 (2026-11).'
+  - name: hfish-redis-ping-plus-ok
+    id: 2276
+    port: 6379
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "*1\r\n$4\r\nPING\r"
+        output_match_type: regex
+        output: '^\+ok$'
+        invert_match: false
+    confidence: High
+    comment: 'A RESP PING. HFish''s Redis decoy answers ''+ok'' (lower case) to PING and to most other commands, and ''+key ... not exist'' to GET of a missing key. Genuine Redis answers +PONG to PING and a null bulk string ($-1) to a missing key. Matched: HFish 3.3.6 (2026-11).'
+  - name: hfish-console-tls-default-certificate
+    id: 2277
+    port: 4433
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "1603010068010000640303000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f00000a002fc02fc030009c003501000031000a00080006001d00170018000b00020100000d000e000c0401050106010403050308040023000000170000ff01000100"
+        output_match_type: regex
+        output: '(?s)^\x16\x03\x03.*\x13\x02XX.*\x0c\x0cDefault City.*\x0c\x13Default Company Ltd.*\x17\x0d220921074429Z\x17\x0d240920074429Z'
+        invert_match: false
+    confidence: Medium
+    comment: 'A TLS 1.2 ClientHello to the management console (4433). Every HFish 3.x installation presents the same self-signed certificate, C=XX, L=Default City, O=Default Company Ltd as both subject and issuer, valid from 21 September 2022 to 20 September 2024 (expired), SHA-256 fingerprint 1AE9CC5E...89D947. Services using OpenSSL''s default subject generate their own certificate with their own dates. Medium: the console''s HTTPS certificate can be replaced in the platform settings. Matched: HFish 3.3.6 (2026-11).'
+  - name: hfish-node-api-tls-default-certificate
+    id: 2278
+    port: 4434
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "1603010068010000640303000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f00000a002fc02fc030009c003501000031000a00080006001d00170018000b00020100000d000e000c0401050106010403050308040023000000170000ff01000100"
+        output_match_type: regex
+        output: '(?s)^\x16\x03\x03.*\x13\x02XX.*\x0c\x0cDefault City.*\x0c\x13Default Company Ltd.*\x17\x0d220921074429Z\x17\x0d240920074429Z'
+        invert_match: false
+    confidence: High
+    comment: 'A TLS 1.2 ClientHello to the node communication port (4434, fixed and documented as unchangeable, and reachable by every node). It presents the same built-in self-signed certificate as the console (C=XX, L=Default City, O=Default Company Ltd, 2022-09-21 to 2024-09-20), shared by every installation. Matched: HFish 3.3.6 (2026-11).'
+  - name: hfish-mysql-fixed-greeting
+    id: 2279
+    port: 3306
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^\x4a\x00\x00\x00\x0a5\.5\.53\x00\x01\x00\x00\x00uQsoT6Pp\x00..\x21\x02\x00\x0f.\x15\x00{10}d&\+Gb95<l0EJ\x00mysql_native_password\x00$'
+        invert_match: false
+    confidence: High
+    comment: 'Reads the MySQL server greeting without sending anything. HFish''s MySQL decoy sends an identical handshake on every connection: version 5.5.53, connection id 1 and the same 20-byte authentication salt (uQsoT6Pp + d&+Gb95<l0EJ). A genuine MySQL or MariaDB server increments the connection id and generates a fresh random salt for every connection. Matched: HFish 3.3.6 (2026-11).'
