@@ -5610,7 +5610,7 @@ signatures:
         output: '^[\x20-\x7e\t\r\n]+$'
         invert_match: false
     confidence: Medium
-    comment: "Port 23 stays silent until the client types, then returns only printable text (default 'login: ') and closes, with no Telnet option negotiation. Genuine telnetd and Telnet honeypots such as OpenCanary open with IAC (0xff) DO/WILL negotiation before any prompt. Medium: a minimal Telnet service without negotiation would also match. Matched: honeypot-ddos f288125 (2026-11). Also matches Shmakov Honeypot 1c3d5f3 (2026-11)."
+    comment: "Port 23 stays silent until the client types, then returns only printable text (default 'login: ') and closes, with no Telnet option negotiation. Genuine telnetd and Telnet honeypots such as OpenCanary open with IAC (0xff) DO/WILL negotiation before any prompt. Medium: a minimal Telnet service without negotiation would also match. Matched: honeypot-ddos f288125 (2026-11). Also matches Shmakov Honeypot 1c3d5f3 (2026-11). Also matches oxipot 0.6.0 (2026-11)."
   - name: honeypot-ddos-pentbox-smb-text-reply
     id: 715
     port: 445
@@ -13770,7 +13770,7 @@ signatures:
         output: ""
         invert_match: false
     confidence: High
-    comment: "Pressing Enter on an empty line at the login prompt closes the connection at once with no output. A genuine login program asks again ('login:') or goes on to the password prompt. Matched: telnetlogger 2b88261 (0.2) (2026-11)."
+    comment: "Pressing Enter on an empty line at the login prompt closes the connection at once with no output. A genuine login program asks again ('login:') or goes on to the password prompt. Matched: telnetlogger 2b88261 (0.2) (2026-11). Also matches oxipot 0.6.0 (2026-11)."
   - name: telnetlogger-lf-does-not-end-line
     id: 1562
     port: 23
@@ -19702,3 +19702,105 @@ signatures:
         invert_match: false
     confidence: High
     comment: "Anonymous bind (message id 3), then two bytes that are not an LDAPMessage (a BER boolean header). ldap-honeypot answers the bind with success and the stray bytes with a fixed SearchResultDone for message id 1, resultCode 50 insufficientAccessRights, then closes. Genuine servers send nothing or reset the connection. (Chameleon's LDAP service sends the same fixed reply, but to the bind itself, so the first step tells them apart.) Hard-coded. Matched: ldap-honeypot 7632a24 (2026-11)."
+  - name: oxipot-telnet-banner-box
+    id: 2230
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '(?s)^#{77}\n# UNAUTHORIZED ACCESS TO THIS DEVICE IS PROHIBITED You must have explicit,  #\n.*# All activities performed on this device are logged and monitored\.         #\n#{77}\n\nlogin:$'
+        invert_match: false
+    confidence: High
+    comment: "Server-first greeting is the hard-coded 77-column '#' box warning banner (bare LF line endings, no telnet option negotiation) followed directly by a bare 'login: ' prompt with no host name. Genuine telnetd (inetutils, BusyBox) open with IAC option negotiation and prompt '<hostname> login: '. Matched: oxipot 0.6.0 (2026-11)."
+  - name: oxipot-telnet-banner-box-port-2223
+    id: 2231
+    port: 2223
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '(?s)^#{77}\n# UNAUTHORIZED ACCESS TO THIS DEVICE IS PROHIBITED You must have explicit,  #\n.*# All activities performed on this device are logged and monitored\.         #\n#{77}\n\nlogin:$'
+        invert_match: false
+    confidence: High
+    comment: "As 2230 on 2223, oxipot's fixed listening port when it is run as an executable or container without a port mapping. Matched: oxipot 0.6.0 (2026-11)."
+  - name: oxipot-telnet-password-prompt-negotiation
+    id: 2232
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '(^|\n)login:$'
+        invert_match: false
+      - input_type: string
+        input: "admin\r"
+        output_match_type: hex
+        output: "fffb01fffb03fffd18fffd1f0d50617373776f72643a20fffe20fffe21fffe22fffe27fffc05"
+        invert_match: false
+    confidence: High
+    comment: "After a bare 'login:' prompt, the user name is answered with the fixed sequence WILL ECHO, WILL SGA, DO TTYPE, DO NAWS, CR, 'Password: ', then unsolicited DONT TSPEED, DONT LFLOW, DONT LINEMODE, DONT NEW-ENVIRON and WONT STATUS. Genuine telnetd negotiates options once at connection start and login prints only 'Password: '. Matched: oxipot 0.6.0 (2026-11)."
+  - name: oxipot-telnet-password-prompt-negotiation-port-2223
+    id: 2233
+    port: 2223
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '(^|\n)login:$'
+        invert_match: false
+      - input_type: string
+        input: "admin\r"
+        output_match_type: hex
+        output: "fffb01fffb03fffd18fffd1f0d50617373776f72643a20fffe20fffe21fffe22fffe27fffc05"
+        invert_match: false
+    confidence: High
+    comment: "As 2232 on 2223, oxipot's fixed listening port. Matched: oxipot 0.6.0 (2026-11)."
+  - name: oxipot-telnet-login-incorrect-bare-prompt
+    id: 2234
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '(^|\n)login:$'
+        invert_match: false
+      - input_type: string
+        input: "admin\r"
+        output_match_type: string
+        output: "Password: "
+        invert_match: false
+      - input_type: string
+        input: "wrongpass\r"
+        output_match_type: string
+        output: "Login incorrect"
+        invert_match: true
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^Login incorrect\r\nlogin:$'
+        invert_match: false
+    confidence: High
+    comment: "A failed login is answered with a bare CR LF at once and, two seconds later, 'Login incorrect' followed by the same bare 'login: ' prompt, without a host name (genuine login prints '<hostname> login: '); the third failure closes the connection. Matched: oxipot 0.6.0 (2026-11)."
+  - name: oxipot-telnet-empty-username-closes
+    id: 2235
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '(^|\n)login:$'
+        invert_match: false
+      - input_type: string
+        input: "\r"
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+    confidence: Medium
+    comment: "An empty user name at the bare 'login:' prompt closes the connection without a reply; BusyBox login prompts again and inetutils login asks for a password. Behaviour shared by any telnet service that hangs up on an empty user name. Matched: oxipot 0.6.0 (2026-11)."
