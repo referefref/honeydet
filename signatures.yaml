@@ -20427,3 +20427,63 @@ signatures:
         invert_match: false
     confidence: High
     comment: "Companion to 2306. Because Ehoney's MySQL honeypot sees every client as the k3s pod gateway (10.42.0.1 by default), MariaDB's max_connect_errors limit counts all scanners and visitors together: after about a hundred interrupted handshakes from anyone the honeypot refuses every new connection, before the greeting, with Host '10.42.0.1' is blocked because of many connection errors. A genuine server blocks only the offending client's own address. Matched: Ehoney v3.0.0, master 3712e64 (2026-11)."
+  - name: greedybear-react-index
+    id: 2310
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*Server: gunicorn\r\n.*\r\n\r\n.*<title>GreedyBear</title>.*src="/static/reactapp/assets/index-'
+        invert_match: false
+    confidence: High
+    comment: "GET / (and any unknown path) returns the React single-page application from Django under gunicorn: <title>GreedyBear</title> with the bundle under /static/reactapp/assets/. The title is the project name. Matched: GreedyBear 3.6.4 (2026-11)."
+  - name: greedybear-openapi-schema
+    id: 2311
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /api/schema/ HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*Content-Disposition: inline; filename="GreedyBear API\.yaml"\r\n.*\r\n\r\nopenapi: 3\.[0-9.]+\ninfo:\n  title: GreedyBear API\n  version: [0-9]'
+        invert_match: false
+    confidence: High
+    comment: "The unauthenticated drf-spectacular schema at /api/schema/ is the OpenAPI document 'GreedyBear API.yaml' with title GreedyBear API and the exact release number in info.version. Matched: GreedyBear 3.6.4 (2026-11)."
+  - name: greedybear-react-manifest
+    id: 2312
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /static/reactapp/manifest.json HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\nServer: nginx\r\n.*\r\n\r\n\{\s*"short_name": "GreedyBear",\s*"name": "GreedyBear",'
+        invert_match: false
+    confidence: High
+    comment: "nginx serves the web app manifest /static/reactapp/manifest.json directly from the static volume (short_name and name GreedyBear), so it answers whatever Host header is sent, also when DJANGO_ALLOWED_HOSTS is set. Matched: GreedyBear 3.6.4 (2026-11)."
+  - name: greedybear-public-feed
+    id: 2313
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /api/feeds/all/all/recent.json HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*Server: gunicorn\r\n.*Allow: GET, HEAD, OPTIONS\r\n.*\r\n\r\n\{(?:"license":"[^"]*",)?"iocs":\['
+        invert_match: false
+    confidence: High
+    comment: "The public feed endpoint /api/feeds/<feed>/<attack>/<prioritize>.json answers without authentication with a JSON object whose key is iocs (preceded by license when FEEDS_LICENSE is set). Matched: GreedyBear 3.6.4 (2026-11)."
+  - name: greedybear-api-root
+    id: 2314
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /api/ HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*Server: gunicorn\r\n.*\r\n\r\n\{"payloads":"https?://[^"]*/api/payloads"\}$'
+        invert_match: false
+    confidence: High
+    comment: "The Django REST framework router root /api/ lists a single route, payloads (the honeypot payload view). Matched: GreedyBear 3.6.4 (2026-11)."
