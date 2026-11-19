@@ -19583,3 +19583,122 @@ signatures:
         max_response_ms: 500
     confidence: Medium
     comment: "Icarus accepts a TCP connection on port 20139, the container-side port that Icarus's own start.sh publishes as 139; Icarus listens on it directly when it runs without Docker port mapping, and nothing else uses it by default and closes it at once without sending or reading a byte (its handler only records the source address), and does the same on a second connection. A genuine NetBIOS session service keeps the connection open and waits for a session request. A TCP-wrapped service, a port forwarder with no backend or another connect-and-close sensor can also close silently, hence Medium. Matched: Icarus 59d48a7 (2026-11)."
+  - name: ldap-honeypot-wrong-password-bind-succeeds
+    id: 2220
+    port: 389
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "30350201076030020103041b636e3d6e6f626f64792c64633d6578616d706c652c64633d636f6d800e57726f6e672d506173732d323132"
+        output_match_type: hex
+        output: "300c02010761070a010004000400"
+        invert_match: false
+    confidence: High
+    comment: "Simple bind (message id 7) as cn=nobody,dc=example,dc=com with an invented password. ldap-honeypot accepts every bind: BindResponse resultCode 0 (success) with empty matchedDN and diagnosticMessage. Genuine OpenLDAP 2.5 and 389 Directory Server answer 49 invalidCredentials; Samba AD answers 8 strongerAuthRequired without TLS. Hard-coded. Matched: ldap-honeypot 7632a24 (2026-11)."
+  - name: ldap-honeypot-rootdse-ignores-attribute-list
+    id: 2221
+    port: 389
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "303b020102633604000a01000a0100020100020100010100870b6f626a656374436c61737330160414737570706f727465644c44415056657273696f6e"
+        output_match_type: hex
+        output: "040a76656e646f724e616d65"
+        invert_match: false
+    confidence: High
+    comment: "Anonymous RootDSE search (base '', scope base) asking only for supportedLDAPVersion. ldap-honeypot ignores the attribute list and returns its whole fixed RootDSE, including vendorName. Genuine OpenLDAP, 389 Directory Server and Samba AD return only the attribute requested. The attribute is always present whatever the vendor options say. Matched: ldap-honeypot 7632a24 (2026-11)."
+  - name: ldap-honeypot-whoami-protocolerror
+    id: 2222
+    port: 389
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "301e02010577198017312e332e362e312e342e312e343230332e312e31312e33"
+        output_match_type: hex
+        output: "02010578140a01020400040d70726f746f636f6c4572726f72"
+        invert_match: false
+    confidence: High
+    comment: "WhoAmI extended request (1.3.6.1.4.1.4203.1.11.3, message id 5). ldap-honeypot answers ExtendedResponse resultCode 2 with the literal diagnosticMessage 'protocolError'. Genuine OpenLDAP and 389 Directory Server answer success; Samba AD answers 2 with 'Extended Operation(1.3.6.1.4.1.4203.1.11.3) not supported'. Hard-coded. Matched: ldap-honeypot 7632a24 (2026-11)."
+  - name: ldap-honeypot-starttls-unwillingtoperform
+    id: 2223
+    port: 389
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "301d02010677188016312e332e362e312e342e312e313436362e3230303337"
+        output_match_type: hex
+        output: "0a013504000412756e77696c6c696e67546f506572666f726d8a16312e332e362e312e342e312e313436362e3230303337"
+        invert_match: false
+    confidence: High
+    comment: "StartTLS extended request (message id 6). ldap-honeypot answers resultCode 53 with the literal diagnosticMessage 'unwillingToPerform' and the StartTLS OID as responseName. Genuine 389 Directory Server and Samba AD with TLS answer success; OpenLDAP without TLS answers 2 'unsupported extended operation'. Hard-coded. Matched: ldap-honeypot 7632a24 (2026-11)."
+  - name: ldap-honeypot-abandon-answered
+    id: 2224
+    port: 389
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "3006020108500104"
+        output_match_type: hex
+        output: "02010865140a01020400040d70726f746f636f6c4572726f72"
+        invert_match: false
+    confidence: High
+    comment: "AbandonRequest (message id 8, abandoning id 4). The protocol defines no response to Abandon and genuine OpenLDAP, 389 Directory Server and Samba AD send nothing; ldap-honeypot answers with a SearchResultDone, resultCode 2, diagnosticMessage 'protocolError'. Hard-coded. Matched: ldap-honeypot 7632a24 (2026-11)."
+  - name: ldap-honeypot-compare-gets-searchresultdone
+    id: 2225
+    port: 389
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "302602010a6e210416636e3d782c64633d6578616d706c652c64633d636f6d30070402636e040178"
+        output_match_type: hex
+        output: "02010a65140a01020400040d70726f746f636f6c4572726f72"
+        invert_match: false
+    confidence: High
+    comment: "CompareRequest (message id 10) for cn=x,dc=example,dc=com. ldap-honeypot answers every operation it does not emulate with a SearchResultDone (application tag 5) carrying resultCode 2 and the literal text 'protocolError'. Genuine servers answer with a CompareResponse (application tag 15), here 32 noSuchObject. Hard-coded. Matched: ldap-honeypot 7632a24 (2026-11)."
+  - name: ldap-honeypot-message-id-zero-becomes-one
+    id: 2226
+    port: 389
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "300c020100600702010304008000"
+        output_match_type: hex
+        output: "300c02010161070a010004000400"
+        invert_match: false
+    confidence: High
+    comment: "Anonymous bind with messageID 0. ldap-honeypot replaces a zero message ID with 1 in its BindResponse. Genuine OpenLDAP, 389 Directory Server and Samba AD echo message ID 0. Hard-coded. Matched: ldap-honeypot 7632a24 (2026-11)."
+  - name: ldap-honeypot-default-rootdse-metadata
+    id: 2227
+    port: 389
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "302502010c632004000a01000a0100020100020100010100870b6f626a656374436c6173733000"
+        output_match_type: hex
+        output: "302a041464656661756c744e616d696e67436f6e746578743112041044433d636f72702c44433d6c6f63616c"
+        invert_match: false
+      - input_type: hex
+        input: "302502010c632004000a01000a0100020100020100010100870b6f626a656374436c6173733000"
+        output_match_type: hex
+        output: "3025040a76656e646f724e616d65311704154d6963726f736f667420436f72706f726174696f6e3021040d76656e646f7256657273696f6e3110040e57696e646f777320536572766572"
+        invert_match: false
+        reconnect: true
+    confidence: Medium
+    comment: "Anonymous RootDSE search for all attributes, twice. ldap-honeypot's defaults return defaultNamingContext DC=corp,DC=local and vendorName 'Microsoft Corporation' with vendorVersion 'Windows Server'. Genuine Active Directory publishes no vendorName or vendorVersion, Samba AD names itself 'Samba Team', and OpenLDAP and 389 Directory Server return neither value. Configurable with --vendor-name, --vendor-version and --naming-context, so Medium. Matched: ldap-honeypot 7632a24 (2026-11)."
+  - name: ldap-honeypot-fallback-after-bind
+    id: 2228
+    port: 389
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "300c020103600702010304008000"
+        output_match_type: hex
+        output: "300c02010361070a010004000400"
+        invert_match: false
+      - input_type: hex
+        input: "0100"
+        output_match_type: hex
+        output: "300c02010165070a013204000400"
+        invert_match: false
+    confidence: High
+    comment: "Anonymous bind (message id 3), then two bytes that are not an LDAPMessage (a BER boolean header). ldap-honeypot answers the bind with success and the stray bytes with a fixed SearchResultDone for message id 1, resultCode 50 insufficientAccessRights, then closes. Genuine servers send nothing or reset the connection. (Chameleon's LDAP service sends the same fixed reply, but to the bind itself, so the first step tells them apart.) Hard-coded. Matched: ldap-honeypot 7632a24 (2026-11)."
