@@ -20962,3 +20962,51 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: 'A TFTP read request (RRQ for a random file name, octet mode) to UDP 69, where the default DecoyMini probe policy places its ''UDP port connection'' template as a TFTP decoy. The template answers any datagram with its default response ''welcome!''. A genuine TFTP server answers a read request with a TFTP DATA or ERROR packet (opcode 3 or 5, for example ''File not found''). The TCP variant of the template (3306 in the default policy) also sends ''welcome!'' to a request line and then resets the connection. Medium: the response text is a template value. Matched: DecoyMini 4.0.18198 (2026-11).'
+  - name: gotham-orchestrator-api-bat-banner
+    id: 2360
+    port: 5000
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 .*\r\n\r\n.*YJGS8P"Y888P"Y888P"Y888P"Y8888P.*GOTHAM''s project'
+        invert_match: false
+    confidence: High
+    comment: 'The orchestrator API answers / with a fixed ASCII-art bat logo followed by "GOTHAM''s project". The text is hard-coded in api.py and is not configurable; no other product serves it. Matched: GOTHAM dev_V1 d58e99c, API 0.1.0 (2026-11).'
+  - name: gotham-orchestrator-api-version-endpoint
+    id: 2361
+    port: 5000
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /version HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 [^\r\n]*\r\n(?:[^\r\n]+\r\n)*Content-Type: text/html; charset=utf-8\r\n(?:[^\r\n]+\r\n)*\r\n\{"version": "[0-9][0-9.]*"\}\s*\z'
+        invert_match: false
+    confidence: Medium
+    comment: 'GET /version returns exactly {"version": "0.1.0"} plus a newline, built as a string from a Python dict and therefore served as text/html rather than JSON. A small JSON version body is common in APIs, so the content type and the exact layout carry the signature; Medium. Matched: GOTHAM dev_V1 d58e99c, API 0.1.0 (2026-11).'
+  - name: gotham-orchestrator-api-post-only-routes
+    id: 2362
+    port: 5000
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /add/honeypot HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 405 .*\r\nAllow: (?:POST, OPTIONS|OPTIONS, POST)\r\n.*<title>405 Method Not Allowed</title>'
+        invert_match: false
+      - input_type: string
+        input: "GET /delete/link HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        reconnect: true
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 405 .*\r\nAllow: (?:POST, OPTIONS|OPTIONS, POST)\r\n.*<title>405 Method Not Allowed</title>'
+        invert_match: false
+      - input_type: string
+        input: "GET /edit/server HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        reconnect: true
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 405 .*\r\nAllow: (?:POST, OPTIONS|OPTIONS, POST)\r\n.*<title>405 Method Not Allowed</title>'
+        invert_match: false
+    confidence: Medium
+    comment: 'The API''s management routes (/add/honeypot, /delete/link, /edit/server and their siblings) accept only POST, so a GET to each returns Flask''s 405 page with an Allow header listing only POST and OPTIONS (in either order, which varies between processes), while unknown paths return 404. The route set is GOTHAM''s own, but it is shape rather than content (any Flask application with the same POST-only paths would match), so Medium. Matched: GOTHAM dev_V1 d58e99c, API 0.1.0 (2026-11).'
