@@ -1596,7 +1596,7 @@ signatures:
         output: '^HTTP/1\.1 200 OK\r\n[\s\S]*?\r\n\r\n[\s\S]*"tagline" ?: ?"You Know, for Search"'
         invert_match: false
     confidence: High
-    comment: "Handlers ignore the HTTP method, so PUT / (also DELETE, OPTIONS and invented methods) returns the banner with 200. Genuine Elasticsearch answers PUT / with 400 'No handler found' (1.x) or 405 (7.x, 8.x). Also matches HFish 3.3.6 (2026-11)."
+    comment: "Handlers ignore the HTTP method, so PUT / (also DELETE, OPTIONS and invented methods) returns the banner with 200. Genuine Elasticsearch answers PUT / with 400 'No handler found' (1.x) or 405 (7.x, 8.x). Also matches HFish 3.3.6 (2026-11). Also matches hachimi bc8b94b (2026-11)."
   - name: elastichoney-nodes-invalid-json
     id: 143
     port: 9200
@@ -18019,7 +18019,7 @@ signatures:
         output: '^\+OK$'
         invert_match: false
     confidence: High
-    comment: "AUTH with a random user name and password returns '+OK'. Genuine Redis 6 onwards and Valkey answer WRONGPASS, and Redis 2.8 to 5 reject the two-argument form. Matched: RediTrap 8b5d789 (2026-11)."
+    comment: "AUTH with a random user name and password returns '+OK'. Genuine Redis 6 onwards and Valkey answer WRONGPASS, and Redis 2.8 to 5 reject the two-argument form. Matched: RediTrap 8b5d789 (2026-11). Also matches hachimi bc8b94b (2026-11)."
   - name: reditrap-protocol-error-python-bytes
     id: 2066
     port: 6379
@@ -20487,3 +20487,123 @@ signatures:
         invert_match: false
     confidence: High
     comment: "The Django REST framework router root /api/ lists a single route, payloads (the honeypot payload view). Matched: GreedyBear 3.6.4 (2026-11)."
+  - name: hachimi-http-any-path-nginx-welcome
+    id: 2320
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /hd-{{rand}}.html HTTP/1.1\r\nHost: www\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 200 OK\r\nServer: [^\r\n]*\r\nDate: [^\r\n]+\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: \d+\r\nConnection: close\r\n\r\n(?s).*<h1>Welcome to nginx!</h1>'
+        invert_match: false
+    confidence: High
+    comment: "hachimi answers a request for any path, on any port, with 200 OK and a copy of the nginx default page, under a Server header and page title taken in turn from built-in lists (servers.txt, titles.txt; the first title is empty). A genuine nginx returns 404 for a random path, and its default page has the title 'Welcome to nginx!' and its own Server header. Matched: hachimi bc8b94b (2026-11)."
+  - name: hachimi-http-on-ssh-port
+    id: 2321
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: www\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 200 OK\r\nServer: [^\r\n]*\r\nDate: [^\r\n]+\r\nContent-Type: text/html; charset=utf-8\r\n(?s).*<h1>Welcome to nginx!</h1>'
+        invert_match: false
+    confidence: High
+    comment: "hachimi chooses the protocol from the client's first bytes rather than the port, so an HTTP request to port 22 gets its copy of the nginx default page, served as 'text/html; charset=utf-8' (nginx itself sends 'text/html'); an SSH server sends its banner and rejects the request. Matched: hachimi bc8b94b (2026-11)."
+  - name: hachimi-ssh-openssh84-go-kexinit
+    id: 2322
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: 5353482d322e302d4f70656e5353485f392e360d0a
+        output_match_type: regex
+        output: '^SSH-2\.0-OpenSSH_8\.4\r\n(?s).*kex-strict-s-v00@openssh\.com\x00\x00\x00!rsa-sha2-256,rsa-sha2-512,ssh-rsa\x00\x00\x00laes128-gcm@openssh\.com,aes256-gcm@openssh\.com,chacha20-poly1305@openssh\.com'
+        invert_match: false
+    confidence: High
+    comment: "hachimi's SSH service sends nothing until the client sends its version string (a genuine server greets first), then claims SSH-2.0-OpenSSH_8.4 (no Debian or distribution suffix) with the key exchange list of Go's x/crypto/ssh: RSA host keys only and AES-GCM ciphers before chacha20. OpenSSH sends its banner first and offers ed25519/ECDSA host keys with chacha20 first. Matched: hachimi bc8b94b (2026-11)."
+  - name: hachimi-tls-default-certificate
+    id: 2323
+    port: 443
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: 1603010068010000640303000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f000010c02fc030c02bc02c009c009d002f00350100002b000a00060004001d0017000b00020100000d0012001004010501060108040805080604030503ff01000100
+        output_match_type: hex
+        output: 30123110300e060355040a130748616368696d69
+        invert_match: false
+    confidence: Medium
+    comment: "Without a configured certificate hachimi generates a self-signed RSA certificate at each start whose subject and issuer are only O=Hachimi (no common name), on every port that receives a TLS ClientHello. A TLS 1.2 ClientHello makes the certificate visible in clear. Medium: operators can configure their own certificate. Matched: hachimi bc8b94b (2026-11)."
+  - name: hachimi-redis-ping-array-reply
+    id: 2324
+    port: 6379
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "PING hachimi"
+        output_match_type: regex
+        output: '^\*7\r\nhachimi$'
+        invert_match: false
+    confidence: High
+    comment: "hachimi's Redis emulation answers PING with an argument using an array header ('*7') followed by the bare argument; Redis returns a bulk string ('$7'). Matched: hachimi bc8b94b (2026-11)."
+  - name: hachimi-redis-info-fixed-run-id
+    id: 2325
+    port: 6379
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "INFO server"
+        output_match_type: regex
+        output: 'redis_version:4\.0\.8\r\n(?s).*run_id:0e61abd297771de3fe812a3c21027732ac9f41fe\r\n(?s).*uptime_in_seconds:25926381\r\n'
+        invert_match: false
+    confidence: High
+    comment: "INFO server returns a fixed Redis 4.0.8 section with the same run_id, process id and uptime on every instance and at every request; a genuine Redis creates a new random run_id at each start and its uptime grows. Matched: hachimi bc8b94b (2026-11)."
+  - name: hachimi-elasticsearch-fixed-cluster
+    id: 2326
+    port: 9200
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: www\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)Warning: 299 Elasticsearch-7\.17\.8-.*"cluster_uuid" : "o6VYCbWMTiW9jXIna8s-FA".*"number" : "7\.14\.1"'
+        invert_match: false
+    confidence: High
+    comment: "Port 9200 (and any path starting /_) returns a fixed Elasticsearch banner: node e944cd511328, cluster_uuid o6VYCbWMTiW9jXIna8s-FA and version 7.14.1, under a security Warning header from version 7.17.8. A genuine cluster has its own random cluster UUID and one version. Matched: hachimi bc8b94b (2026-11)."
+  - name: hachimi-docker-api-version
+    id: 2327
+    port: 2375
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /version HTTP/1.1\r\nHost: www\r\nUser-Agent: Docker-Client/20.10.0 (linux)\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 200 OK\r\nServer: Docker/20\.10\.0 \(linux\)\r\n(?s).*"KernelVersion":"3\.10\.0-1160\.99\.1\.el7\.x86_64"'
+        invert_match: false
+    confidence: High
+    comment: "Port 2375 answers /version with a fixed Docker 20.10.0 description (containerd 1.6.27, kernel 3.10.0-1160.99.1.el7) and the Server header first; Docker's Go HTTP server writes its headers in alphabetical order (Api-Version first, Server after Ostype) and reports the host's own kernel. Matched: hachimi bc8b94b (2026-11)."
+  - name: hachimi-rsync-protocol-27-modules
+    id: 2328
+    port: 873
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: 405253594e43443a2033312e300a236c6973740a
+        output_match_type: regex
+        output: '^@RSYNCD: 27\n(?s).*wwwdata\twwwdata\nbackup\tbackup\ndata\tdata\nhtml\thtml\n@RSYNCD: EXIT'
+        invert_match: false
+    confidence: High
+    comment: "hachimi's rsync daemon speaks only after the client's greeting, answers with protocol 27 and lists the fixed modules wwwdata, backup, data and html; a genuine rsyncd sends its greeting first (protocol 31 or later with a digest list) and pads module names. Matched: hachimi bc8b94b (2026-11)."
+  - name: hachimi-tomcat-manager-any-credentials
+    id: 2329
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /manager/html HTTP/1.1\r\nHost: www\r\nUser-Agent: Mozilla/5.0\r\nAuthorization: Basic aGQ6aGQ=\r\nConnection: close\r\n\r"
+        output_match_type: string
+        output: "JSESSIONID=7CA0511239CF843052119408A234494F"
+        invert_match: false
+    confidence: High
+    comment: "/manager/html on any port accepts any Basic credentials and returns a Tomcat Web Application Manager page with the same session id on every request; a genuine Tomcat rejects unknown credentials with 401 and issues random session ids. Matched: hachimi bc8b94b (2026-11)."
