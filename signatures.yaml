@@ -5610,7 +5610,7 @@ signatures:
         output: '^[\x20-\x7e\t\r\n]+$'
         invert_match: false
     confidence: Medium
-    comment: "Port 23 stays silent until the client types, then returns only printable text (default 'login: ') and closes, with no Telnet option negotiation. Genuine telnetd and Telnet honeypots such as OpenCanary open with IAC (0xff) DO/WILL negotiation before any prompt. Medium: a minimal Telnet service without negotiation would also match. Matched: honeypot-ddos f288125 (2026-11). Also matches Shmakov Honeypot 1c3d5f3 (2026-11). Also matches oxipot 0.6.0 (2026-11). Also matches HFish 3.3.6 (2026-11)."
+    comment: "Port 23 stays silent until the client types, then returns only printable text (default 'login: ') and closes, with no Telnet option negotiation. Genuine telnetd and Telnet honeypots such as OpenCanary open with IAC (0xff) DO/WILL negotiation before any prompt. Medium: a minimal Telnet service without negotiation would also match. Matched: honeypot-ddos f288125 (2026-11). Also matches Shmakov Honeypot 1c3d5f3 (2026-11). Also matches oxipot 0.6.0 (2026-11). Also matches HFish 3.3.6 (2026-11). Also matches DecoyMini 4.0.18198 (2026-11)."
   - name: honeypot-ddos-pentbox-smb-text-reply
     id: 715
     port: 445
@@ -6054,7 +6054,7 @@ signatures:
         output: '(?s)^HTTP/1\.[01] \d{3} [^\r\n]*\r\n(?:[^\r\n]+\r\n)*Server: Apache[^\r\n]*\r\n(?:[^\r\n]+\r\n)*Date: [^\r\n]+\r\n(?:Content-Length: \d+\r\n)?(?:Content-Type: [^\r\n]*\r\n)?Connection: close\r\n'
         invert_match: false
     confidence: High
-    comment: "Beelzebub's HTTP services are Go net/http: configured headers are written in sorted order and Go adds Date (and Content-Length) after them, so a response that claims 'Server: Apache...' carries Date after Server, followed only by the headers Go adds itself (Content-Length, a sniffed Content-Type, then Connection: close). Apache httpd always sends Date first and Server second; Twisted-based honeypots that claim Apache (OpenCanary) send Connection before Server. Holds for any configured Apache Server header (WordPress example on 80, 401 example on 8080, directory maze on 8888). Matched: Beelzebub v3.10.0 (2026-11)."
+    comment: "Beelzebub's HTTP services are Go net/http: configured headers are written in sorted order and Go adds Date (and Content-Length) after them, so a response that claims 'Server: Apache...' carries Date after Server, followed only by the headers Go adds itself (Content-Length, a sniffed Content-Type, then Connection: close). Apache httpd always sends Date first and Server second; Twisted-based honeypots that claim Apache (OpenCanary) send Connection before Server. Holds for any configured Apache Server header (WordPress example on 80, 401 example on 8080, directory maze on 8888). Matched: Beelzebub v3.10.0 (2026-11). Also matches DecoyMini 4.0.18198 (2026-11)."
   - name: beelzebub-mysql-text-banner
     id: 754
     port: 3306
@@ -6600,7 +6600,7 @@ signatures:
         output: '(?s)curve25519-sha256@libssh\.org,ecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521,diffie-hellman-group14-sha1\x00\x00\x00\x07ssh-rsa\x00\x00\x00.aes128-gcm@openssh\.com,chacha20-poly1305@openssh\.com,aes128-ctr,aes192-ctr,aes256-ctr\x00'
         invert_match: false
     confidence: High
-    comment: "Banner claims OpenSSH, but the server KEXINIT is that of the Go golang.org/x/crypto/ssh server of early 2020 (five key exchanges ending in diffie-hellman-group14-sha1, a single ssh-rsa host key, AES-GCM/ChaCha20/AES-CTR ciphers). OpenSSH always offers its own, longer lists (and ssh-ed25519 or ECDSA host keys). Matched: honeytrap 05965fc (2026-11). Also matches sshForShits 4a2bef3 built with its April 2020 x/crypto (2026-11). Also matches sshlowpot 67717d9 built with x/crypto of January 2020 (2026-11)."
+    comment: "Banner claims OpenSSH, but the server KEXINIT is that of the Go golang.org/x/crypto/ssh server of early 2020 (five key exchanges ending in diffie-hellman-group14-sha1, a single ssh-rsa host key, AES-GCM/ChaCha20/AES-CTR ciphers). OpenSSH always offers its own, longer lists (and ssh-ed25519 or ECDSA host keys). Matched: honeytrap 05965fc (2026-11). Also matches sshForShits 4a2bef3 built with its April 2020 x/crypto (2026-11). Also matches sshlowpot 67717d9 built with x/crypto of January 2020 (2026-11). Also matches DecoyMini 4.0.18198 (2026-11)."
   - name: honeytrap-ssh-exec-ls-not-found
     id: 792
     port: 22
@@ -20832,3 +20832,133 @@ signatures:
         invert_match: false
     confidence: High
     comment: 'After the X.224 exchange (which selects CredSSP with source reference 0 and no flags, as honeydet id 2123 also sees on rdphoneypot), a TLS ClientHello is answered with the self-signed certificate the RDP decoy creates on first start: subject and issuer CN=DESKTOP-RDP, O=Microsoft, C=US. Windows creates its RDP certificate with the computer name as the only subject attribute (CN=<hostname>, no organisation or country), and xrdp uses the host''s own certificate. The certificate lives in data/rdp.crt and is only replaced if the operator does so by hand. Matched: Knock-Knock 3.0.1-dev (master 2969954) (2026-11).'
+  - name: decoymini-console-prodinfo-api
+    id: 2350
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /api/login/prodInfo HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\n.*X-Begin-Time: \d{19}\r\n.*\{"code":0,"data":\{"ProdModel":"DecoyMini","ProdName":"[^"]*","Supplier":"[^"]*"\},"message":"[^"]*"\}$'
+        invert_match: false
+    confidence: High
+    comment: 'Unauthenticated GET of /api/login/prodInfo on the DecoyMini management console (the installer''s default listening port is 80; the vendor''s Docker image uses 88). The console names itself in JSON: ProdModel DecoyMini, the Chinese product name and the vendor (Beijing Jiwo Technology), and every reply carries an X-Begin-Time header holding a 19-digit nanosecond Unix timestamp. The login page fetches this on every visit, so it cannot be switched off. Matched: DecoyMini 4.0.18198 (2026-11).'
+  - name: decoymini-console-index-headers
+    id: 2351
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\nAccept-Ranges: bytes\r\nAccess-Control-Allow-Credentials: true\r\nAccess-Control-Allow-Headers: [^\r\n]*X-Auth-Openid[^\r\n]*x-client-type\r\n.*X-Begin-Time: \d{19}\r\nX-Request-Id: [0-9a-f-]{36}\r\n.*localStorage\.getItem\("dcProdTitle"\)'
+        invert_match: false
+    confidence: High
+    comment: 'GET / on the DecoyMini console: the single-page application is served with permissive CORS headers whose allowed-header list includes X-Auth-Token, X-Auth-UUID and X-Auth-Openid, an X-Begin-Time header with a 19-digit nanosecond timestamp and an X-Request-Id UUID, and the page sets its title from the localStorage key dcProdTitle. No genuine web server or common application sends this combination. Matched: DecoyMini 4.0.18198 (2026-11).'
+  - name: decoymini-node-service-tls-shipped-certificate
+    id: 2352
+    port: 1226
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "1603010068010000640303000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f00000a002fc02fc030009c003501000031000a00080006001d00170018000b00020100000d000e000c0401050106010403050308040023000000170000ff01000100"
+        output_match_type: hex
+        output: '02144e3d02c88b1a436708e586287129de06c163b322'
+        invert_match: false
+    confidence: High
+    comment: 'A TLS 1.2 ClientHello to the node service port (1226, SvcAddr in config.yaml, used by probes to reach the manager). The server presents the self-signed certificate shipped in the installation package (/usr/decoymini/data/mgr.crt, OpenSSL default subject C=AU, ST=Some-State, O=Internet Widgits Pty Ltd, valid 2026-05-29 to 2036-05-26, serial 4E3D02C88B1A436708E586287129DE06C163B322), the same in every installation; the signature matches its serial number. Other services with OpenSSL''s default subject generate their own certificate and serial. Matched: DecoyMini 4.0.18198 (2026-11).'
+  - name: decoymini-web-decoy-tls-shipped-certificate
+    id: 2353
+    port: 443
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "1603010068010000640303000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f00000a002fc02fc030009c003501000031000a00080006001d00170018000b00020100000d000e000c0401050106010403050308040023000000170000ff01000100"
+        output_match_type: hex
+        output: '0214268461d19ef1c3dc9cf6169df4a48400f7e46304'
+        invert_match: false
+    confidence: Medium
+    comment: 'A TLS 1.2 ClientHello to an HTTPS web decoy (the default probe policy''s ''WEB business system'' trap on 443). The decoy presents the certificate shipped with the probe (/usr/decoy/data/decoydef.crt, C=AU, ST=Some-State, O=Internet Widgits Pty Ltd, valid 2026-05-29 to 2036-05-26, serial 268461D19EF1C3DC9CF6169DF4A48400F7E46304), the same in every installation. Medium: the trap can be moved to another port or served over plain HTTP. Matched: DecoyMini 4.0.18198 (2026-11).'
+  - name: decoymini-web-decoy-not-exist-404
+    id: 2354
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /decoymini-{{rand}} HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 404 Not Found\r\nServer: [^\r\n]+\r\nDate: [^\r\n]+\r\nContent-Length: \d+\r\nContent-Type: text/plain; charset=utf-8\r\n(Connection: close\r\n)?\r\n/decoymini-\S+ (Page )?not exist\.$'
+        invert_match: false
+    confidence: High
+    comment: 'GET of a random missing path on a DecoyMini web decoy (HTTP engine: the WEB business system sample and the base WEB template; 8080 in the lab policy). The template''s ''notexists'' rule returns a plain-text 404 that echoes the requested URL followed by ''Page not exist.'' (or ''not exist.'' in the base template), under the configured Server header (Apache-Coyote/1.1 by default). Tomcat, which that header imitates, returns an HTML error page or an empty 404, and no common server echoes the path in this form. Matched: DecoyMini 4.0.18198 (2026-11).'
+  - name: decoymini-web-decoy-tracing-script
+    id: 2355
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\n.*Server: Apache-Coyote/1\.1\r\n.*</html>\r?\n<script src="/jquerys\.js"></script>$'
+        invert_match: false
+    confidence: Medium
+    comment: 'GET / on a DecoyMini web decoy with the default traceability setting: the engine appends <script src="/jquerys.js"></script> after the closing </html> tag of every page; /jquerys.js is an obfuscated script that collects details of the visitor''s browser and system for the console''s attacker profile. A genuine page does not carry a script element after </html>. Medium: traceability is a template setting and the Server header is configurable. Matched: DecoyMini 4.0.18198 (2026-11).'
+  - name: decoymini-telnet-connect-ok-prompt
+    id: 2356
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "\r"
+        output_match_type: regex
+        output: '^Connect OK\r\n[^\r\n]+ login:$'
+        invert_match: false
+    confidence: Medium
+    comment: 'The DecoyMini Telnet decoy says nothing until the client sends data and performs no Telnet option negotiation; after a carriage return it answers ''Connect OK'' and a ''<server name> login:'' prompt (''Work login:'' by default). A genuine telnetd sends IAC option negotiation as soon as the connection opens. Medium: the server name and the ''Connect OK'' line are template values. Matched: DecoyMini 4.0.18198 (2026-11).'
+  - name: decoymini-ftp-default-banner
+    id: 2357
+    port: 21
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^220 欢迎使用本FTP服务器$'
+        invert_match: false
+      - input_type: string
+        input: "USER anonymous\r"
+        output_match_type: regex
+        output: '^331 User name ok, password required$'
+        invert_match: false
+    confidence: Medium
+    comment: 'The DecoyMini FTP decoy''s default greeting ''220 欢迎使用本FTP服务器'' (''Welcome to this FTP server'' in Chinese), followed by the Go FTP library''s reply ''331 User name ok, password required'' to USER. vsftpd, ProFTPD and Pure-FTPd use their own greetings and 331 texts. Medium: the greeting is a template setting (the 331 text is shared with other honeypots built on the same library, such as HFish, whose greeting differs). Matched: DecoyMini 4.0.18198 (2026-11).'
+  - name: decoymini-ssh-openssh74-go-kexinit
+    id: 2358
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^SSH-2\.0-OpenSSH_7\.4$'
+        invert_match: false
+      - input_type: string
+        input: "SSH-2.0-OpenSSH_9.2p1 Debian-2\r"
+        output_match_type: regex
+        output: '(?s)\x00\x00\x00qcurve25519-sha256@libssh\.org,ecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521,diffie-hellman-group14-sha1\x00\x00\x00\x07ssh-rsa\x00\x00\x00Uaes128-gcm@openssh\.com,chacha20-poly1305@openssh\.com,aes128-ctr,aes192-ctr,aes256-ctr\x00\x00\x00Uaes128-gcm'
+        invert_match: false
+    confidence: Medium
+    comment: 'The DecoyMini SSH decoy announces SSH-2.0-OpenSSH_7.4 (the template default) but its key exchange is that of an older Go x/crypto/ssh server: five key-exchange methods ending with diffie-hellman-group14-sha1, ssh-rsa as the only host-key algorithm (no rsa-sha2-256/512, so OpenSSH 8.8 and later refuse to connect unless ssh-rsa is re-enabled) and aes128-gcm first among the ciphers. Genuine OpenSSH 7.4 offers curve25519-sha256, group-exchange and rsa-sha2 host keys. Medium: the version string is configurable and other Go honeypots on old x/crypto with an RSA key send the same list. Matched: DecoyMini 4.0.18198 (2026-11).'
+  - name: decoymini-udp-port-template-welcome
+    id: 2359
+    port: 69
+    proto: udp
+    steps:
+      - input_type: hex
+        input: "00016465636f796d696e692d70726f62652e747874006f6374657400"
+        output_match_type: regex
+        output: '^welcome!$'
+        invert_match: false
+    confidence: Medium
+    comment: 'A TFTP read request (RRQ for a random file name, octet mode) to UDP 69, where the default DecoyMini probe policy places its ''UDP port connection'' template as a TFTP decoy. The template answers any datagram with its default response ''welcome!''. A genuine TFTP server answers a read request with a TFTP DATA or ERROR packet (opcode 3 or 5, for example ''File not found''). The TCP variant of the template (3306 in the default policy) also sends ''welcome!'' to a request line and then resets the connection. Medium: the response text is a template value. Matched: DecoyMini 4.0.18198 (2026-11).'
