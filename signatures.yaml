@@ -20607,3 +20607,88 @@ signatures:
         invert_match: false
     confidence: High
     comment: "/manager/html on any port accepts any Basic credentials and returns a Tomcat Web Application Manager page with the same session id on every request; a genuine Tomcat rejects unknown credentials with 401 and issues random session ids. Matched: hachimi bc8b94b (2026-11)."
+  - name: honeywire-hub-dashboard
+    id: 2330
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*<title>HoneyWire Sentinel</title>.*<div id="app"></div>'
+        invert_match: false
+    confidence: High
+    comment: "The HoneyWire Hub (management dashboard and sensor API) serves its Vue single-page application with the title 'HoneyWire Sentinel' on the Hub port (8080 by default). Reveals the deception platform's console rather than a decoy. Matched: HoneyWire Hub 2.1.0 (2026-11)."
+  - name: honeywire-hub-sensor-api
+    id: 2331
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST /api/v2/heartbeat HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nContent-Length: 2\r\nConnection: close\r\n\r\n{}"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 401 Unauthorized\r\n.*\r\n\r\nUnauthorized Sensor$'
+        invert_match: false
+    confidence: High
+    comment: "The Hub's sensor telemetry endpoint POST /api/v2/heartbeat answers a request without a node key with 401 and the plain-text body 'Unauthorized Sensor'. Matched: HoneyWire Hub 2.1.0 (2026-11)."
+  - name: honeywire-hub-setup-status
+    id: 2332
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /api/v2/setup/status HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\nContent-Type: application/json\r\n.*\r\n\r\n\{"requiresSetup":(?:true|false)\}$'
+        invert_match: false
+    confidence: High
+    comment: "The Hub's public setup endpoint GET /api/v2/setup/status returns {\"requiresSetup\":false} once initialised, or true on a Hub that has not been claimed yet (whose setup endpoint is then open to anyone who can reach it). Matched: HoneyWire Hub 2.1.0 (2026-11)."
+  - name: honeywire-web-router-decoy-page
+    id: 2333
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*<title>[^<]* Router Login</title>.*Enter administrator credentials to access the device management interface\..*<form method="post" action="/login">.*<span>Model</span>\s*<span>RV340</span>.*<span>1\.0\.03\.20</span>'
+        invert_match: false
+    confidence: High
+    comment: "The Web Router Decoy sensor serves one built-in login page: '<brand> Router Login' (Netgear by default, set by HW_ROUTER_BRAND) with a footer that always reads Model RV340, firmware 1.0.03.20, whatever brand is shown, and a form posting to /login. Matched: HoneyWire Web Router Decoy 2.0.1 (2026-11)."
+  - name: honeywire-web-router-decoy-login-delay
+    id: 2334
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST /login HTTP/1.1\r\nHost: x\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: 33\r\nConnection: close\r\n\r\nusername=honeydet&password=probe1"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 401 Unauthorized\r\nContent-Type: text/html; charset=utf-8\r\n.*<title>[^<]* Router Login</title>.*\.error \{\s*display: block;'
+        invert_match: false
+        min_response_ms: 1400
+    confidence: High
+    comment: "A failed login to the Web Router Decoy is answered after a fixed delay of about 1.5 seconds with HTTP 401 and the same page with its error block shown; routers' web logins answer a form post with 200 or a redirect. Sends one dummy login, which the sensor reports to the Hub as a critical event. Matched: HoneyWire Web Router Decoy 2.0.1 (2026-11)."
+  - name: honeywire-tcp-tarpit-default-banner-2222
+    id: 2335
+    port: 2222
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^SSH-2\.0-OpenSSH_8\.2p1$'
+        invert_match: false
+    confidence: Medium
+    comment: "The TCP Tarpit sensor's default banner, from its sensor manifest, is the bare string SSH-2.0-OpenSSH_8.2p1 on its first default decoy port 2222; packaged OpenSSH 8.2p1 (Ubuntu 20.04) adds a distribution suffix such as 'Ubuntu-4ubuntu0.13'. In hold mode the sensor then reads and never answers, where a genuine server answers the client's version with its key exchange. Medium: the banner and ports are configurable, and a self-built OpenSSH 8.2p1 also sends the bare string. Matched: HoneyWire TCP Tarpit 2.0.2 (2026-11)."
+  - name: honeywire-tcp-tarpit-ssh-banner-on-mysql-port
+    id: 2336
+    port: 3306
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^SSH-2\.0-OpenSSH_8\.2p1$'
+        invert_match: false
+    confidence: Medium
+    comment: "The TCP Tarpit's second default decoy port is 3306 (MySQL), but the sensor sends the same banner on every port, by default the bare SSH banner SSH-2.0-OpenSSH_8.2p1 from its sensor manifest: a MySQL or MariaDB server greets with its binary handshake packet, and packaged OpenSSH 8.2p1 adds a distribution suffix. Medium: the banner and ports are configurable. Matched: HoneyWire TCP Tarpit 2.0.2 (2026-11)."
