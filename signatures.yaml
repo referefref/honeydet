@@ -12145,7 +12145,7 @@ signatures:
       output: '^250-[^\r\n]+\r?\n250-PIPELINING'
       invert_match: false
     confidence: High
-    comment: 'HELO is answered with the full multi-line EHLO extension list. RFC 5321 gives HELO a single-line 250 reply, which is what Postfix, Exim, OpenSMTPD, aiosmtpd, Mailpit and MailHog send. Matched: Mailoney 2.2.0 (commit b8310a7) (2026-11).'
+    comment: "HELO is answered with the full multi-line EHLO extension list. RFC 5321 gives HELO a single-line 250 reply, which is what Postfix, Exim, OpenSMTPD, aiosmtpd, Mailpit and MailHog send. Matched: Mailoney 2.2.0 (commit b8310a7) (2026-11). Also matches Knock-Knock 3.0.1-dev (master 2969954) (2026-11)."
   - name: mailoney-auth-plain-235-failed
     id: 1392
     port: 25
@@ -12328,7 +12328,7 @@ signatures:
       output: '^235 2\.7\.0 Authentication successful'
       invert_match: false
     confidence: Medium
-    comment: 'AUTH PLAIN with the example credentials from config.ini.example (username / password) succeeds without TLS. Configurable (smpt_username and smtp_password), hence Medium. Matched: SHIVA receiver commit 6197cd3 (2026-11).'
+    comment: "AUTH PLAIN with the example credentials from config.ini.example (username / password) succeeds without TLS. Configurable (smpt_username and smtp_password), hence Medium. Matched: SHIVA receiver commit 6197cd3 (2026-11). Also matches Knock-Knock 3.0.1-dev (master 2969954) (2026-11)."
   - name: shiva-queued-as-uuid
     id: 1403
     port: 25
@@ -13815,7 +13815,7 @@ signatures:
         invert_match: false
         max_response_ms: 1000
     confidence: High
-    comment: "Any password is refused with 'Login incorrect' within milliseconds, and the next 'login:' prompt follows two seconds later. Genuine login programs (util-linux/shadow login under inetutils telnetd, BusyBox login) first echo the line end and then wait 2.5 to 3 seconds before 'Login incorrect' (measured in the lab: inetutils/login 2.5 s, BusyBox 3.0 s). Matched: telnetlogger 2b88261 (0.2) (2026-11)."
+    comment: "Any password is refused with 'Login incorrect' within milliseconds, and the next 'login:' prompt follows two seconds later. Genuine login programs (util-linux/shadow login under inetutils telnetd, BusyBox login) first echo the line end and then wait 2.5 to 3 seconds before 'Login incorrect' (measured in the lab: inetutils/login 2.5 s, BusyBox 3.0 s). Matched: telnetlogger 2b88261 (0.2) (2026-11). Also matches Knock-Knock 3.0.1-dev (master 2969954) (2026-11)."
   - name: telnetlogger-empty-password-closes
     id: 1564
     port: 23
@@ -18557,7 +18557,7 @@ signatures:
         output: "030000130ed000000000000200080002000000"
         invert_match: false
     confidence: Medium
-    comment: "A Connection Request offering TLS and CredSSP (0x3, what most clients send) gets a Connection Confirm selecting CredSSP with source reference 0 and response flags 0. Windows Server 2012 and later set negotiation response flags (EXTENDED_CLIENT_DATA_SUPPORTED and others), FreeRDP with NLA sets flags 0x03, xrdp selects TLS (reference 0x1234, flags 0x01), PyRDP uses reference 0x1234 and Glutton selects TLS. Medium because older Windows versions send no flags. Matched: rdphoneypot 2.0.1 (e5cf78e, default TLS mode) (2026-11)."
+    comment: "A Connection Request offering TLS and CredSSP (0x3, what most clients send) gets a Connection Confirm selecting CredSSP with source reference 0 and response flags 0. Windows Server 2012 and later set negotiation response flags (EXTENDED_CLIENT_DATA_SUPPORTED and others), FreeRDP with NLA sets flags 0x03, xrdp selects TLS (reference 0x1234, flags 0x01), PyRDP uses reference 0x1234 and Glutton selects TLS. Medium because older Windows versions send no flags. Matched: rdphoneypot 2.0.1 (e5cf78e, default TLS mode) (2026-11). Also matches Knock-Knock 3.0.1-dev (master 2969954) (2026-11)."
   - name: rdphoneypot-bontchev-legacy-client-tls-handshake
     id: 2124
     port: 3389
@@ -20692,3 +20692,143 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: "The TCP Tarpit's second default decoy port is 3306 (MySQL), but the sensor sends the same banner on every port, by default the bare SSH banner SSH-2.0-OpenSSH_8.2p1 from its sensor manifest: a MySQL or MariaDB server greets with its binary handshake packet, and packaged OpenSSH 8.2p1 adds a distribution suffix. Medium: the banner and ports are configurable. Matched: HoneyWire TCP Tarpit 2.0.2 (2026-11)."
+  - name: knock-knock-dashboard
+    id: 2340
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\n.*server: uvicorn\r\n.*<title>Knock-Knock\.net \| Live Honeypot Dashboard'
+        invert_match: false
+    confidence: High
+    comment: 'The Knock-Knock live dashboard (FastAPI under uvicorn, default port 8080) answers / with its own page, titled ''Knock-Knock.net | Live Honeypot Dashboard for SSH, Telnet, FTP, RDP, SMB, SIP, HTTP, and SMTP Attacks''. It is the tool''s own interface rather than a decoy, so a host that serves it runs Knock-Knock. Operators can bind it to localhost with WEB_LISTEN or move it with WEB_PORT. Matched: Knock-Knock 3.0.1-dev (master 2969954) (2026-11).'
+  - name: knock-knock-http-it-works-no-date
+    id: 2341
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '\AHTTP/1\.1 200 OK\r\nServer: Apache/[^\r\n]*\r\nContent-Type: text/html; charset=utf-8\r\nConnection: close\r\n\r\n<html><body><h1>It works!</h1></body></html>\z'
+        invert_match: false
+    confidence: High
+    comment: 'The HTTP decoy answers / with Server: Apache/2.4.41 (Ubuntu), Content-Type text/html; charset=utf-8 and the one-line ''It works!'' page, with no Date, Content-Length, Last-Modified, ETag or Accept-Ranges header. Apache always sends Date first and serves a static index with its length and validators; Ubuntu''s Apache serves the long ''Apache2 Ubuntu Default Page'', and the official httpd 2.4 image''s short ''It works! Apache httpd'' page comes with Date, Last-Modified, ETag and Content-Length and no charset. The same answer is given on 443 inside TLS. Matched: Knock-Knock 3.0.1-dev (master 2969954) (2026-11).'
+  - name: knock-knock-snmp-sysdescr
+    id: 2342
+    port: 161
+    proto: udp
+    steps:
+      - input_type: string
+        input: "1.3.6.1.2.1.1.1.0"
+        output_match_type: string
+        output: "Linux gateway snmpd 5.9; embedded network appliance"
+        invert_match: false
+    confidence: High
+    comment: 'An SNMP get of sysDescr.0 (community ''public'') returns the fixed string ''Linux gateway snmpd 5.9; embedded network appliance'' (hard-coded). net-snmp''s default sysDescr is the uname line of the host (for example ''Linux <hostname> 6.8.12 ... x86_64''), and appliances report their own product string. Needs honeydet -proto udp. Matched: Knock-Knock 3.0.1-dev (master 2969954) (2026-11).'
+  - name: knock-knock-telnet-ubuntu-login
+    id: 2343
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: hex
+        output: "fffb01fffb03fffe220d0a5562756e74752032322e30342e34204c54530d0a0d0a6c6f67696e3a"
+        invert_match: false
+    confidence: High
+    comment: 'On connect the Telnet decoy sends IAC WILL ECHO, IAC WILL SUPPRESS-GO-AHEAD and IAC DONT LINEMODE followed at once by ''Ubuntu 22.04.4 LTS'' and a ''login: '' prompt, in one burst and before any negotiation. A genuine telnetd (inetutils or netkit, as packaged by Debian and Ubuntu) opens with DO TERMINAL-TYPE, DO TSPEED, DO XDISPLOC and DO NEW-ENVIRON and prints the issue text and prompt only after the client has answered. Matched: Knock-Knock 3.0.1-dev (master 2969954) (2026-11).'
+  - name: knock-knock-ftp-feat-before-login
+    id: 2344
+    port: 21
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^220 \(vsFTPd 3\.0\.3\)$'
+        invert_match: false
+      - input_type: string
+        input: "FEAT\r"
+        output_match_type: regex
+        output: '^530 Please login with USER and PASS\.$'
+        invert_match: false
+    confidence: High
+    comment: 'The FTP decoy presents the vsftpd 3.0.3 banner but answers FEAT before login with ''530 Please login with USER and PASS.''. Genuine vsftpd answers FEAT before authentication with its ''211-Features:'' list (EPRT, EPSV, MDTM, PASV, REST STREAM, SIZE, TVFS). Matched: Knock-Knock 3.0.1-dev (master 2969954) (2026-11).'
+  - name: knock-knock-smtp-vrfy-try-my-best
+    id: 2345
+    port: 25
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^220 '
+        invert_match: false
+      - input_type: string
+        input: "EHLO probe.example\r"
+        output_match_type: string
+        output: "250"
+        invert_match: false
+      - input_type: string
+        input: "VRFY root\r"
+        output_match_type: regex
+        output: '^252 2\.0\.0 Send some mail, I''ll try my best$'
+        invert_match: false
+    confidence: High
+    comment: 'Whatever MTA it imitates (SMTP_FINGERPRINT postfix, exim, sendmail or exchange), the SMTP decoy answers VRFY with ''252 2.0.0 Send some mail, I''ll try my best'', qmail''s wording with an enhanced status code added. Postfix answers ''252 2.0.0 root'' for a local user (550 for an unknown one, 502 when VRFY is disabled). Matched: Knock-Knock 3.0.1-dev (master 2969954) (2026-11).'
+  - name: knock-knock-ssh-old-openssh-ext-info-s
+    id: 2346
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "SSH-2.0-OpenSSH_9.2p1\r"
+        output_match_type: regex
+        output: '(?s)^SSH-2\.0-OpenSSH_[1-8]\.[^\r\n]*\r\n.*curve25519-sha256,curve25519-sha256@libssh\.org,ecdh-sha2-nistp256,[^\x00]*,ext-info-s,kex-strict-s-v00@openssh\.com.{4}rsa-sha2-512,rsa-sha2-256,ecdsa-sha2-nistp256,ssh-ed25519.{4}chacha20-poly1305@openssh\.com,'
+        invert_match: false
+    confidence: Medium
+    comment: 'The SSH decoy (AsyncSSH) announces an OpenSSH 8.x version (default ''OpenSSH_8.9p1 Ubuntu-3ubuntu0.14'', 8.2p1 in the legacy profile) but its KEXINIT ends with ''ext-info-s,kex-strict-s-v00@openssh.com'' and, without liboqs, has no sntrup761x25519-sha512@openssh.com. OpenSSH servers advertise ext-info-s only from 9.6 onwards, and Ubuntu 22.04''s OpenSSH 8.9p1 offers sntrup761x25519-sha512@openssh.com after the ECDH methods. The host key list (rsa-sha2-512, rsa-sha2-256, ecdsa-sha2-nistp256, ssh-ed25519) separates it from other AsyncSSH honeypots such as Cyanide, which offer the ssh.com names. Medium: the version string and algorithm lists can be changed with SSH_PROFILE and the SSH_* overrides. Matched: Knock-Knock 3.0.1-dev (master 2969954) (2026-11).'
+  - name: knock-knock-sip-challenge-before-via
+    id: 2347
+    port: 5060
+    proto: udp
+    steps:
+      - input_type: hex
+        input: "4f5054494f4e53207369703a313030403139322e302e322e3130205349502f322e300d0a5669613a205349502f322e302f554450203139322e302e322e313a353036303b72706f72743b6272616e63683d7a39684734624b2d6b6b323334370d0a4d61782d466f7277617264733a2037300d0a46726f6d3a203c7369703a6864403139322e302e322e313e3b7461673d6b6b323334370d0a546f3a203c7369703a313030403139322e302e322e31303e0d0a43616c6c2d49443a206b6b32333437403139322e302e322e310d0a435365713a2031204f5054494f4e530d0a436f6e74656e742d4c656e6774683a20300d0a0d0a"
+        output_match_type: regex
+        output: '(?s)\ASIP/2\.0 40[17] [A-Za-z ]+\r\n(?:WWW|Proxy)-Authenticate: Digest realm="[^"]*", nonce="[A-Za-z0-9]{24}", algorithm=MD5, qop="auth"\r\nVia: SIP/2\.0/UDP 192\.0\.2\.1:5060;rport'
+        invert_match: false
+    confidence: High
+    comment: 'An out-of-dialogue OPTIONS is challenged with the Digest header placed before Via, a 24-character alphanumeric nonce and qop=auth (Server: Asterisk PBX 18.0.0 by default). Asterisk (chan_pjsip) and Kamailio put Via first, as they copy it from the request, and Asterisk''s nonce has the form <timestamp>/<hash> with an opaque value. Needs honeydet -proto udp. Matched: Knock-Knock 3.0.1-dev (master 2969954) (2026-11).'
+  - name: knock-knock-nodered-python-json-settings
+    id: 2348
+    port: 1880
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /settings HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\nX-Powered-By: Express\r\n.*\r\n\r\n\{"httpNodeRoot": "/", "version": "'
+        invert_match: false
+    confidence: High
+    comment: 'The optional Node-RED decoy (NRED, port 1880) claims X-Powered-By: Express but returns /settings as Python-serialised JSON with a space after every colon and comma (''{"httpNodeRoot": "/", "version": "3.0.2", ...''). Node-RED returns compact JSON from JSON.stringify, with ETag and Date headers and a much longer settings object. Matched: Knock-Knock 3.0.1-dev (master 2969954) (2026-11).'
+  - name: knock-knock-rdp-desktop-rdp-microsoft-cert
+    id: 2349
+    port: 3389
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "030000130ee000000000000100080003000000"
+        output_match_type: hex
+        output: "030000130ed0"
+        invert_match: false
+      - input_type: hex
+        input: "1603010068010000640303000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f00000a002fc02fc030009c003501000031000a00080006001d00170018000b00020100000d000e000c0401050106010403050308040023000000170000ff01000100"
+        output_match_type: regex
+        output: '(?s)^\x16\x03\x03.*\x06\x03\x55\x04\x03\x0c\x0bDESKTOP-RDP1.\x30.\x06\x03\x55\x04\x0a\x0c\x09Microsoft1'
+        invert_match: false
+    confidence: High
+    comment: 'After the X.224 exchange (which selects CredSSP with source reference 0 and no flags, as honeydet id 2123 also sees on rdphoneypot), a TLS ClientHello is answered with the self-signed certificate the RDP decoy creates on first start: subject and issuer CN=DESKTOP-RDP, O=Microsoft, C=US. Windows creates its RDP certificate with the computer name as the only subject attribute (CN=<hostname>, no organisation or country), and xrdp uses the host''s own certificate. The certificate lives in data/rdp.crt and is only replaced if the operator does so by hand. Matched: Knock-Knock 3.0.1-dev (master 2969954) (2026-11).'
