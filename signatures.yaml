@@ -21286,3 +21286,80 @@ signatures:
         invert_match: false
     confidence: High
     comment: "The same public session feed as JSON at /feed.json: the Atom document converted with xmltodict, keeping the '#text' and '@' keys, title 'MHN HpFeeds Report' and generator Werkzeug. Medium where FEED_AUTH_REQUIRED = True. Matched: MHN 2fa4f77 (mhn-py3) (2026-11)."
+  - name: ochi-index-page
+    id: 2390
+    port: 3000
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*<title>Ochi</title>.*Web UI for honeypot events.*/build/bundle\.js'
+        invert_match: false
+    confidence: High
+    comment: "The single-page application shell: title 'Ochi', description 'Web UI for honeypot events', the Svelte bundle under /build/ and Google's sign-in script. Matched: Ochi d0c784d (2026-11)."
+  - name: ochi-subscribe-websocket-required
+    id: 2391
+    port: 3000
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /api/subscribe HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 426 Upgrade Required\r\n.*\r\n\r\nWebSocket protocol violation: Connection header "close" does not contain Upgrade'
+        invert_match: false
+    confidence: High
+    comment: "The public live-event stream /api/subscribe answers a plain GET with 426 and the coder/websocket library's 'WebSocket protocol violation' text. Matched: Ochi d0c784d (2026-11)."
+  - name: ochi-login-google-idtoken-error
+    id: 2392
+    port: 3000
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST /api/login HTTP/1.1\r\nHost: x\r\nContent-Length: 0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 400 Bad Request\r\n.*\r\n\r\nidtoken: invalid token, token must have three segments; found 1'
+        invert_match: false
+    confidence: High
+    comment: "An empty POST to /api/login returns the error text of Google's idtoken validator: Ochi's only sign-in is Google Identity Services. Nothing is fetched from Google for a malformed token. Matched: Ochi d0c784d (2026-11)."
+  - name: ochi-event-lookup-sql-error
+    id: 2393
+    port: 3000
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /api/events/0 HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 404 Not Found\r\n.*Content-Type: text/plain; charset=utf-8\r\n.*\r\n\r\nsql: no rows in result set'
+        invert_match: false
+    confidence: High
+    comment: "The unauthenticated shared-event link /api/events/{id} returns Go's database/sql error text for an unknown id. Matched: Ochi d0c784d (2026-11)."
+  - name: ochi-publish-token-and-download
+    id: 2394
+    port: 3000
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST /api/publish HTTP/1.1\r\nHost: x\r\nContent-Length: 3\r\n\r\n{}"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 403 Forbidden\r\n.*Content-Length: 10\r\n(?:.*\r\n)?\r\nForbidden$'
+        invert_match: false
+      - input_type: string
+        input: "GET /api/download/x HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 400 Bad Request\r\n.*\r\n\r\nInvalid parameters'
+        invert_match: false
+    confidence: Medium
+    comment: "The sensor ingest endpoint refuses a POST without its publish token (403 'Forbidden'), and the sensor download endpoint answers 400 'Invalid parameters'; two short Go http.Error replies on one connection. Matched: Ochi d0c784d (2026-11)."
+  - name: ochi-build-directory-listing
+    id: 2395
+    port: 3000
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /build/ HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*\r\n\r\n<!doctype html>\n<meta name="viewport" content="width=device-width">\n<pre>\n<a href="bundle\.css">bundle\.css</a>\n<a href="bundle\.js">bundle\.js</a>\n</pre>'
+        invert_match: false
+    confidence: Medium
+    comment: "/build/ is served by Go's http.FileServer, which lists the directory: exactly bundle.css and bundle.js, the Rollup output of the Svelte front end. Other Go-served Svelte applications could list the same two files. Matched: Ochi d0c784d (2026-11)."
