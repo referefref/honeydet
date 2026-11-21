@@ -2451,7 +2451,7 @@ signatures:
         output: '^HTTP/1\.1 200 OK\r\n[^<]*\r\n\r\n<!doctype html>\n<meta name="viewport" content="width=device-width">\n<pre>\n<a href="misc/">misc/</a>\n<a href="themes/">themes/</a>\n</pre>$'
         invert_match: false
     confidence: High
-    comment: "Drupot serves /core/ with Go's http.ServeFile, which returns a directory listing of its small public/core tree (misc/ and themes/ only). Genuine Drupal 8 to 11 answer /core/ with 403 Forbidden from the web server, and Drupal 7 (which has no core directory) with its own 404 page."
+    comment: "Drupot serves /core/ with Go's http.ServeFile, which returns a directory listing of its small public/core tree (misc/ and themes/ only). Genuine Drupal 8 to 11 answer /core/ with 403 Forbidden from the web server, and Drupal 7 (which has no core directory) with its own 404 page. Not matched by the Drupot v0.2.4 sensor that MHN deploys (2026-11)."
   - name: drupot-files-directory-listing
     id: 251
     port: 80
@@ -2463,7 +2463,7 @@ signatures:
         output: '^HTTP/1\.1 200 OK\r\n[^<]*\r\n\r\n<!doctype html>\n<meta name="viewport" content="width=device-width">\n<pre>\n<a href="css/">css/</a>\n<a href="js/">js/</a>\n</pre>$'
         invert_match: false
     confidence: High
-    comment: "Go directory listing of Drupot's public/sites/default/files (only the css/ and js/ aggregates the bait pages link to). Genuine Drupal 8 to 11 return 404 from Apache for the files directory index, and Drupal 7 returns its own 404 page."
+    comment: "Go directory listing of Drupot's public/sites/default/files (only the css/ and js/ aggregates the bait pages link to). Genuine Drupal 8 to 11 return 404 from Apache for the files directory index, and Drupal 7 returns its own 404 page. Not matched by the Drupot v0.2.4 sensor that MHN deploys (2026-11)."
   - name: drupot-changelog-200-not-found-page
     id: 252
     port: 80
@@ -2475,7 +2475,7 @@ signatures:
         output: '^HTTP/1\.1 200 OK\r\n[^<]*\r\n\r\n<!DOCTYPE html><html><head><title>404 Not Found</title></head><body><h1>Not Found</h1><p>The requested URL "[^"]*/CHANGELOG\.txt" was not found on this server\.</p></body></html>$'
         invert_match: false
     confidence: High
-    comment: "Drupot copies Drupal 8's fast 404 page for /CHANGELOG.txt (the file Drupal 7 scanners look for) but sends it with status 200 OK. Genuine Drupal 8 to 11 send the same page with 404 Not Found; Drupal 7 serves the real changelog as text/plain."
+    comment: "Drupot copies Drupal 8's fast 404 page for /CHANGELOG.txt (the file Drupal 7 scanners look for) but sends it with status 200 OK. Genuine Drupal 8 to 11 send the same page with 404 Not Found; Drupal 7 serves the real changelog as text/plain. Also matches the Drupot v0.2.4 sensor that MHN deploys (2026-11)."
   - name: drupot-node-422-plain-error
     id: 253
     port: 80
@@ -2487,7 +2487,7 @@ signatures:
         output: '^HTTP/1\.1 422 Unprocessable Entity\r\nContent-Type: text/plain; charset=utf-8\r\nX-Content-Type-Options: nosniff\r\n[^<]*\r\n\r\nThe website encountered an unexpected error\. Please try again later\.$'
         invert_match: false
     confidence: High
-    comment: "Every path under /node/ (the REST target of CVE-2019-6340) gets 422 Unprocessable Entity with Drupal's error sentence as a bare text/plain body from Go's http.Error. Genuine Drupal answers /node/1 with 200 or with its themed HTML 404 page, never a plain-text 422 for a GET."
+    comment: "Every path under /node/ (the REST target of CVE-2019-6340) gets 422 Unprocessable Entity with Drupal's error sentence as a bare text/plain body from Go's http.Error. Genuine Drupal answers /node/1 with 200 or with its themed HTML 404 page, never a plain-text 422 for a GET. Also matches the Drupot v0.2.4 sensor that MHN deploys (2026-11)."
   - name: drupot-unknown-path-front-page
     id: 254
     port: 80
@@ -2499,7 +2499,7 @@ signatures:
         output: '^HTTP/1\.[01] 200 OK\r\n[\s\S]*<meta name="Generator" content="Drupal 8 \(https://www\.drupal\.org\)" />[\s\S]*<title>Welcome to [^<|]* \| [^<]*</title>'
         invert_match: false
     confidence: High
-    comment: "Drupot's catch-all route returns the Drupal 8 front page ('Welcome to <site name>') with 200 OK for any unknown path. Genuine Drupal 7 to 11 return 404 Not Found with a 'Page not found' page. Survives a reverse proxy and changes to the site name."
+    comment: "Drupot's catch-all route returns the Drupal 8 front page ('Welcome to <site name>') with 200 OK for any unknown path. Genuine Drupal 7 to 11 return 404 Not Found with a 'Page not found' page. Survives a reverse proxy and changes to the site name. Also matches the Drupot v0.2.4 sensor that MHN deploys (2026-11)."
   - name: drupot-static-login-form-build-id
     id: 255
     port: 80
@@ -2511,7 +2511,7 @@ signatures:
         output: '^HTTP/1\.[01] 200 OK\r\n[\s\S]*name="form_build_id" value="form-80fXZ5pjlkK1HGjoF-RMzqjByNdvQpxqUTQVLFuwR64"'
         invert_match: false
     confidence: High
-    comment: "The login page is a static template with a fixed form_build_id (form-80fXZ5pj...), identical on every Drupot instance and every request. Genuine Drupal generates a random form_build_id when it builds the form (Drupal 7 on every request; Drupal 8 to 11 per site, then reused from the page cache until it is cleared), so this exact value never appears on a real site."
+    comment: "The login page is a static template with a fixed form_build_id (form-80fXZ5pj...), identical on every Drupot instance and every request. Genuine Drupal generates a random form_build_id when it builds the form (Drupal 7 on every request; Drupal 8 to 11 per site, then reused from the page cache until it is cleared), so this exact value never appears on a real site. Also matches the Drupot v0.2.4 sensor that MHN deploys (2026-11)."
   - name: drupot-go-headers-drupal8-page
     id: 256
     port: 80
@@ -2523,7 +2523,7 @@ signatures:
         output: '^HTTP/1\.1 200 OK\r\nDate: [^\r]+\r\nContent-Type: text/html; charset=utf-8\r\nConnection: close\r\nTransfer-Encoding: chunked\r\n\r\n[0-9a-f]+\r\n\s*<!DOCTYPE html>[\s\S]*<meta name="Generator" content="Drupal 8 \(https://www\.drupal\.org\)" />'
         invert_match: false
     confidence: Medium
-    comment: "A Drupal 8 front page served with Go net/http's minimal header set (Date, Content-Type, Connection, Transfer-Encoding) and no Server, X-Powered-By, X-Generator, X-Drupal-Cache or Cache-Control headers. Every genuine Drupal sends X-Generator and cache headers. Medium because a reverse proxy in front of Drupot adds or reorders headers."
+    comment: "A Drupal 8 front page served with Go net/http's minimal header set (Date, Content-Type, Connection, Transfer-Encoding) and no Server, X-Powered-By, X-Generator, X-Drupal-Cache or Cache-Control headers. Every genuine Drupal sends X-Generator and cache headers. Medium because a reverse proxy in front of Drupot adds or reorders headers. Also matches the Drupot v0.2.4 sensor that MHN deploys (2026-11)."
   # drupal-honeypot (ids 260-265)
   - name: drupal-honeypot-register-time-field
     id: 260
@@ -21161,3 +21161,128 @@ signatures:
         invert_match: false
     confidence: High
     comment: "Authenticated signature: run with -username user -password admin. Inside the SSH module the two log files the agent ships from the bind-mounted /host-logs/ssh directory, commands.log (written by the user's own shell hook) and sshd.log (rsyslog's auth log), are mode 666, so the logged-in user can read and rewrite them. Matched: Melissae v2.7 (2026-11)."
+  - name: mhn-hpfeeds-feedbroker-info
+    id: 2380
+    port: 10000
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^\x00\x00\x00\x0e\x01\x04@hp2'
+        invert_match: false
+    confidence: High
+    comment: "The MHN hpfeeds broker (feedbroker.py) greets every client, before it sends anything, with an OP_INFO message of total length 14: opcode 1, the broker name '@hp2' (length 4) and a four-byte random nonce. CHN's hpfeeds3 broker and the upstream hpfeeds3 package announce 'hpfeeds' (length 17 message) instead. hpfeeds is used almost only to carry honeypot events, so an open broker marks a honeynet collector. Matched: MHN 2fa4f77 (mhn-py3, hpfeeds a342d34) (2026-11)."
+  - name: mhn-hpfeeds-feedbroker-authfail
+    id: 2381
+    port: 10000
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^\x00\x00\x00\x0e\x01\x04@hp2'
+        invert_match: false
+      - input_type: hex
+        input: "000000220208686f6e65796465740000000000000000000000000000000000000000"
+        output_match_type: regex
+        output: '^\x00\x00\x00\x0e\x00authfail\.$'
+        invert_match: false
+    confidence: High
+    comment: "After the greeting, an OP_AUTH for the unknown identifier 'honeydet' with a dummy 20-byte hash gets the terse OP_ERROR 'authfail.' and the connection stays open; CHN's hpfeeds3 broker answers 'Authentication failed for honeydet'. Matched: MHN 2fa4f77 (mhn-py3, hpfeeds a342d34) (2026-11)."
+  - name: mhn-server-login-page
+    id: 2382
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /ui/login/ HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*<title>Login</title>.*<h1>Welcome to the Modern Honeypot Network Server</h1>.*id="login-form"'
+        invert_match: false
+    confidence: High
+    comment: "The MHN web console's login page at /ui/login/ carries the heading 'Welcome to the Modern Honeypot Network Server' above the login form (id login-form). CHN's page says 'Community Honeypot Network Server'. Matched: MHN 2fa4f77 (mhn-py3) (2026-11)."
+  - name: mhn-server-public-atom-feed
+    id: 2383
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /feed.xml HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*Content-Type: application/atom\+xml.*<title type="text">MHN HpFeeds Report</title>.*<generator>Werkzeug</generator>'
+        invert_match: false
+    confidence: High
+    comment: "The session feed at /feed.xml is public by default (FEED_AUTH_REQUIRED = False in the configuration template): an anonymous request gets an Atom feed titled 'MHN HpFeeds Report', generated by Werkzeug's Atom helper, listing the latest attack sessions (sensor, source address and port). CHN inherited this feed unchanged, so this signature finds both MHN and CHN servers (2389 and the CHN signatures tell them apart). Medium where the operator has set FEED_AUTH_REQUIRED = True (the feed then answers 404). Matched: MHN 2fa4f77 (mhn-py3); CHN 1.9.1 (2026-11)."
+  - name: mhn-server-public-registration-script
+    id: 2384
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /static/registration.txt HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*\r\n\r\n#!/bin/bash\n.*Usage: sh \$0 <server_url> <deploy_key> <honeypot_type>\..*\$server_url/api/sensor/ > /tmp/deploy\.json'
+        invert_match: false
+    confidence: High
+    comment: "Every MHN sensor deploy script fetches /static/registration.txt, a public bash script (usage 'sh $0 <server_url> <deploy_key> <honeypot_type>.') that registers the sensor through the API and writes the reply to /tmp/deploy.json. It contains no secret. Matched: MHN 2fa4f77 (mhn-py3) (2026-11)."
+  - name: mhn-server-public-deploy-script
+    id: 2385
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /api/script/?text=true&script_id=1 HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*Content-Disposition: attachment; filename=deploy\.sh\r\n.*Usage: \$0 <server_url> <deploy_key>\..*registration\.txt -O registration\.sh.*\. \./registration\.sh \$server_url \$deploy_key '
+        invert_match: false
+    confidence: High
+    comment: "Deploy scripts are served without authentication: GET /api/script/?text=true&script_id=1 returns the first default script (Shockpot in this release) as an attachment named deploy.sh, a bash script that downloads registration.txt from the server and sources it with the server URL and deploy key. CHN's scripts take URL, DEPLOY and ARCH and write a stingar/ compose file instead. Medium for servers where the default scripts were deleted or replaced. Matched: MHN 2fa4f77 (mhn-py3) (2026-11)."
+  - name: mhn-server-api-unauthorised-json
+    id: 2386
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /api/sensor/ HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 401 UNAUTHORIZED\r\n.*Content-Type: application/json\r\n.*\r\n\r\n\{\n  "error": "Not authorized to perform this request\."\n\}'
+        invert_match: false
+    confidence: High
+    comment: "The sensor API answers an anonymous GET /api/sensor/ with Werkzeug's upper-case '401 UNAUTHORIZED' and the indented JSON body {\"error\": \"Not authorized to perform this request.\"} that Flask 0.12's jsonify writes; CHN's newer Flask returns the same message on one line. Matched: MHN 2fa4f77 (mhn-py3) (2026-11)."
+  - name: mhn-honeymap-page
+    id: 2387
+    port: 3000
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*<title>HoneyMap</title>.*Florian Weingarten, Mark Schloesser, Johannes Gilger.*sockjs'
+        invert_match: false
+    confidence: High
+    comment: "MHN installs honeymap, the Honeynet Project's live attack map, on port 3000 (linked from the console as HONEYMAP_URL): the page titled 'HoneyMap' names its authors (Florian Weingarten, Mark Schloesser, Johannes Gilger) and loads SockJS for the live feed. A standalone honeymap is equally a honeynet component. Matched: MHN 2fa4f77 (mhn-py3, honeymap 0a22065) (2026-11)."
+  - name: mhn-honeymap-sockjs-info
+    id: 2388
+    port: 3000
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /data/info HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*Content-Type: application/json.*\r\n\r\n\{"websocket":true,"cookie_needed":true,"origins":\["\*:\*"\],"entropy":\d+\}'
+        invert_match: false
+    confidence: Medium
+    comment: "honeymap's server publishes its event stream as a SockJS endpoint at /data; /data/info answers with the SockJS info object (websocket, cookie_needed, origins *:*, entropy). Medium: any SockJS service mounted at /data answers the same way; on port 3000 next to a HoneyMap page it marks the MHN map. Matched: MHN 2fa4f77 (mhn-py3, honeymap 0a22065) (2026-11)."
+  - name: mhn-server-public-json-feed
+    id: 2389
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /feed.json HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*Content-Type: application/json\r\n.*"generator": "Werkzeug".*"#text": "MHN HpFeeds Report"'
+        invert_match: false
+    confidence: High
+    comment: "The same public session feed as JSON at /feed.json: the Atom document converted with xmltodict, keeping the '#text' and '@' keys, title 'MHN HpFeeds Report' and generator Werkzeug. Medium where FEED_AUTH_REQUIRED = True. Matched: MHN 2fa4f77 (mhn-py3) (2026-11)."
