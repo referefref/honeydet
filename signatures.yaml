@@ -17677,7 +17677,7 @@ signatures:
         output: "15030300020228"
         invert_match: false
     confidence: Medium
-    comment: "A TLS 1.2 ClientHello offering only the AES-128-GCM suites (ECDHE-ECDSA, ECDHE-RSA and RSA) gets a fatal handshake_failure alert: the server's suite list holds only AES-256 suites. AES-128-GCM is the most widely supported TLS 1.2 suite and every genuine server tested negotiated it. Servers deliberately limited to 256-bit suites behave the same, hence Medium. Matched: confluencePot commit 847f249 built with Go 1.27.4 (2026-11)."
+    comment: "A TLS 1.2 ClientHello offering only the AES-128-GCM suites (ECDHE-ECDSA, ECDHE-RSA and RSA) gets a fatal handshake_failure alert: the server's suite list holds only AES-256 suites. AES-128-GCM is the most widely supported TLS 1.2 suite and every genuine server tested negotiated it. Servers deliberately limited to 256-bit suites behave the same, hence Medium. Matched: confluencePot commit 847f249 built with Go 1.27.4 (2026-11). Also matches the Melissae v2.7 manager dashboard on 443 (2026-11)."
   - name: confluencepot-tls12-no-x25519
     id: 2012
     port: 443
@@ -17689,7 +17689,7 @@ signatures:
         output: "15030300020228"
         invert_match: false
     confidence: Medium
-    comment: "A TLS 1.2 ClientHello offering ECDHE AES-256-GCM suites with X25519 as the only group gets a fatal handshake_failure alert, because the server's curve list has no X25519; genuine servers negotiate X25519. Servers restricted to NIST curves behave the same, hence Medium. Matched: confluencePot commit 847f249 built with Go 1.27.4 (2026-11)."
+    comment: "A TLS 1.2 ClientHello offering ECDHE AES-256-GCM suites with X25519 as the only group gets a fatal handshake_failure alert, because the server's curve list has no X25519; genuine servers negotiate X25519. Servers restricted to NIST curves behave the same, hence Medium. Matched: confluencePot commit 847f249 built with Go 1.27.4 (2026-11). Also matches the Melissae v2.7 manager dashboard on 443 (2026-11)."
   - name: confluencepot-go-https-aes256-nist-only
     id: 2013
     port: 443
@@ -21010,3 +21010,154 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: 'The API''s management routes (/add/honeypot, /delete/link, /edit/server and their siblings) accept only POST, so a GET to each returns Flask''s 405 page with an Allow header listing only POST and OPTIONS (in either order, which varies between processes), while unknown paths return 404. The route set is GOTHAM''s own, but it is shape rather than content (any Flask application with the same POST-only paths would match), so Medium. Matched: GOTHAM dev_V1 d58e99c, API 0.1.0 (2026-11).'
+  - name: melissae-web-it-works-page
+    id: 2370
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: "(?s)^HTTP/1\\.1 200 OK\r\nServer: nginx/.*\r\nContent-Security-Policy: default-src 'self'; script-src 'self'; object-src 'none';\r\n.*<center>\\s*<h1>It works !</h1>\\s*</center>"
+        invert_match: false
+    confidence: High
+    comment: "Melissae's web module answers GET / through an nginx load balancer in front of two Apache httpd containers: Server: nginx/<version>, the Content-Security-Policy and X-XSS-Protection headers the module adds in Apache, and its own 62-byte index page with a centred '<h1>It works !</h1>' (with a space before the exclamation mark). Apache's stock page reads 'It works!' without the space and nginx's is 'Welcome to nginx!'. Matched: Melissae v2.7 (2026-11)."
+  - name: melissae-web-apache-404-behind-nginx
+    id: 2371
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /hd-{{rand}}.html HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: "(?s)^HTTP/1\\.1 404 Not Found\r\nServer: nginx/.*\r\nContent-Security-Policy: default-src 'self'; script-src 'self'; object-src 'none';\r\n.*<h1>Not Found</h1>\r?\n<p>The requested URL was not found on this server\\.</p>"
+        invert_match: false
+    confidence: Medium
+    comment: "A missing page returns Apache's own 404 page (charset iso-8859-1, 'The requested URL was not found on this server.') with Server: nginx/<version> and the web module's exact Content-Security-Policy. nginx in front of Apache is a common real arrangement, so this rests on the module's header set; Medium. Matched: Melissae v2.7 (2026-11)."
+  - name: melissae-ftp-shipped-account-no-passive
+    id: 2372
+    port: 21
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: "^220 \\(vsFTPd 3\\."
+        invert_match: false
+      - input_type: string
+        input: "USER ftpuser\r"
+        output_match_type: regex
+        output: "^331 "
+        invert_match: false
+      - input_type: string
+        input: "PASS ftppass\r"
+        output_match_type: regex
+        output: "^230 Login successful\\."
+        invert_match: false
+      - input_type: string
+        input: "PASV\r"
+        output_match_type: regex
+        output: "^550 Permission denied\\."
+        invert_match: false
+    confidence: High
+    comment: "The FTP module is vsFTPd with the account ftpuser / ftppass created in its Dockerfile and passive mode switched off (pasv_enable=NO): the shipped login succeeds and PASV is refused with '550 Permission denied.'. A genuine vsftpd does not have this account and offers passive mode. Matched: Melissae v2.7 (2026-11)."
+  - name: melissae-ftp-feat-without-passive
+    id: 2373
+    port: 21
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: "^220 \\(vsFTPd 3\\."
+        invert_match: false
+      - input_type: string
+        input: "FEAT\r"
+        output_match_type: regex
+        output: "^211-Features:\r?\n EPRT\r?\n MDTM\r?\n REST STREAM\r?\n SIZE\r?\n TVFS\r?\n211 End"
+        invert_match: false
+    confidence: Medium
+    comment: "Before login, FEAT on the FTP module lists EPRT, MDTM, REST STREAM, SIZE and TVFS but neither EPSV nor PASV, because the module disables passive mode. A default vsftpd lists EPSV and PASV. Any vsftpd configured with pasv_enable=NO answers the same way, so Medium. Matched: Melissae v2.7 (2026-11)."
+  - name: melissae-telnet-ubuntu-server-banner
+    id: 2374
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: hex
+        output: "fffb25fffb26fffd18"
+        invert_match: false
+      - input_type: hex
+        input: "fffe25fffe26fffc18fffc20fffc23fffc27fffc24"
+        output_match_type: hex
+        output: "fffd01"
+        invert_match: false
+      - input_type: hex
+        input: "fffe03fffc01fffc22fffc1ffffe05fffc21"
+        output_match_type: regex
+        output: "Linux [^ ]+ \\(ubuntu-server\\) \\(pts/[0-9]+\\)[\\s\\S]*ubuntu-server login:"
+        invert_match: false
+    confidence: Medium
+    comment: "The telnet module is GNU inetutils telnetd in an Ubuntu 24.04 container whose host name is fixed to ubuntu-server in the agent's docker-compose.yml; after the option negotiation is refused it prints 'Linux <kernel> (ubuntu-server) (pts/N)' and 'ubuntu-server login: '. A real host could carry the same name, so Medium. Matched: Melissae v2.7 (2026-11)."
+  - name: melissae-telnet-shipped-account-command-logger
+    id: 2375
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: hex
+        output: "fffb25fffb26fffd18"
+        invert_match: false
+      - input_type: hex
+        input: "fffe25fffe26fffc18fffc20fffc23fffc27fffc24"
+        output_match_type: hex
+        output: "fffd01"
+        invert_match: false
+      - input_type: hex
+        input: "fffe03fffc01fffc22fffc1ffffe05fffc21"
+        output_match_type: regex
+        output: "ubuntu-server login:"
+        invert_match: false
+      - input_type: string
+        input: "admin\r"
+        output_match_type: regex
+        output: "Password:"
+        invert_match: false
+      - input_type: string
+        input: "telnet\r"
+        output_match_type: regex
+        output: "Welcome to Ubuntu|admin@ubuntu-server:~"
+        invert_match: false
+      - input_type: string
+        input: "echo PC=$PROMPT_COMMAND\r"
+        output_match_type: regex
+        output: "PC=_log_cmd"
+        invert_match: false
+    confidence: High
+    comment: "The telnet module ships the account admin / telnet, and every login shell runs /etc/profile.d/honeypot-logging.sh, which sets PROMPT_COMMAND to _log_cmd to copy each command to the agent's commands.log. A genuine server neither accepts that account nor sets this hook. Matched: Melissae v2.7 (2026-11)."
+  - name: melissae-ssh-command-logger-in-bashrc
+    id: 2376
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "grep -o '/host-logs/ssh/commands.log' ~/.bashrc; hostname"
+        output_match_type: regex
+        output: "^/host-logs/ssh/commands\\.log\\s+ubuntu-server\\s*$"
+        invert_match: false
+    confidence: High
+    comment: "Authenticated signature: run with -username user -password admin, the account the SSH module's Dockerfile creates. The SSH module is genuine OpenSSH on Ubuntu 24.04; the user's .bashrc ends with a log_cmd PROMPT_COMMAND hook that appends every command to /host-logs/ssh/commands.log, and the container's host name is ubuntu-server. Without credentials (or where the login is refused) it does not match. Matched: Melissae v2.7 (2026-11)."
+  - name: melissae-ssh-world-writable-log-files
+    id: 2377
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "stat -c '%A %n' /host-logs/ssh/commands.log /host-logs/ssh/sshd.log"
+        output_match_type: regex
+        output: "^-rw-rw-rw- /host-logs/ssh/commands\\.log\\s+-rw-rw-rw- /host-logs/ssh/sshd\\.log\\s*$"
+        invert_match: false
+    confidence: High
+    comment: "Authenticated signature: run with -username user -password admin. Inside the SSH module the two log files the agent ships from the bind-mounted /host-logs/ssh directory, commands.log (written by the user's own shell hook) and sshd.log (rsyslog's auth log), are mode 666, so the logged-in user can read and rewrite them. Matched: Melissae v2.7 (2026-11)."
