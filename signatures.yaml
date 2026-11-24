@@ -21508,3 +21508,95 @@ signatures:
         invert_match: false
     confidence: High
     comment: 'The DICOMHawk log viewer (Flask under uWSGI, port 5000, published by the upstream docker-compose file) serves a landing page titled DICOMHawk - Honeypot DICOM Server, without authentication. Matched: DICOMHawk v2.0 branch commit 091ae66 (2026-11).'
+  - name: honeyplc-s7-default-identity
+    id: 2410
+    port: 102
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: 0300001611e00000000100c0010ac1020100c2020102
+        output_match_type: hex
+        output: 0300001611d0
+        invert_match: false
+      - input_type: hex
+        input: 0300001902f08032010000000000080000f0000001000101e0
+        output_match_type: hex
+        output: 02f08032030000
+        invert_match: false
+      - input_type: hex
+        input: 0300002102f080320700000000000800080001120411440100ff090004001c0000
+        output_match_type: regex
+        output: 'PRODUCTION S7-(?:1200|300|1500)\x00+\x02CPU [^\x00]+\x00(?s:.*)S (?:ZVC5YU6038586|C-U2A203512011|C-H3SF38492016)\x00'
+        invert_match: false
+    confidence: High
+    comment: 'S7comm Read SZL 0x001C (component identification, what nmap s7-info and Step 7 show) returns the identity compiled into HoneyPLC''s modified Snap7 library: station name ''PRODUCTION S7-1200'' (or S7-300 / S7-1500 for the other bundled firmware headers), module ''CPU 1212C'' and serial ''S ZVC5YU6038586'' (S7-300: ''S C-U2A203512011''; S7-1500: ''S C-H3SF38492016''), copied from the authors'' own PLCs. Every deployment of the published build reports the same serial number; a genuine PLC reports its own serial and the station name set in its hardware configuration. Matched: HoneyPLC 6188234 (2026-11).'
+  - name: honeyplc-s7-module-id-snap7-firmware-records
+    id: 2411
+    port: 102
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: 0300001611e00000000100c0010ac1020100c2020102
+        output_match_type: hex
+        output: 0300001611d0
+        invert_match: false
+      - input_type: hex
+        input: 0300001902f08032010000000000080000f0000001000101e0
+        output_match_type: hex
+        output: 02f08032030000
+        invert_match: false
+      - input_type: hex
+        input: 0300002102f080320700000000000800080001120411440100ff09000400110000
+        output_match_type: hex
+        output: 36455337203231322d31424433302d305842302000c0000400010007202020202020202020202020202020202020202000c0560302060081426f6f74204c6f61646572
+        invert_match: false
+    confidence: High
+    comment: 'S7comm Read SZL 0x0011 (module identification) names the S7-1200 module 6ES7 212-1BD30-0XB0 but keeps the stock Snap7 records that follow it: a blank index-7 record and firmware V3.2.6 with the Snap7 boot-loader record, byte for byte as a stock Snap7 server (CPU 315-2 PN/DP identity) sends them. The SNMP sysDescr of the same profile reports FW V.2.2.0, so the two protocols disagree about the firmware. Matched: HoneyPLC 6188234 (2026-11).'
+  - name: honeyplc-http-s7-portal-on-lighttpd
+    id: 2412
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: plc\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\n.*Server: lighttpd/[0-9.]+\r\n.*URL=Portal/Intro\.mwsl'
+        invert_match: false
+    confidence: High
+    comment: 'The S7-1200 web portal start page (a meta refresh to Portal/Intro.mwsl, a wget copy of a real PLC''s page) is served by lighttpd, which announces itself in the Server header. The S7-1200''s own web server is Siemens firmware and does not identify as lighttpd. Matched: HoneyPLC 6188234 with lighttpd 1.4.69 (2026-11).'
+  - name: honeyplc-http-mwsl-served-as-static-file
+    id: 2413
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /Portal/Intro.mwsl HTTP/1.1\r\nHost: plc\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\n.*Content-Type: application/octet-stream\r\n.*S7Web\.css'
+        invert_match: false
+    confidence: High
+    comment: 'Portal/Intro.mwsl, a page the PLC generates from its MiniWeb (MWSL) templates and sends as HTML, is served as a static file with Content-Type application/octet-stream, so a browser offers to download it instead of showing it. Matched: HoneyPLC 6188234 with lighttpd 1.4.69 (2026-11).'
+  - name: honeyplc-snmp-default-sysdescr
+    id: 2414
+    port: 161
+    proto: udp
+    steps:
+      - input_type: string
+        input: 1.3.6.1.2.1.1.1.0
+        output_match_type: regex
+        output: '^Siemens, SIMATIC (?:S7, CPU-1200, 6ES7 212-1BD30-0XB0, HW: 2, FW: V\.2\.2\.0, SZVC5YU6038586|S7, CPU1511-1 PN, 6ES7 511-1AK01-0AB0, HW: 2, FW: V1\.8\.3, S C-H3SF38492016)$'
+        invert_match: false
+    confidence: Medium
+    comment: 'SNMPv2c (community public): sysDescr is the value recorded from the authors'' own S7-1200 (or S7-1500) PLC in the bundled profile, including that device''s serial number, so every default deployment reports the same serial. Profile data replayed by snmpsim; an operator can record a new profile. Needs honeydet -proto udp. Matched: HoneyPLC 6188234 with snmpsim 1.2.2 (2026-11).'
+  - name: honeyplc-snmp-frozen-uptime
+    id: 2415
+    port: 161
+    proto: udp
+    steps:
+      - input_type: string
+        input: 1.3.6.1.2.1.1.3.0
+        output_match_type: regex
+        output: '^(?:239430|194500870|18950)$'
+        invert_match: false
+    confidence: Medium
+    comment: 'SNMPv2c (community public): sysUpTime is the fixed value from the profile''s recorded walk (S7-1200: 239430 hundredths of a second, 39 min 54 s; S7-300: 194500870; S7-1500: 18950) and never advances, so repeated queries return the same uptime. A genuine agent''s sysUpTime increases with every query. Profile data replayed by snmpsim. Needs honeydet -proto udp. Matched: HoneyPLC 6188234 with snmpsim 1.2.2 (2026-11).'
