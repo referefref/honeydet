@@ -21363,3 +21363,148 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: "/build/ is served by Go's http.FileServer, which lists the directory: exactly bundle.css and bundle.js, the Rollup output of the Svelte front end. Other Go-served Svelte applications could list the same two files. Matched: Ochi d0c784d (2026-11)."
+  - name: dicomhawk-dcmtk362-identity-pynetdicom-pdu
+    id: 2400
+    port: 104
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: '0100000000cd00010000414e592d534350202020202020202020484f4e45594445542020202020202020000000000000000000000000000000000000000000000000000000000000000010000015312e322e3834302e31303030382e332e312e312e312000002e0100000030000011312e322e3834302e31303030382e312e3140000011312e322e3834302e31303030382e312e325000003a51000004000040005200001b312e322e3237362e302e373233303031302e332e302e332e362e375500000f4f464649535f44434d544b5f333637'
+        output_match_type: hex
+        output: '5100000400003ffe5200001b312e322e3237362e302e373233303031302e332e302e332e362e32'
+        invert_match: false
+    confidence: High
+    comment: 'An A-ASSOCIATE-RQ for the Verification service is accepted with the Implementation Class UID and version name of DCMTK 3.6.2 (1.2.276.0.7230010.3.0.3.6.2, OFFIS_DCMTK_362) but a maximum PDU length of 16382, pynetdicom''s default. Genuine DCMTK 3.6.2 (storescp and dcmqrscp) and 3.6.7 offer 16384, and pynetdicom servers carry their own UID; DICOMHawk sets DCMTK''s identity on a pynetdicom 2.0.1 application entity. Matched: DICOMHawk v2.0 branch commit 091ae66 (2026-11).'
+  - name: dicomhawk-cfind-missing-level-c006
+    id: 2401
+    port: 104
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: '0100000000d700010000414e592d534350202020202020202020484f4e45594445542020202020202020000000000000000000000000000000000000000000000000000000000000000010000015312e322e3834302e31303030382e332e312e312e3120000038010000003000001b312e322e3834302e31303030382e352e312e342e312e322e322e3140000011312e322e3834302e31303030382e312e325000003a51000004000040005200001b312e322e3237362e302e373233303031302e332e302e332e362e375500000f4f464649535f44434d544b5f333637'
+        output_match_type: hex
+        output: '21000019010000004000'
+        invert_match: false
+      - input_type: hex
+        input: '04000000006c0000005a010300000000040000004c000000000002001c000000312e322e3834302e31303030382e352e312e342e312e322e322e3100000000010200000020000000100102000000010000000007020000000000000000080200000002010000000a01021000100000000000'
+        output_match_type: hex
+        output: '000000090200000006c0'
+        invert_match: false
+    confidence: High
+    comment: 'After an accepted Study Root FIND association, a C-FIND-RQ without a Query/Retrieve Level element is answered with status 0xC006 (invalid attribute value), DICOMHawk''s own check. Genuine archives answer 0xA900 (DCMTK dcmqrscp 3.6.2 and 3.6.7, pynetdicom 2.0.1 and 3.0.4 qrscp) or 0xC000 (Orthanc); DCMTK storescp and pynetdicom storescp refuse the FIND context. Matched: DICOMHawk v2.0 branch commit 091ae66 (2026-11).'
+  - name: dicomhawk-cfind-bogus-level-empty-success
+    id: 2402
+    port: 104
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: '0100000000d700010000414e592d534350202020202020202020484f4e45594445542020202020202020000000000000000000000000000000000000000000000000000000000000000010000015312e322e3834302e31303030382e332e312e312e3120000038010000003000001b312e322e3834302e31303030382e352e312e342e312e322e322e3140000011312e322e3834302e31303030382e312e325000003a51000004000040005200001b312e322e3237362e302e373233303031302e332e302e332e362e375500000f4f464649535f44434d544b5f333637'
+        output_match_type: hex
+        output: '21000019010000004000'
+        invert_match: false
+      - input_type: hex
+        input: '04000000007a0000005a010300000000040000004c000000000002001c000000312e322e3834302e31303030382e352e312e342e312e322e322e3100000000010200000020000000100102000000010000000007020000000000000000080200000002010000001801020800520006000000424f475553201000100000000000'
+        output_match_type: regex
+        output: '(?s)^\x04.{0,110}\x00\x00\x09\x02\x00\x00\x00\x00\x00'
+        invert_match: false
+    confidence: High
+    comment: 'After an accepted Study Root FIND association, a C-FIND-RQ with the invalid Query/Retrieve Level BOGUS gets an immediate final success (0x0000) with no matches: DICOMHawk does not validate the level and simply finds nothing. Genuine archives refuse it (DCMTK dcmqrscp and Orthanc 0xC000, pynetdicom qrscp 0xA900); the pynetdicom reference PACS honeypot answers with pending matches. Matched: DICOMHawk v2.0 branch commit 091ae66 (2026-11).'
+  - name: dicomhawk-cmove-handler-error-c514
+    id: 2403
+    port: 104
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: '0100000000d700010000414e592d534350202020202020202020484f4e45594445542020202020202020000000000000000000000000000000000000000000000000000000000000000010000015312e322e3834302e31303030382e332e312e312e3120000038010000003000001b312e322e3834302e31303030382e352e312e342e312e322e322e3240000011312e322e3834302e31303030382e312e325000003a51000004000040005200001b312e322e3237362e302e373233303031302e332e302e332e362e375500000f4f464649535f44434d544b5f333637'
+        output_match_type: hex
+        output: '21000019010000004000'
+        invert_match: false
+      - input_type: hex
+        input: '04000000009a000000720103000000000400000064000000000002001c000000312e322e3834302e31303030382e352e312e342e312e322e322e320000000001020000002100000010010200000001000000000610000000484f4e455944455420202020202020200000000702000000000000000008020000000201000000200102080052000600000053545544592020000d0008000000312e322e332e3420'
+        output_match_type: hex
+        output: '000000090200000014c5'
+        invert_match: false
+    confidence: Medium
+    comment: 'After an accepted Study Root MOVE association, a C-MOVE-RQ for an unknown study to an unknown destination AE is answered with status 0xC514, the code pynetdicom sends when the application''s C-MOVE handler fails (DICOMHawk''s handler raises an error before it yields a destination). Genuine archives answer 0x0000 with no sub-operations (DCMTK dcmqrscp), 0xA801 move destination unknown (pynetdicom qrscp) or abort (Orthanc). Medium: any pynetdicom application with a failing C-MOVE handler answers the same. Matched: DICOMHawk v2.0 branch commit 091ae66 (2026-11).'
+  - name: dicomhawk-default-archive-patient
+    id: 2404
+    port: 104
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: '0100000000d700010000414e592d534350202020202020202020484f4e45594445542020202020202020000000000000000000000000000000000000000000000000000000000000000010000015312e322e3834302e31303030382e332e312e312e3120000038010000003000001b312e322e3834302e31303030382e352e312e342e312e322e322e3140000011312e322e3834302e31303030382e312e325000003a51000004000040005200001b312e322e3237362e302e373233303031302e332e302e332e362e375500000f4f464649535f44434d544b5f333637'
+        output_match_type: hex
+        output: '21000019010000004000'
+        invert_match: false
+      - input_type: hex
+        input: '0400000000900000005a010300000000040000004c000000000002001c000000312e322e3834302e31303030382e352e312e342e312e322e322e3100000000010200000020000000100102000000010000000007020000000000000000080200000002010000002e01020800520006000000535455445920100010000e00000054696d2048656e72696b73656e2020000d0000000000'
+        output_match_type: hex
+        output: '363237392e363030312e333333313033303330313838373733323638303733323638353236373335'
+        invert_match: false
+    confidence: Medium
+    comment: 'A Study Root study-level C-FIND for the patient name Tim Henriksen returns the study 1.3.6.1.4.1.14519.5.2.1.6279.6001.333103030188773268073268526735: a public TCIA (LIDC-IDRI) study that the default DICOMHawk archive (storage/db.db and dicom_storage) ships under an invented Danish name. Genuine archives without that default data return no match. Medium: the archive changes when the operator replaces the files or TCIA rotation runs with a TCIA account. Matched: DICOMHawk v2.0 branch commit 091ae66 (2026-11).'
+  - name: dicomhawk-dcmtk362-identity-pynetdicom-pdu-11112
+    id: 2405
+    port: 11112
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: '0100000000cd00010000414e592d534350202020202020202020484f4e45594445542020202020202020000000000000000000000000000000000000000000000000000000000000000010000015312e322e3834302e31303030382e332e312e312e312000002e0100000030000011312e322e3834302e31303030382e312e3140000011312e322e3834302e31303030382e312e325000003a51000004000040005200001b312e322e3237362e302e373233303031302e332e302e332e362e375500000f4f464649535f44434d544b5f333637'
+        output_match_type: hex
+        output: '5100000400003ffe5200001b312e322e3237362e302e373233303031302e332e302e332e362e32'
+        invert_match: false
+    confidence: High
+    comment: 'An A-ASSOCIATE-RQ for the Verification service is accepted with the Implementation Class UID and version name of DCMTK 3.6.2 (1.2.276.0.7230010.3.0.3.6.2, OFFIS_DCMTK_362) but a maximum PDU length of 16382, pynetdicom''s default. Genuine DCMTK 3.6.2 (storescp and dcmqrscp) and 3.6.7 offer 16384, and pynetdicom servers carry their own UID; DICOMHawk sets DCMTK''s identity on a pynetdicom 2.0.1 application entity. Same probe on 11112, DICOMHawk''s port when run without Docker. Matched: DICOMHawk v2.0 branch commit 091ae66 (2026-11).'
+  - name: dicomhawk-cfind-missing-level-c006-11112
+    id: 2406
+    port: 11112
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: '0100000000d700010000414e592d534350202020202020202020484f4e45594445542020202020202020000000000000000000000000000000000000000000000000000000000000000010000015312e322e3834302e31303030382e332e312e312e3120000038010000003000001b312e322e3834302e31303030382e352e312e342e312e322e322e3140000011312e322e3834302e31303030382e312e325000003a51000004000040005200001b312e322e3237362e302e373233303031302e332e302e332e362e375500000f4f464649535f44434d544b5f333637'
+        output_match_type: hex
+        output: '21000019010000004000'
+        invert_match: false
+      - input_type: hex
+        input: '04000000006c0000005a010300000000040000004c000000000002001c000000312e322e3834302e31303030382e352e312e342e312e322e322e3100000000010200000020000000100102000000010000000007020000000000000000080200000002010000000a01021000100000000000'
+        output_match_type: hex
+        output: '000000090200000006c0'
+        invert_match: false
+    confidence: High
+    comment: 'After an accepted Study Root FIND association, a C-FIND-RQ without a Query/Retrieve Level element is answered with status 0xC006 (invalid attribute value), DICOMHawk''s own check. Genuine archives answer 0xA900 (DCMTK dcmqrscp 3.6.2 and 3.6.7, pynetdicom 2.0.1 and 3.0.4 qrscp) or 0xC000 (Orthanc); DCMTK storescp and pynetdicom storescp refuse the FIND context. Same probe on 11112, DICOMHawk''s port when run without Docker. Matched: DICOMHawk v2.0 branch commit 091ae66 (2026-11).'
+  - name: dicomhawk-api-robots-txt
+    id: 2407
+    port: 3000
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /robots.txt HTTP/1.1\r\nHost: pacs\r\nConnection: close\r\n\r\n"
+        output_match_type: string
+        output: 'Disallow: /ensurance_data/'
+        invert_match: false
+    confidence: High
+    comment: 'GET /robots.txt on the DICOMHawk web API (Express, port 3000) returns the fixed honeytoken file that disallows /admin/, /admin-config/, /secure/ and the misspelt /ensurance_data/, with an example.com sitemap line. Matched: DICOMHawk v2.0 branch commit 091ae66 (2026-11).'
+  - name: dicomhawk-api-loginadmin
+    id: 2408
+    port: 3000
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /loginAdmin HTTP/1.1\r\nHost: pacs\r\nConnection: close\r\n\r\n"
+        output_match_type: regex
+        output: '(?s)X-Powered-By: Express.*\{"isAdmin":false\}'
+        invert_match: false
+    confidence: High
+    comment: 'GET /loginAdmin on the DICOMHawk web API (Express, port 3000) answers {"isAdmin":false} without authentication: the admin token check that the code renames to avoid fingerprinting. Matched: DICOMHawk v2.0 branch commit 091ae66 (2026-11).'
+  - name: dicomhawk-logserver-landing-page
+    id: 2409
+    port: 5000
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: pacs\r\nConnection: close\r\n\r\n"
+        output_match_type: string
+        output: '<title>DICOMHawk - Honeypot DICOM Server</title>'
+        invert_match: false
+    confidence: High
+    comment: 'The DICOMHawk log viewer (Flask under uWSGI, port 5000, published by the upstream docker-compose file) serves a landing page titled DICOMHawk - Honeypot DICOM Server, without authentication. Matched: DICOMHawk v2.0 branch commit 091ae66 (2026-11).'
