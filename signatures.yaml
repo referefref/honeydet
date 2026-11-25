@@ -21529,7 +21529,7 @@ signatures:
         output: 'PRODUCTION S7-(?:1200|300|1500)\x00+\x02CPU [^\x00]+\x00(?s:.*)S (?:ZVC5YU6038586|C-U2A203512011|C-H3SF38492016)\x00'
         invert_match: false
     confidence: High
-    comment: 'S7comm Read SZL 0x001C (component identification, what nmap s7-info and Step 7 show) returns the identity compiled into HoneyPLC''s modified Snap7 library: station name ''PRODUCTION S7-1200'' (or S7-300 / S7-1500 for the other bundled firmware headers), module ''CPU 1212C'' and serial ''S ZVC5YU6038586'' (S7-300: ''S C-U2A203512011''; S7-1500: ''S C-H3SF38492016''), copied from the authors'' own PLCs. Every deployment of the published build reports the same serial number; a genuine PLC reports its own serial and the station name set in its hardware configuration. Matched: HoneyPLC 6188234 (2026-11).'
+    comment: "S7comm Read SZL 0x001C (component identification, what nmap s7-info and Step 7 show) returns the identity compiled into HoneyPLC's modified Snap7 library: station name 'PRODUCTION S7-1200' (or S7-300 / S7-1500 for the other bundled firmware headers), module 'CPU 1212C' and serial 'S ZVC5YU6038586' (S7-300: 'S C-U2A203512011'; S7-1500: 'S C-H3SF38492016'), copied from the authors' own PLCs. Every deployment of the published build reports the same serial number; a genuine PLC reports its own serial and the station name set in its hardware configuration. Matched: HoneyPLC 6188234 (2026-11). Also matches ICSpot ca94e30 (2026-11)."
   - name: honeyplc-s7-module-id-snap7-firmware-records
     id: 2411
     port: 102
@@ -21551,7 +21551,7 @@ signatures:
         output: 36455337203231322d31424433302d305842302000c0000400010007202020202020202020202020202020202020202000c0560302060081426f6f74204c6f61646572
         invert_match: false
     confidence: High
-    comment: 'S7comm Read SZL 0x0011 (module identification) names the S7-1200 module 6ES7 212-1BD30-0XB0 but keeps the stock Snap7 records that follow it: a blank index-7 record and firmware V3.2.6 with the Snap7 boot-loader record, byte for byte as a stock Snap7 server (CPU 315-2 PN/DP identity) sends them. The SNMP sysDescr of the same profile reports FW V.2.2.0, so the two protocols disagree about the firmware. Matched: HoneyPLC 6188234 (2026-11).'
+    comment: "S7comm Read SZL 0x0011 (module identification) names the S7-1200 module 6ES7 212-1BD30-0XB0 but keeps the stock Snap7 records that follow it: a blank index-7 record and firmware V3.2.6 with the Snap7 boot-loader record, byte for byte as a stock Snap7 server (CPU 315-2 PN/DP identity) sends them. The SNMP sysDescr of the same profile reports FW V.2.2.0, so the two protocols disagree about the firmware. Matched: HoneyPLC 6188234 (2026-11). Also matches ICSpot ca94e30 (2026-11)."
   - name: honeyplc-http-s7-portal-on-lighttpd
     id: 2412
     port: 80
@@ -21689,3 +21689,122 @@ signatures:
         invert_match: false
     confidence: High
     comment: "EventHorizon CoAP tarpit (udp/5683, run with honeydet -proto udp): a non-confirmable GET for a resource that does not exist (/honeydet) is answered, after the tarpit's 1-second delay, with a confirmable 2.05 Content carrying message ID 1, a Block2 option (block 0, size 64, more to follow) and the payload AAAAA. A genuine CoAP server answers 4.04 Not Found, or nothing. Matched: EventHorizon d576f0a (2026-11)."
+  - name: icspot-s7-1200-identity-with-water-tower-dbs
+    id: 2440
+    port: 102
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: 0300001611e00000000100c0010ac1020100c2020102
+        output_match_type: hex
+        output: 0300001611d0
+        invert_match: false
+      - input_type: hex
+        input: 0300001902f08032010000000000080000f0000001000101e0
+        output_match_type: hex
+        output: 02f08032030000
+        invert_match: false
+      - input_type: hex
+        input: 0300002102f080320700000000000800080001120411440100ff090004001c0000
+        output_match_type: regex
+        output: 'PRODUCTION S7-1200\x00+\x02CPU 1212C\x00(?s:.*)S ZVC5YU6038586\x00'
+        invert_match: false
+      - input_type: hex
+        input: 0300001f02f080320100000001000e00000401120a10020001006784000000
+        output_match_type: regex
+        output: '\x04\x00\x08[\x01\x02]$'
+        invert_match: false
+      - input_type: hex
+        input: 0300001f02f080320100000001000e00000401120a10020004000384000000
+        output_match_type: regex
+        output: '\x04\x00\x20\x00\x00[\x00-\x07](?s:.)?$'
+        invert_match: false
+    confidence: High
+    comment: 'S7comm: the CPU identity compiled into the bundled Snap7 library (station ''PRODUCTION S7-1200'', CPU 1212C, serial ''S ZVC5YU6038586'', the same in every deployment), and the water tower simulation behind the data blocks: DB103 byte 0 holds the outlet pump state P201 (1 on, 2 off) and DB3 bytes 0-3 the tank level in metres x 1500 as a big-endian integer (0 to about 1700; the last byte is optional, as responses are compared with trailing whitespace bytes trimmed), both read from the simulation''s SQLite database at each request. HoneyPLC, which shares the identity and the DB21/DB103/DB3 layout, leaves DB103 at zero and fills DB3 with a repeated request counter; a stock Snap7 server reports SNAP7-SERVER and has no DB103. If the simulation database is missing, ICSpot falls back to HoneyPLC''s counter and this signature does not match. Matched: ICSpot ca94e30 (2026-11).'
+  - name: icspot-ftp-stat-hardcoded-client-address
+    id: 2441
+    port: 21
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ''
+        output_match_type: regex
+        output: '^220 CP 343-1 IT FTP-Server V1\.36 ready for new user$'
+        invert_match: false
+      - input_type: string
+        input: "STAT\r"
+        output_match_type: regex
+        output: '211-CP 343-1 IT FTP-Server V1\.36\r\n +Connected to 192\.168\.1\.200\n +Not logged in'
+        invert_match: false
+    confidence: High
+    comment: 'FTP STAT before login reports ''Connected to 192.168.1.200'' whatever the client''s address: the line that reads the client address from Honeyd is commented out and a fixed lab address is used instead; the status lines after the first end in a bare LF. A genuine server reports the connected client''s own address. Matched: ICSpot ca94e30 (2026-11).'
+  - name: icspot-ftp-cp343-user-refused-without-password
+    id: 2442
+    port: 21
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ''
+        output_match_type: regex
+        output: '^220 CP 343-1 IT FTP-Server V1\.36 ready for new user$'
+        invert_match: false
+      - input_type: string
+        input: "USER anonymous\r"
+        output_match_type: regex
+        output: '^530 Not logged in\.$'
+        invert_match: false
+      - input_type: string
+        input: "SYST\r"
+        output_match_type: regex
+        output: '^215 CP x43-1 IT Type: L8$'
+        invert_match: false
+    confidence: Medium
+    comment: 'The Siemens CP 343-1 IT FTP banner, every USER answered 530 Not logged in (never 331, so no login is possible) and SYST with the template text ''CP x43-1 IT''. The texts come from the CERN SCADA honeynet scripts (2006) that ICSpot reuses and can be edited. Matched: ICSpot ca94e30 (2026-11).'
+  - name: icspot-telnet-python-bytes-repr-greeting
+    id: 2443
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ''
+        output_match_type: regex
+        output: '^b''\\xff\\xfb\\x01''\n\rSiemens Login:$'
+        invert_match: false
+    confidence: High
+    comment: 'The Telnet greeting starts with the literal text b''\xff\xfb\x01'' (the Python 3 repr of a bytes object, 15 printable characters) instead of the three-byte IAC WILL ECHO option it was meant to send, then ''Siemens Login: ''. The first character typed ends the session. Matched: ICSpot ca94e30 (2026-11).'
+  - name: icspot-http-directory-listing-double-date
+    id: 2444
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /home/ HTTP/1.0\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.0 200\r\nServer: HTTP-Server V1\.27\r\nPragma: no-cache\r\nDate: Date: [A-Z][a-z]{2} [A-Z][a-z]{2} [ 0-9]\d \d\d:\d\d \d{4}\r\r\nLast-Modified: Date: '
+        invert_match: false
+    confidence: High
+    comment: 'The emulated CP 343-1 web server''s directory listing sends ''Date: Date: <date>\r\r\n'' and ''Last-Modified: Date: ...'': the formatted date already contains the header name and a CR, and the script adds both again. A genuine server sends one Date header in RFC 9110 format. Matched: ICSpot ca94e30 (2026-11).'
+  - name: icspot-http-root-redirect-cp-error-page
+    id: 2445
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.0\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.0 302\r\nLocation: /index\.htm\r\nPragma: no-cache\r\nContent-Type: text/html\r\nContent-Length: 119\r\n\r\n<HTML><HEAD><TITLE>Error</TITLE></HEAD>\r\n<BODY><CENTER><H2>/<BR><BR>302 : MOVED TEMPORARILY</H2>'
+        invert_match: false
+    confidence: Medium
+    comment: 'GET / answers with a status line without reason phrase (''HTTP/1.0 302''), Location /index.htm and a fixed ''302 : MOVED TEMPORARILY'' error page, the CP 343-1 web server emulation of the CERN SCADA honeynet scripts. Under Python 3 the page behind it (index.htm, and every other file) gets an empty response, because the script uses the Python 2 file() call. Matched: ICSpot ca94e30 (2026-11).'
+  - name: icspot-hmi-water-tank-control-panel
+    id: 2446
+    port: 8000
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: hmi\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\n.*<title>Remote HMI</title>.*SIMATIC   HMI</h2>.*<h1>Water Tank Control Panel</h1>'
+        invert_match: false
+    confidence: High
+    comment: 'The ICSpot HMI (a Flask-SocketIO app that Honeyd proxies from port 8000): title ''Remote HMI'', heading ''SIMATIC   HMI'' (three spaces) and ''Water Tank Control Panel'', loading jQuery and socket.io 1.3.6 from public CDNs. A Siemens WinCC or panel web HMI is Siemens software, not Flask. Matched: ICSpot ca94e30 (2026-11).'
