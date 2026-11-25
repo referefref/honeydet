@@ -7011,7 +7011,7 @@ signatures:
         output: 'SNAP7-SERVER\x00+\x02CPU 315-2 PN/DP\x00'
         invert_match: false
     confidence: High
-    comment: "The S7comm service is the Snap7 library's server with its built-in identity: the component identification list (SZL 0x001C) names the PLC 'SNAP7-SERVER', module 'CPU 315-2 PN/DP', serial 'S C-C2UR28922012'. A genuine S7-300 reports the station name set in its hardware configuration. Any other Snap7 server left at its defaults answers the same way. Matched: Honeygrove 7dd9291 (v0.6.0) (2026-11)."
+    comment: "The S7comm service is the Snap7 library's server with its built-in identity: the component identification list (SZL 0x001C) names the PLC 'SNAP7-SERVER', module 'CPU 315-2 PN/DP', serial 'S C-C2UR28922012'. A genuine S7-300 reports the station name set in its hardware configuration. Any other Snap7 server left at its defaults answers the same way. Matched: Honeygrove 7dd9291 (v0.6.0) (2026-11). Also matches Python PLC Honeypot 0a8a826 (2026-11)."
   - name: lyrebird-ftp-lab-banner
     id: 820
     port: 21
@@ -21952,3 +21952,107 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: 'A service request (GetEndpoints) on channel id 0 after a valid OpenSecureChannel. OpcUaTrap closes the connection with an Error message (BadSecureChannelIdInvalid) whose reason text is the LibUA format "TL error 0x80220000". open62541 1.5.10 sends the same status with no reason text and asyncua 2.1.0 ignores the channel id and answers the request. Medium: shared with other servers on the LibUA stack. Matched: OpcUaTrap 0.5.0 (2026-11).'
+  - name: python-plc-honeypot-m221-web-start-page
+    id: 2460
+    port: 5001
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*Server: Werkzeug/.*<title> Logic Controller - Modicon M221 </title>.*EcoStruxure Machine Expert - Basic.*PLC Management Account:'
+        invert_match: false
+    confidence: High
+    comment: "The Modbus PLC emulator's start page: a Bootstrap page titled 'Logic Controller - Modicon M221' with an 'EcoStruxure Machine Expert - Basic' banner and a 'PLC Management Account' login form, served by Werkzeug (Flask's development server). Machine Expert Basic is Schneider's desktop programming software; the page is the project's own template, the same in every deployment. Matched: Python PLC Honeypot 0a8a826 (2026-11)."
+  - name: python-plc-honeypot-s7-1200-web-start-page
+    id: 2461
+    port: 5002
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*Server: Werkzeug/.*<title> Siemens S7-1200 PLC </title>.*SIMATIC 1200 station_1/PLC_1.*CPU 1214C ACDCRty'
+        invert_match: false
+    confidence: High
+    comment: "The S7Comm PLC emulator's start page: a Bootstrap page titled 'Siemens S7-1200 PLC' with 'SIMATIC 1200 station_1/PLC_1' and module type 'CPU 1214C ACDCRty', served by Werkzeug. A genuine S7-1200 web server is Siemens' own embedded server (Portal.mwsl pages), not Werkzeug. Matched: Python PLC Honeypot 0a8a826 (2026-11)."
+  - name: python-plc-honeypot-m221-login-get-error
+    id: 2462
+    port: 5001
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /login HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 500 INTERNAL SERVER ERROR\r\n.*Server: Werkzeug/'
+        invert_match: false
+      - input_type: string
+        input: "GET /plcstate HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        reconnect: true
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 401 UNAUTHORIZED\r\n.*<title>401 Unauthorized</title>'
+        invert_match: false
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        reconnect: true
+        output_match_type: string
+        output: "PLC Management Account:"
+        invert_match: false
+    confidence: High
+    comment: "GET /login (the login form's own URL) fails with Werkzeug's '500 INTERNAL SERVER ERROR', because the route renders the start page template without the data it needs, and the I/O state page /plcstate answers a plain '401 UNAUTHORIZED' error page instead of redirecting to a login form (Flask-Login has no login view configured), on a server whose start page carries the M221 'PLC Management Account' form. Matched: Python PLC Honeypot 0a8a826 (2026-11)."
+  - name: python-plc-honeypot-s7-1200-login-get-error
+    id: 2463
+    port: 5002
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /login HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 500 INTERNAL SERVER ERROR\r\n.*Server: Werkzeug/'
+        invert_match: false
+      - input_type: string
+        input: "GET /plcstate HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        reconnect: true
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 401 UNAUTHORIZED\r\n.*<title>401 Unauthorized</title>'
+        invert_match: false
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        reconnect: true
+        output_match_type: string
+        output: "SIMATIC 1200 station_1/PLC_1"
+        invert_match: false
+    confidence: High
+    comment: "As 2462 for the S7-1200 persona: GET /login returns Werkzeug's '500 INTERNAL SERVER ERROR' and /plcstate a plain '401 UNAUTHORIZED' page, on a server whose start page shows 'SIMATIC 1200 station_1/PLC_1'. Matched: Python PLC Honeypot 0a8a826 (2026-11)."
+  - name: python-plc-honeypot-s7-snap7-four-8-byte-dbs
+    id: 2464
+    port: 102
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: 0300001611e00000000100c0010ac1020100c2020102
+        output_match_type: hex
+        output: 0300001611d0
+        invert_match: false
+      - input_type: hex
+        input: 0300001902f08032010000000000080000f0000001000101e0
+        output_match_type: hex
+        output: 02f08032030000
+        invert_match: false
+      - input_type: hex
+        input: 0300002102f080320700000000000800080001120411440100ff090004001c0001
+        output_match_type: string
+        output: "SNAP7-SERVER"
+        invert_match: false
+      - input_type: hex
+        input: 0300001f02f080320100000001000e00000401120a10020008000484000000
+        output_match_type: regex
+        output: '\x04\x01(?s:.)\x04\x00\x40[\x00\x01]\x00[\x00\x01]\x00[\x00\x01]\x00[\x00\x01]\x00$'
+        invert_match: false
+      - input_type: hex
+        input: 0300001f02f080320100000001000e00000401120a10020001000484000040
+        output_match_type: hex
+        output: "0401050000"
+        invert_match: false
+    confidence: High
+    comment: "S7comm: a stock Snap7 server identity (SZL 0x001C module name 'SNAP7-SERVER', CPU 315-2 PN/DP) with the emulator's fixed data block layout: DB1 to DB4 of exactly eight bytes each, holding Boolean values (0 or 1) at bytes 0, 2, 4 and 6. Reading DB4 bytes 0-7 succeeds with that pattern and reading DB4 byte 8 fails with 'address out of range' (0x05). A stock Snap7 server has no DB4; the web page of the same emulator claims an S7-1200 CPU 1214C. Matched: Python PLC Honeypot 0a8a826 (2026-11)."
