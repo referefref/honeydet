@@ -22192,3 +22192,75 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: "ISO-on-TCP (siemens profile): a COTP Connection Request without the optional TPDU size parameter makes the server close the connection without a reply. ISO 8073 makes the parameter optional (default 128 octets); Snap7 and Siemens CPUs confirm the connection. Medium: a firewall that resets the connection also matches. Matched: Utricularia ceb0189 (2026-11)."
+  - name: vsat-honeypot-status-api-mode
+    id: 2480
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /api/status HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*\r\n\r\n\{.*"configuredVessel":\{[^}]*"mode":"(?:honeypot|scrape)".*"upstreamNav":\{|(?s)^HTTP/1\.[01] 200 OK\r\n.*\r\n\r\n\{.*"upstreamNav":\{.*"configuredVessel":\{[^}]*"mode":"(?:honeypot|scrape)"'
+        invert_match: false
+    confidence: High
+    comment: "GET /api/status answers without authentication with the dashboard's whole JSON state, including configuredVessel.mode set to the navigation mode ('honeypot' or 'scrape') and an upstreamNav block (Vesseltracker scraping state). These keys belong to the honeypot's own design; key order varies between runs (Perl hash order), so both orders are matched; header order is not used, so it also matches behind a reverse proxy. Matched: VSAT Honeypot a24a016 (2026-11)."
+  - name: vsat-honeypot-sailor-page-header-block
+    id: 2481
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nConnection: close\r\nCache-Control: no-store\r\nReferrer-Policy: no-referrer\r\nX-Robots-Tag: noindex, nofollow, noarchive\r\nX-Frame-Options: DENY\r\nX-Content-Type-Options: nosniff\r\nServer: Allegro-WebServer/3\.2\.1\r\nContent-Length: \d+\r\n\r\n.*<title>SAILOR 900 VSAT Ka - Installation Manager</title>.*id="configured-vessel-imo"'
+        invert_match: false
+    confidence: High
+    comment: "GET / returns the decoy's SAILOR 900 VSAT Ka Installation Manager page with its fixed header block: no Date header, Server: Allegro-WebServer/3.2.1, and a vessel IMO field (configured-vessel-imo) that exists for the honeypot's Vesseltracker feature. Matched: VSAT Honeypot a24a016 (2026-11)."
+  - name: vsat-honeypot-head-returns-body
+    id: 2482
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "HEAD / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\n.*X-Robots-Tag: noindex, nofollow, noarchive\r\n.*Server: Allegro-WebServer/[^\r\n]*\r\nContent-Length: \d+\r\n\r\n<!DOCTYPE html>'
+        invert_match: false
+    confidence: High
+    comment: "HEAD / is answered with the full HTML page after the headers. RFC 9110 forbids a body in a HEAD response, and nginx, Apache, lighttpd, BusyBox httpd and thttpd send headers only. Matched: VSAT Honeypot a24a016 (2026-11)."
+  - name: vsat-honeypot-any-method-accepted
+    id: 2483
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "FOO / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\n.*Server: Allegro-WebServer/[^\r\n]*\r\nContent-Length: \d+\r\n\r\n<!DOCTYPE html>'
+        invert_match: false
+    confidence: High
+    comment: "An undefined request method (FOO) on / gets 200 OK and the dashboard page: the server routes on path only. Genuine web servers answer 400, 405 or 501. Matched: VSAT Honeypot a24a016 (2026-11)."
+  - name: vsat-honeypot-plain-404-no-date
+    id: 2484
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /cgi-bin/index.cgi HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 404 Not Found\r\nContent-Type: text/plain; charset=utf-8\r\nConnection: close\r\nCache-Control: no-store\r\nReferrer-Policy: no-referrer\r\nX-Robots-Tag: noindex, nofollow, noarchive\r\nX-Frame-Options: DENY\r\nX-Content-Type-Options: nosniff\r\nServer: [^\r\n]+\r\nContent-Length: 10\r\n\r\nNot found'
+        invert_match: false
+    confidence: Medium
+    comment: "Unknown paths return a 10-byte text/plain 'Not found' with the server's fixed header block and no Date header (any Server value, so a changed banner still matches). Medium: the block is generic enough that another hand-written server could share it. Matched: VSAT Honeypot a24a016 (2026-11)."
+  - name: vsat-honeypot-http09-gets-full-headers
+    id: 2485
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nConnection: close\r\nCache-Control: no-store\r\n.*Server: Allegro-WebServer/[^\r\n]*\r\nContent-Length: \d+\r\n\r\n<!DOCTYPE html>'
+        invert_match: false
+    confidence: Medium
+    comment: "A request line without a protocol version (HTTP/0.9 form) gets a full HTTP/1.1 200 response with headers. Servers either reply in HTTP/0.9 form (body only) or reject the request with 400. Medium: behaviour of old embedded servers varies. Matched: VSAT Honeypot a24a016 (2026-11)."
