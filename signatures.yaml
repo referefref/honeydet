@@ -22056,3 +22056,139 @@ signatures:
         invert_match: false
     confidence: High
     comment: "S7comm: a stock Snap7 server identity (SZL 0x001C module name 'SNAP7-SERVER', CPU 315-2 PN/DP) with the emulator's fixed data block layout: DB1 to DB4 of exactly eight bytes each, holding Boolean values (0 or 1) at bytes 0, 2, 4 and 6. Reading DB4 bytes 0-7 succeeds with that pattern and reading DB4 byte 8 fails with 'address out of range' (0x05). A stock Snap7 server has no DB4; the web page of the same emulator claims an S7-1200 CPU 1214C. Matched: Python PLC Honeypot 0a8a826 (2026-11)."
+  - name: utricularia-enip-registersession-unsupported-version-empty
+    id: 2470
+    port: 44818
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "65000400000000000000000001020304050607080000000002000000"
+        output_match_type: hex
+        output: "650000000000000069000000"
+        invert_match: false
+    confidence: High
+    comment: "EtherNet/IP: RegisterSession asking for protocol version 2 is refused with status 0x0069 (unsupported protocol revision) but with an empty body (length 0). The specification has the target return the highest version it supports in the reply body (length 4, version 1), as OpENer does. Independent of the persona. Matched: Utricularia ceb0189 (2026-11)."
+  - name: utricularia-enip-registersession-options-ignored-short-body-refused
+    id: 2471
+    port: 44818
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "65000400000000000000000001020304050607080000000001000001"
+        output_match_type: hex
+        output: "0000000001020304050607080000000001000000"
+        invert_match: false
+      - input_type: hex
+        input: "6500020000000000000000000102030405060708000000000100"
+        output_match_type: hex
+        output: "650000000000000065000000"
+        invert_match: false
+    confidence: High
+    comment: "EtherNet/IP: RegisterSession with a non-zero options flags field (0x0100) is granted a session with status 0, while a RegisterSession whose body is only two bytes long is answered with status 0x0065 (invalid length) and an empty body. OpENer refuses the first with status 0x0069 and accepts the second; Conpot accepts the first and does not answer the second. Matched: Utricularia ceb0189 (2026-11)."
+  - name: utricularia-s7-szl-0424-not-available
+    id: 2472
+    port: 102
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "0300001611e00000000100c0010ac1020100c2020102"
+        output_match_type: hex
+        output: "d00001"
+        invert_match: false
+      - input_type: hex
+        input: "0300001902f08032010000000000080000f0000001000101e0"
+        output_match_type: hex
+        output: "02f0803203"
+        invert_match: false
+      - input_type: hex
+        input: "0300002102f080320700000003000800080001120411440100ff09000404240000"
+        output_match_type: hex
+        output: "120812840401000000000a"
+        invert_match: false
+    confidence: Medium
+    comment: "S7comm (siemens profile): Read SZL 0x0424 (CPU operating mode), which S7 scanners and engineering tools read routinely, returns return code 0x0A (object does not exist) with no data, because only SZL 0x0011 and 0x001C are implemented. Siemens CPUs and Snap7 return the mode record. Medium: the set of implemented lists could grow in a later version. Matched: Utricularia ceb0189 (2026-11)."
+  - name: utricularia-enip-oversized-length-closes
+    id: 2473
+    port: 44818
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "6300ffff00000000000000000102030405060708000000000000000000000000"
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+    confidence: Medium
+    comment: "EtherNet/IP: an encapsulation header announcing a 65535-byte body (more than the 65511-byte maximum) makes the server close the connection at once without a reply. OpENer keeps the connection open and waits. Medium: a firewall or proxy that resets the connection also matches. Matched: Utricularia ceb0189 (2026-11)."
+  - name: utricularia-enip-generator-identity
+    id: 2474
+    port: 44818
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "630000000000000000000000010203040506070800000000"
+        output_match_type: hex
+        output: "f3000e00"
+        invert_match: false
+      - input_type: hex
+        input: "630000000000000000000000010203040506070800000000"
+        output_match_type: regex
+        output: 'Modicon M(340 CPU|580 CPU|241 Logic Controller)\x03$'
+        invert_match: false
+    confidence: Medium
+    comment: "EtherNet/IP ListIdentity: vendor 243 (Schneider Electric), device type 14, and a product name from the persona generator's short list ('Modicon M340 CPU', 'Modicon M580 CPU', 'Modicon M241 Logic Controller') followed by state 3. Persona values: an operator who edits the generated persona to a real product name does not match. Matched: Utricularia ceb0189 (2026-11)."
+  - name: utricularia-s7-szl-reply-as-ack-data
+    id: 2475
+    port: 102
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "0300001611e00000000100c0010ac1020100c2020102"
+        output_match_type: hex
+        output: "d00001"
+        invert_match: false
+      - input_type: hex
+        input: "0300001902f08032010000000000080000f0000001000101e0"
+        output_match_type: hex
+        output: "02f0803203"
+        invert_match: false
+      - input_type: hex
+        input: "0300002102f080320700000003000800080001120411440100ff09000400110000"
+        output_match_type: hex
+        output: "02f080320300000003000c"
+        invert_match: false
+    confidence: High
+    comment: "S7comm (siemens profile): a Read SZL 0x0011 userdata request is answered with message type 0x03 (Ack_Data, 12-byte header with error fields) instead of 0x07 (Userdata, 10-byte header), which Siemens CPUs and Snap7 use for SZL replies. Independent of the persona. Matched: Utricularia ceb0189 (2026-11)."
+  - name: utricularia-s7-readvar-not-implemented
+    id: 2476
+    port: 102
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "0300001611e00000000100c0010ac1020100c2020102"
+        output_match_type: hex
+        output: "d00001"
+        invert_match: false
+      - input_type: hex
+        input: "0300001902f08032010000000000080000f0000001000101e0"
+        output_match_type: hex
+        output: "02f0803203"
+        invert_match: false
+      - input_type: hex
+        input: "0300001f02f080320100000006000e00000401120a10020001000083000000"
+        output_match_type: hex
+        output: "02f080320300000006000200008104"
+        invert_match: false
+    confidence: High
+    comment: "S7comm (siemens profile): Read Var of one byte of flag memory (M0) is refused with error class 0x81 code 0x04 (function not implemented). Every S7-300/400/1200/1500 CPU and Snap7 implement Read Var and return the data (or an item-level error for a missing area). Matched: Utricularia ceb0189 (2026-11)."
+  - name: utricularia-s7-cotp-cr-without-tpdu-size-closes
+    id: 2477
+    port: 102
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "0300001311e00000000100c1020100c2020102"
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+    confidence: Medium
+    comment: "ISO-on-TCP (siemens profile): a COTP Connection Request without the optional TPDU size parameter makes the server close the connection without a reply. ISO 8073 makes the parameter optional (default 128 octets); Snap7 and Siemens CPUs confirm the connection. Medium: a firewall that resets the connection also matches. Matched: Utricularia ceb0189 (2026-11)."
