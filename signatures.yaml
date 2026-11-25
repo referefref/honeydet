@@ -5598,7 +5598,7 @@ signatures:
         output: '^(?:[^S]|S[^S]|SS[^H]|SSH[^-])[\x20-\x7e\t\r\n]*$'
         invert_match: false
     confidence: Medium
-    comment: "Port 22 answers an SSH client identification with plain text that is not an SSH identification string: the PenTBox honeypot's configured false message (for example 'Access denied'). Covers operator-chosen messages that do not imitate an SSH banner. Matched: honeypot-ddos f288125 (2026-11). With a honeydet timeout over 10 seconds it also matches the endlessh tarpit on port 22 (commit dfe44eb, 2026-11). Also matches endlessh-go 2026.0730.0 (2026-11). Also matches sshcont 744d506 (2026-11). Also matches the bagel 1.0.0 SSH tarpit (2026-11). Also matches tarssh 0.7.0 with honeydet -timeout 12 (2026-11)."
+    comment: "Port 22 answers an SSH client identification with plain text that is not an SSH identification string: the PenTBox honeypot's configured false message (for example 'Access denied'). Covers operator-chosen messages that do not imitate an SSH banner. Matched: honeypot-ddos f288125 (2026-11). With a honeydet timeout over 10 seconds it also matches the endlessh tarpit on port 22 (commit dfe44eb, 2026-11). Also matches endlessh-go 2026.0730.0 (2026-11). Also matches sshcont 744d506 (2026-11). Also matches the bagel 1.0.0 SSH tarpit (2026-11). Also matches tarssh 0.7.0 with honeydet -timeout 12 (2026-11). Also matches EventHorizon d576f0a (2026-11)."
   - name: honeypot-ddos-pentbox-telnet-no-negotiation
     id: 714
     port: 23
@@ -9368,7 +9368,7 @@ signatures:
         output: '^(?:[ -RT-~][ -~]{0,29}|S|S[ -RT-~][ -~]{0,28}|SS|SS[ -GI-~][ -~]{0,27}|SSH|SSH[ -,.-~][ -~]{0,26})$'
         invert_match: false
     confidence: High
-    comment: "endlessh SSH tarpit on port 22 (the usual deployment, with the real SSH server moved to another port). It never sends an SSH version line: from Delay milliseconds after the connection is accepted (default 10000) it sends one random line of printable ASCII every Delay (1 to 30 characters plus CRLF at the default MaxLineLength 32, never starting with SSH-), ignores everything the client sends and keeps the connection open. Two client idents get back one short printable line that is not a version line, and two more idents get a second such line on the still-open connection. Genuine SSH servers (OpenSSH, Dropbear, tinysshd) answer at once with SSH-2.0- and a binary key exchange; line-based services answer each input line or close. Needs honeydet -timeout 11 or more at the default Delay (about 20 s per probe). Matched: endlessh 1.1 (source dfe44eb and Debian 1.1-5+b1) (2026-11). Also matches endlessh-go 2026.0730.0 (2026-11). Also matches tarssh 0.7.0 with honeydet -timeout 12 (2026-11)."
+    comment: "endlessh SSH tarpit on port 22 (the usual deployment, with the real SSH server moved to another port). It never sends an SSH version line: from Delay milliseconds after the connection is accepted (default 10000) it sends one random line of printable ASCII every Delay (1 to 30 characters plus CRLF at the default MaxLineLength 32, never starting with SSH-), ignores everything the client sends and keeps the connection open. Two client idents get back one short printable line that is not a version line, and two more idents get a second such line on the still-open connection. Genuine SSH servers (OpenSSH, Dropbear, tinysshd) answer at once with SSH-2.0- and a binary key exchange; line-based services answer each input line or close. Needs honeydet -timeout 11 or more at the default Delay (about 20 s per probe). Matched: endlessh 1.1 (source dfe44eb and Debian 1.1-5+b1) (2026-11). Also matches endlessh-go 2026.0730.0 (2026-11). Also matches tarssh 0.7.0 with honeydet -timeout 12 (2026-11). Also matches EventHorizon d576f0a (2026-11)."
   - name: endlessh-ssh-tarpit-two-random-lines-any-length-default-port
     id: 1052
     port: "2222"
@@ -9402,7 +9402,7 @@ signatures:
         output: '^(?:[ -RT-~][ -~]{0,252}|S|S[ -RT-~][ -~]{0,251}|SS|SS[ -GI-~][ -~]{0,250}|SSH|SSH[ -,.-~][ -~]{0,249})$'
         invert_match: false
     confidence: Medium
-    comment: "endlessh SSH tarpit on port 22 with any MaxLineLength (3 to 255): two client idents get back a single random printable line (up to 253 characters, not a version line, no binary key exchange), and two more idents a second line on the still-open connection, each arriving only after the configured Delay. Survives a changed MaxLineLength; Medium because a line-based service that answers each pair of input lines with exactly one long printable line and stays open would also match. Needs honeydet -timeout greater than the Delay (11 or more at the default 10 s). Matched: endlessh 1.1 (source dfe44eb and Debian 1.1-5+b1), MaxLineLength 32, 100 and 255 (2026-11). Also matches endlessh-go 2026.0730.0 (2026-11). Also matches tarssh 0.7.0 with honeydet -timeout 12 (2026-11)."
+    comment: "endlessh SSH tarpit on port 22 with any MaxLineLength (3 to 255): two client idents get back a single random printable line (up to 253 characters, not a version line, no binary key exchange), and two more idents a second line on the still-open connection, each arriving only after the configured Delay. Survives a changed MaxLineLength; Medium because a line-based service that answers each pair of input lines with exactly one long printable line and stays open would also match. Needs honeydet -timeout greater than the Delay (11 or more at the default 10 s). Matched: endlessh 1.1 (source dfe44eb and Debian 1.1-5+b1), MaxLineLength 32, 100 and 255 (2026-11). Also matches endlessh-go 2026.0730.0 (2026-11). Also matches tarssh 0.7.0 with honeydet -timeout 12 (2026-11). Also matches EventHorizon d576f0a (2026-11)."
   - name: honssh-twisted-kexinit-rsa-dss-md5-sha1
     id: 1060
     port: 22
@@ -16597,7 +16597,7 @@ signatures:
         output: '(?s)^HTTP/1\.1 200 OK\r?\n.*ST: '
         invert_match: false
     confidence: High
-    comment: "A datagram that is not an SSDP request but only contains the text M-SEARCH ('lab-check M-SEARCH lab-check') is answered with an SSDP search reply. SSDP stacks parse the request line, so MiniUPnPd and others ignore it. Matched: UPnProxyPot 6cbcd62 (2026-11)."
+    comment: "A datagram that is not an SSDP request but only contains the text M-SEARCH ('lab-check M-SEARCH lab-check') is answered with an SSDP search reply. SSDP stacks parse the request line, so MiniUPnPd and others ignore it. Matched: UPnProxyPot 6cbcd62 (2026-11). Also matches EventHorizon d576f0a (2026-11)."
   - name: upnproxypot-ssdp-default-reply
     id: 1878
     port: 1900
@@ -21600,3 +21600,92 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: 'SNMPv2c (community public): sysUpTime is the fixed value from the profile''s recorded walk (S7-1200: 239430 hundredths of a second, 39 min 54 s; S7-300: 194500870; S7-1500: 18950) and never advances, so repeated queries return the same uptime. A genuine agent''s sysUpTime increases with every query. Profile data replayed by snmpsim. Needs honeydet -proto udp. Matched: HoneyPLC 6188234 with snmpsim 1.2.2 (2026-11).'
+  - name: eventhorizon-mqtt-connect-publishes-sys-credentials
+    id: 2420
+    port: "1883"
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "101400044d5154540402003c0008686f6e6579646574"
+        output_match_type: regex
+        output: '\$SYS/credentials\x04.username=admin password=admin'
+        invert_match: false
+    confidence: High
+    comment: "EventHorizon MQTT tarpit: an anonymous MQTT 3.1.1 CONNECT is accepted (CONNACK 0, any user name or password) and immediately followed by an unsolicited QoS 2 PUBLISH, packet identifier 1234, on the topic $SYS/credentials with the payload 'username=admin password=admin', although the client has subscribed to nothing. A genuine broker (Mosquitto) sends only the CONNACK and never publishes to a client without a subscription, and brokers reserve $SYS for their own statistics. Matched: EventHorizon d576f0a (2026-11)."
+  - name: eventhorizon-mqtt-unsolicited-pubrel-before-connect
+    id: 2421
+    port: "1883"
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^(?:b\x02\x04.|b\x04\x04.\x00\x00)+$'
+        invert_match: false
+    confidence: High
+    comment: "EventHorizon MQTT tarpit: a client that connects and sends nothing receives unsolicited PUBREL packets (62 02 or 62 04) for packet identifier 1234 (04 D2), at the latest after the tarpit's 5-second polling interval and then repeatedly, part of its never-completed QoS 2 handshake. A genuine broker sends nothing until it has received a CONNECT. Needs honeydet -timeout 6 or more. Matched: EventHorizon d576f0a (2026-11)."
+  - name: eventhorizon-upnp-hue-description-chunked-no-headers
+    id: 2422
+    port: "8080"
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /hue-device.xml HTTP/1.1\r\nHost: upnp\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 200 OK\r\nTransfer-Encoding: chunked\r\nTrailer: X-Checksum\r\n\r\n[0-9A-F]+\r\n<\?xml version="1\.0"\?>\n<root xmlns="urn:Philips:device-1-0">'
+        invert_match: false
+    confidence: High
+    comment: "EventHorizon UPnP tarpit description server (HTTP, port 8080): GET /hue-device.xml returns a status line and only two headers, Transfer-Encoding: chunked and Trailer: X-Checksum (no Date, Server, Content-Type or Connection), followed by a Philips Hue 'Smart Bulb' device description in the non-standard namespace urn:Philips:device-1-0 that never ends: one more <service> chunk every 5 seconds, ignoring Connection: close. A real Hue bridge serves /description.xml in the UPnP namespace urn:schemas-upnp-org:device-1-0 with complete headers; any other HTTP server answers 404. The tarpit reads the request once, straight after accepting the connection; a request that arrives later is not seen and the connection is closed without an answer (or treated as the previous client's request), so a run can be clean, notably just after the tarpit starts. Matched: EventHorizon d576f0a (2026-11)."
+  - name: eventhorizon-ssdp-philips-basic-for-any-search-target
+    id: 2423
+    port: "1900"
+    proto: udp
+    steps:
+      - input_type: string
+        input: "M-SEARCH * HTTP/1.1\r\nHOST: 239.255.255.250:1900\r\nMAN: \"ssdp:discover\"\r\nMX: 1\r\nST: urn:schemas-upnp-org:device:InternetGatewayDevice:1\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\n.*\r\nST: urn:Philips:device:Basic:1\r\n'
+        invert_match: false
+    confidence: High
+    comment: "EventHorizon UPnP tarpit SSDP listener (udp/1900, run with honeydet -proto udp): it answers every M-SEARCH, whatever its search target, with the same response for ST urn:Philips:device:Basic:1, so a search for an Internet Gateway Device is answered by a Philips device. SSDP devices answer only search targets they implement (or ssdp:all and upnp:rootdevice). Matched: EventHorizon d576f0a (2026-11)."
+  - name: eventhorizon-ssdp-hue-default-response
+    id: 2424
+    port: "1900"
+    proto: udp
+    steps:
+      - input_type: string
+        input: "M-SEARCH * HTTP/1.1\r\nHOST: 239.255.255.250:1900\r\nMAN: \"ssdp:discover\"\r\nMX: 1\r\nST: ssdp:all\r\n\r"
+        output_match_type: regex
+        output: '(?s)LOCATION: http://[0-9.]+:[0-9]+/hue-device\.xml\r\nSERVER: Linux/3\.14 UPnP/1\.0 PhilipsHue/2\.1\r\n.*USN: uuid:bd752e88-91a9-49e4-8297-8433e05d1c22::.*CONFIGID\.UPNP\.ORG: 1337$'
+        invert_match: false
+    confidence: High
+    comment: "EventHorizon UPnP tarpit SSDP listener (udp/1900, run with honeydet -proto udp): its fixed search response, LOCATION http://<address>:<port>/hue-device.xml, SERVER Linux/3.14 UPnP/1.0 PhilipsHue/2.1, the fixed USN uuid:bd752e88-91a9-49e4-8297-8433e05d1c22 and CONFIGID.UPNP.ORG 1337. A Hue bridge identifies itself as Hue/1.0 UPnP/1.0 IpBridge, points to /description.xml on port 80 and sends hue-bridgeid; under the project's docker compose the LOCATION carries the container's internal bridge address. Matched: EventHorizon d576f0a (2026-11)."
+  - name: eventhorizon-coap-empty-ack-then-aaaaa-block
+    id: 2425
+    port: "5683"
+    proto: udp
+    steps:
+      - input_type: hex
+        input: "40017e01bb2e77656c6c2d6b6e6f776e04636f7265"
+        output_match_type: regex
+        output: '^`\x00~\x01$'
+        invert_match: false
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '(?s)^@E\x00\x01.\n\n.AAAAA$'
+        invert_match: false
+    confidence: High
+    comment: "EventHorizon CoAP tarpit (udp/5683, run with honeydet -proto udp): a confirmable GET /.well-known/core gets only an empty ACK, and about a second later a separate confirmable 2.05 Content with message ID 1, a Block2 option announcing block 0 of size 64 with more to follow, and the 5-byte payload AAAAA, then more blocks and retransmissions for as long as the client plays along. A genuine CoAP server (libcoap) answers in the ACK itself with 2.05 and its link-format resource list. Needs honeydet -timeout 3 or more. Matched: EventHorizon d576f0a (2026-11)."
+  - name: eventhorizon-coap-unknown-path-same-block
+    id: 2426
+    port: "5683"
+    proto: udp
+    steps:
+      - input_type: hex
+        input: "50017e02b8686f6e6579646574"
+        output_match_type: regex
+        output: '(?s)^@E\x00\x01.\n\n.AAAAA$'
+        invert_match: false
+    confidence: High
+    comment: "EventHorizon CoAP tarpit (udp/5683, run with honeydet -proto udp): a non-confirmable GET for a resource that does not exist (/honeydet) is answered, after the tarpit's 1-second delay, with a confirmable 2.05 Content carrying message ID 1, a Block2 option (block 0, size 64, more to follow) and the payload AAAAA. A genuine CoAP server answers 4.04 Not Found, or nothing. Matched: EventHorizon d576f0a (2026-11)."
