@@ -21808,3 +21808,147 @@ signatures:
         invert_match: false
     confidence: High
     comment: 'The ICSpot HMI (a Flask-SocketIO app that Honeyd proxies from port 8000): title ''Remote HMI'', heading ''SIMATIC   HMI'' (three spaces) and ''Water Tank Control Panel'', loading jQuery and socket.io 1.3.6 from public CDNs. A Siemens WinCC or panel web HMI is Siemens software, not Flask. Matched: ICSpot ca94e30 (2026-11).'
+  - name: opcuatrap-libua-hello-acknowledge-limits
+    id: 2450
+    port: 4840
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "48454c46380000000000000000000100000001000000000000000000180000006f70632e7463703a2f2f6c6f63616c686f73743a34383430"
+        output_match_type: hex
+        output: '41434b461c00000000000000000001000000010000001000100000'
+        invert_match: false
+    confidence: Medium
+    comment: 'An OPC UA Hello (64 KiB send and receive buffers, no message size or chunk limit) is answered with an Acknowledge that offers a maximum message size of exactly 1 MiB and 16 chunks, the transport defaults of the LibUA stack that OpcUaTrap is built on. open62541 1.5.10 offers 512 MiB and 16384 chunks, python asyncua 2.1.0 100 MiB and 1601 chunks. Medium: another server built on LibUA with its default limits answers the same way. Matched: OpcUaTrap 0.5.0 (2026-11).'
+  - name: opcuatrap-libua-static-secure-channel-token
+    id: 2451
+    port: 4840
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "48454c46380000000000000000000100000001000000000000000000180000006f70632e7463703a2f2f6c6f63616c686f73743a34383430"
+        output_match_type: string
+        output: 'ACKF'
+        invert_match: false
+      - input_type: hex
+        input: "4f504e4684000000000000002f000000687474703a2f2f6f7063666f756e646174696f6e2e6f72672f55412f5365637572697479506f6c696379234e6f6e65ffffffffffffffff01000000010000000100be01000000000000000000000100000000000000ffffffff102700000000000000000000000000010000000000000080ee3600"
+        output_match_type: hex
+        output: '0100c1010000000000000000010000000000000000000000000000000000000001000000e80300000000000000000000c02709000100000001'
+        invert_match: false
+    confidence: High
+    comment: 'OpenSecureChannel with security policy None. The response has a zero timestamp in its header and a fixed security token on every connection: channel id 1, token id 1000, a creation time of zero (1601-01-01), a lifetime cut to 600000 ms and a one-byte server nonce of 0x01. Genuine stacks number channels and tokens per connection and stamp the current time (open62541 1.5.10: channel and token ids counting up, real timestamps, null nonce; asyncua 2.1.0: real timestamps, lifetime as requested, empty nonce). Shared with other servers on the unmodified LibUA stack, which are rare. Matched: OpcUaTrap 0.5.0 (2026-11).'
+  - name: opcuatrap-libua-deterministic-session-ids
+    id: 2452
+    port: 4840
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "48454c46380000000000000000000100000001000000000000000000180000006f70632e7463703a2f2f6c6f63616c686f73743a34383430"
+        output_match_type: string
+        output: 'ACKF'
+        invert_match: false
+      - input_type: hex
+        input: "4f504e4684000000000000002f000000687474703a2f2f6f7063666f756e646174696f6e2e6f72672f55412f5365637572697479506f6c696379234e6f6e65ffffffffffffffff01000000010000000100be01000000000000000000000100000000000000ffffffff102700000000000000000000000000010000000000000080ee3600"
+        output_match_type: string
+        output: 'OPNF'
+        invert_match: false
+      - input_type: hex
+        input: "4d534746cf00000001000000e803000003000000030000000100cd01000000000000000000000300000000000000ffffffff102700000000000d00000075726e3a6c61623a70726f62650d00000075726e3a6c61623a70726f6265020500000070726f626501000000ffffffffffffffffffffffffffffffff180000006f70632e7463703a2f2f6c6f63616c686f73743a34383430020000007331200000001111111111111111111111111111111111111111111111111111111111111111ffffffff00000000004ced4000000000"
+        output_match_type: hex
+        output: '03000003000000533a320101020000000000004ced40'
+        invert_match: false
+    confidence: High
+    comment: 'CreateSession over an unsecured (None) channel, sent without a certificate. OpcUaTrap creates the session even when the profile offers no None endpoint (the default oil-gas profile) and returns a session id built from the channel and sequence numbers, the string NodeId "S:2", with the authentication token ns=1;i=2 and a revised timeout of 60000 ms, identical on every connection. open62541 1.5.10 refuses the request (BadSecurityChecksFailed) and asyncua 2.1.0 does not answer it. Matched: OpcUaTrap 0.5.0 (2026-11).'
+  - name: opcuatrap-fake-dotnet-stack-trace-closesession
+    id: 2453
+    port: 4840
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "48454c46380000000000000000000100000001000000000000000000180000006f70632e7463703a2f2f6c6f63616c686f73743a34383430"
+        output_match_type: string
+        output: 'ACKF'
+        invert_match: false
+      - input_type: hex
+        input: "4f504e4684000000000000002f000000687474703a2f2f6f7063666f756e646174696f6e2e6f72672f55412f5365637572697479506f6c696379234e6f6e65ffffffffffffffff01000000010000000100be01000000000000000000000100000000000000ffffffff102700000000000000000000000000010000000000000080ee3600"
+        output_match_type: string
+        output: 'OPNF'
+        invert_match: false
+      - input_type: hex
+        input: "4d534746cf00000001000000e803000003000000030000000100cd01000000000000000000000300000000000000ffffffff102700000000000d00000075726e3a6c61623a70726f62650d00000075726e3a6c61623a70726f6265020500000070726f626501000000ffffffffffffffffffffffffffffffff180000006f70632e7463703a2f2f6c6f63616c686f73743a34383430020000007331200000001111111111111111111111111111111111111111111111111111111111111111ffffffff00000000004ced4000000000"
+        output_match_type: string
+        output: 'MSGF'
+        invert_match: false
+      - input_type: hex
+        input: "4d5347463c00000001000000e803000004000000040000000100d9010101020000000000000000000400000000000000ffffffff1027000000000001"
+        output_match_type: regex
+        output: '(?s)InnerDiagnosticInfo.{1,8}System\.InvalidOperationException: Timestamp validation failed\. .*at Opc\.Ua\.Server\.SessionManager\.CloseSession\('
+        invert_match: false
+    confidence: High
+    comment: 'CloseSession with a request timestamp of zero, sent on the session created by the previous step. The LibUA fork used by OpcUaTrap answers with BadInvalidTimestamp and, in the response header string table, a .NET stack trace that names the OPC Foundation .NET stack (Opc.Ua.Server.SessionManager.CloseSession), a deliberate lure that suggests a vulnerable server. The server is not built on that stack, and genuine servers do not return stack traces to unauthenticated clients. Specific to OpcUaTrap and its LibUA fork. Matched: OpcUaTrap 0.5.0 (2026-11).'
+  - name: opcuatrap-default-profile-identity
+    id: 2454
+    port: 4840
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "48454c46380000000000000000000100000001000000000000000000180000006f70632e7463703a2f2f6c6f63616c686f73743a34383430"
+        output_match_type: string
+        output: 'ACKF'
+        invert_match: false
+      - input_type: hex
+        input: "4f504e4684000000000000002f000000687474703a2f2f6f7063666f756e646174696f6e2e6f72672f55412f5365637572697479506f6c696379234e6f6e65ffffffffffffffff01000000010000000100be01000000000000000000000100000000000000ffffffff102700000000000000000000000000010000000000000080ee3600"
+        output_match_type: string
+        output: 'OPNF'
+        invert_match: false
+      - input_type: hex
+        input: "4d5347465d00000001000000e803000002000000020000000100ac01000000000000000000000200000000000000ffffffff10270000000000180000006f70632e7463703a2f2f6c6f63616c686f73743a34383430ffffffffffffffff"
+        output_match_type: regex
+        output: 'urn:(petrovista:scada:gateway:EF-U7|cascade:aquaview:scada:WTP-01|tristate:scada:rtu:RDL-138-SUB-07)'
+        invert_match: false
+    confidence: Medium
+    comment: 'GetEndpoints on the secure channel (channel 1, token 1000, which OpcUaTrap always assigns). The endpoints carry the application URI of one of the three shipped profiles: urn:petrovista:scada:gateway:EF-U7 (oil-gas, PetroVista SCADA Gateway, Meridian Petroleum Corp), urn:cascade:aquaview:scada:WTP-01 (water-treatment) or urn:tristate:scada:rtu:RDL-138-SUB-07 (power-grid); the self-signed certificate repeats the same identity. Medium: the identity is set in the profile JSON. Matched: OpcUaTrap 0.5.0 (2026-11).'
+  - name: opcuatrap-secured-endpoint-security-level-zero
+    id: 2455
+    port: 4840
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "48454c46380000000000000000000100000001000000000000000000180000006f70632e7463703a2f2f6c6f63616c686f73743a34383430"
+        output_match_type: string
+        output: 'ACKF'
+        invert_match: false
+      - input_type: hex
+        input: "4f504e4684000000000000002f000000687474703a2f2f6f7063666f756e646174696f6e2e6f72672f55412f5365637572697479506f6c696379234e6f6e65ffffffffffffffff01000000010000000100be01000000000000000000000100000000000000ffffffff102700000000000000000000000000010000000000000080ee3600"
+        output_match_type: string
+        output: 'OPNF'
+        invert_match: false
+      - input_type: hex
+        input: "4d5347465d00000001000000e803000002000000020000000100ac01000000000000000000000200000000000000ffffffff10270000000000180000006f70632e7463703a2f2f6c6f63616c686f73743a34383430ffffffffffffffff"
+        output_match_type: regex
+        output: '[\x02\x03]\x00\x00\x009\x00\x00\x00http://opcfoundation\.org/UA/SecurityPolicy#Basic256Sha256(?s:.{0,600}?)uatcp-uasc-uabinary\x00'
+        invert_match: false
+    confidence: Medium
+    comment: 'GetEndpoints on the secure channel. Every endpoint, including the Basic256Sha256 Sign and SignAndEncrypt endpoints, is advertised with SecurityLevel 0, the value that marks the weakest endpoint; clients use the level to pick the most secure one. open62541 1.5.10 advertises 10 to 30 and asyncua 2.1.0 50 and 70 for these endpoints (0 only for None). Medium: a genuine server could leave the level at 0. Matched: OpcUaTrap 0.5.0 (2026-11).'
+  - name: opcuatrap-libua-tl-error-reason
+    id: 2456
+    port: 4840
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "48454c46380000000000000000000100000001000000000000000000180000006f70632e7463703a2f2f6c6f63616c686f73743a34383430"
+        output_match_type: string
+        output: 'ACKF'
+        invert_match: false
+      - input_type: hex
+        input: "4f504e4684000000000000002f000000687474703a2f2f6f7063666f756e646174696f6e2e6f72672f55412f5365637572697479506f6c696379234e6f6e65ffffffffffffffff01000000010000000100be01000000000000000000000100000000000000ffffffff102700000000000000000000000000010000000000000080ee3600"
+        output_match_type: string
+        output: 'OPNF'
+        invert_match: false
+      - input_type: hex
+        input: "4d5347465d000000000000000000000002000000020000000100ac01000000000000000000000200000000000000ffffffff10270000000000180000006f70632e7463703a2f2f6c6f63616c686f73743a34383430ffffffffffffffff"
+        output_match_type: string
+        output: 'TL error 0x80220000'
+        invert_match: false
+    confidence: Medium
+    comment: 'A service request (GetEndpoints) on channel id 0 after a valid OpenSecureChannel. OpcUaTrap closes the connection with an Error message (BadSecureChannelIdInvalid) whose reason text is the LibUA format "TL error 0x80220000". open62541 1.5.10 sends the same status with no reason text and asyncua 2.1.0 ignores the channel id and answers the request. Medium: shared with other servers on the LibUA stack. Matched: OpcUaTrap 0.5.0 (2026-11).'
