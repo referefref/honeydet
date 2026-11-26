@@ -22924,3 +22924,61 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: "U-PoT description server (tcp/49153): the WeMo description lists an icon (<url>icon.jpg</url>), but GET /icon.jpg returns GUPnP's empty 404 Not found, because the shipped descriptor folder has no icon file. A genuine device serves the icons its description lists. Medium: an operator can add the file. Matched: U-PoT 1781156 (WeMo Insight descriptors, GUPnP 1.6.3) (2026-11)."
+  - name: virtuepot-simatic-hmi-page
+    id: 2570
+    port: 5000
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*Server: gunicorn/.*<title>SIMATIC HMI</title>.*url: document\.URL\+"/api"'
+        invert_match: false
+    confidence: High
+    comment: "The water-tank HMI: a Tailwind page titled 'SIMATIC HMI' with a Siemens logo, a tank gauge and a chart that polls document.URL + '/api', served by gunicorn on port 5000. Siemens SIMATIC HMI panels and WinCC servers use Siemens' own web servers, never gunicorn; the page is the project's template, the same in every deployment. Matched: VirtuePot 02888a2 (2026-11)."
+  - name: virtuepot-simatic-hmi-api-json
+    id: 2571
+    port: 5000
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /api HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*Server: gunicorn/.*Content-Type: application/json.*\{"data":\[(\d+,){9}\d+\],"datetime":"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(\.\d+)?"\}'
+        invert_match: false
+    confidence: High
+    comment: "The HMI's unauthenticated /api endpoint: a JSON object with exactly ten holding-register values read live from the OpenPLC container (registers 101 to 110) and an ISO time stamp, from gunicorn on port 5000. The first two values are the simulated level and flow, the other eight are zero. Matched: VirtuePot 02888a2 (2026-11)."
+  - name: virtuepot-icssim-plc1-tank-setpoints
+    id: 2572
+    port: 503
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "000100000006010300060004"
+        output_match_type: hex
+        output: "0103080000753000011170"
+        invert_match: false
+      - input_type: hex
+        input: "000200000006010300020002"
+        output_match_type: hex
+        output: "01030400007530"
+        invert_match: false
+    confidence: Medium
+    comment: "ICSSIM bottle factory PLC1 (pyModbusTCP on port 503): holding registers 6 to 9 hold the tank level limits 3 and 7 as ICSSIM's two-word fixed-point values (x 10000: 0,30000 and 1,4464), and registers 2 and 3 the input valve mode 3 (automatic, 0,30000). The values are the defaults in Configs.py and the PLC logic never changes them. Matched: VirtuePot 02888a2 (2026-11)."
+  - name: virtuepot-icssim-plc2-bottle-setpoints
+    id: 2573
+    port: 504
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "000100000006010300160002"
+        output_match_type: hex
+        output: "01030400004650"
+        invert_match: false
+      - input_type: hex
+        input: "000200000006010300120002"
+        output_match_type: hex
+        output: "01030400007530"
+        invert_match: false
+    confidence: Medium
+    comment: "ICSSIM bottle factory PLC2 (pyModbusTCP on port 504): holding registers 22 and 23 hold the bottle fill limit 1.8 litres as ICSSIM's two-word fixed-point value (0,18000) and registers 18 and 19 the conveyor engine mode 3 (automatic, 0,30000). Defaults from Configs.py, unchanged by the PLC logic. Matched: VirtuePot 02888a2 (2026-11)."
