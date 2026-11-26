@@ -23155,3 +23155,39 @@ signatures:
         invert_match: false
     confidence: High
     comment: "The generated /.well-known/security.txt names the HoneyPrompt project's GitHub security advisories as the contact, with a fixed Expires of 2027-12-31T23:59:59z (lower-case z). Matched: HoneyPrompt 5.7.3 (2026-11)."
+  - name: koney-alert-webhook-tetragon-unauthorized
+    id: 2640
+    port: 8000
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /handlers/tetragon HTTP/1.1\r\nHost: koney-alert-forwarder-webhook\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 401 Unauthorized\r\n.*Content-Type: text/plain; charset=utf-8\r\n.*X-Content-Type-Options: nosniff\r\n.*\r\n\r\nunauthorized$'
+        invert_match: false
+    confidence: High
+    comment: "Koney's alert webhook: GET /handlers/tetragon without the webhook token returns 401 with Go's http.Error body 'unauthorized' (lower case, newline). The route is the one Tetragon's GetUrl action calls when a honeytoken is accessed; generic Go servers answer 404 'page not found' and other frameworks use their own pages. Visible only from inside the cluster (ClusterIP service koney-alert-forwarder-webhook.koney-system, port 8000). Matched: Koney 0.3.0 (2026-11)."
+  - name: koney-alert-webhook-kive-method-not-allowed
+    id: 2641
+    port: 8000
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /handlers/kive HTTP/1.1\r\nHost: koney-alert-forwarder-webhook\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 405 Method Not Allowed\r\nAllow: POST\r\n.*X-Content-Type-Options: nosniff\r\n.*\r\n\r\nMethod Not Allowed$'
+        invert_match: false
+    confidence: High
+    comment: "Koney's alert webhook registers POST /handlers/kive with Go 1.22+ method routing, so a GET to that path returns 405 'Method Not Allowed' with 'Allow: POST' and Go's plain-text body. Only an application that defines this exact route answers this way. Matched: Koney 0.3.0 (2026-11)."
+  - name: koney-alert-webhook-kive-post-unauthorized
+    id: 2642
+    port: 8000
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST /handlers/kive HTTP/1.1\r\nHost: koney-alert-forwarder-webhook\r\nContent-Type: application/json\r\nContent-Length: 3\r\nConnection: close\r\n\r\n{}"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 401 Unauthorized\r\n.*Content-Type: text/plain; charset=utf-8\r\n.*\r\n\r\nunauthorized$'
+        invert_match: false
+    confidence: High
+    comment: "Koney's alert webhook: POST /handlers/kive (the route Kive captors post alerts to) without the webhook token returns 401 with the body 'unauthorized'. Matched: Koney 0.3.0 (2026-11)."
