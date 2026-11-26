@@ -22264,3 +22264,68 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: "A request line without a protocol version (HTTP/0.9 form) gets a full HTTP/1.1 200 response with headers. Servers either reply in HTTP/0.9 form (body only) or reject the request with 400. Medium: behaviour of old embedded servers varies. Matched: VSAT Honeypot a24a016 (2026-11)."
+  - name: foxpot-fixed-station-identity
+    id: 2500
+    port: 1911
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "fox a 1 -1 fox hello\n{\nfox.version=s:1.0\nid=i:1\n};;"
+        output_match_type: regex
+        output: '(?s)^fox a 0 -1 fox hello\n\{\nfox\.version=s:1\.0\.1\nid=i:122\nhostName=s:10\.17\.40\.40\n.*\nhostId=s:Qnx-NPM6-0000-16A3-8210\nvmUuid=s:11e8e9a6-0b40-571a-0000-00000000a096\nbrandId=s:FacExp\n'
+        invert_match: false
+    confidence: High
+    comment: "The station hello is one fixed string in the code: id 122, hostName and hostAddress 10.17.40.40 whatever the real address, station Honeywell, hostId Qnx-NPM6-0000-16A3-8210 and vmUuid 11e8e9a6-0b40-571a-0000-00000000a096, identical on every FoxPot. A genuine station reports its own host id (tied to the controller hardware), VM UUID and address. The value lists in config.txt are not read by the code. Matched: FoxPot 39a142b (2026-11)."
+  - name: foxpot-hello-to-http-request
+    id: 2501
+    port: 1911
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.0\r\n\r"
+        output_match_type: regex
+        output: '^fox a 0 -1 fox hello\n\{\nfox\.version=s:'
+        invert_match: false
+    confidence: Medium
+    comment: "FoxPot answers whatever it receives with the full station hello, so an HTTP request to the Fox port returns 'fox a 0 -1 fox hello' and the station details. In the Fox exchange documented by Nmap and the fox-info script the station hello answers a client hello. Medium: no genuine station was available to confirm its answer to non-Fox input. Matched: FoxPot 39a142b (2026-11)."
+  - name: foxpot-hello-to-bare-newline
+    id: 2502
+    port: 1911
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "0a"
+        output_match_type: regex
+        output: '(?s)^fox a 0 -1 fox hello\n\{\n.*\nauthAgentTypeSpecs=s:fox:FoxUsernamePasswordAuthAgent\n\};;$'
+        invert_match: false
+    confidence: Medium
+    comment: "A single newline, with no Fox message at all, is answered with the complete station hello. Medium: no genuine station was available to confirm its answer to empty input. Matched: FoxPot 39a142b (2026-11)."
+  - name: foxpot-split-hello-answered-twice
+    id: 2503
+    port: 1911
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "fox a 1 -1 fox hello"
+        output_match_type: regex
+        output: '(?s)^fox a 0 -1 fox hello\n\{\nfox\.version=s:.*\};;$'
+        invert_match: false
+      - input_type: string
+        input: "{\nfox.version=s:1.0\nid=i:1\n};;"
+        output_match_type: regex
+        output: '(?s)^fox a 0 -1 fox hello\n\{\nfox\.version=s:.*\};;$'
+        invert_match: false
+    confidence: Medium
+    comment: "A client hello sent in two parts (the first line, then the body and ';;' terminator) receives two full station hellos: FoxPot replies to every TCP read instead of parsing complete Fox messages, so the body alone is answered with a hello as well. Glutton's Fox emulation answers the first part and stays silent on the body. Medium: no genuine station was available to confirm how it reassembles a split message. Matched: FoxPot 39a142b (2026-11)."
+  - name: foxpot-non-hello-message-answered-with-hello
+    id: 2504
+    port: 1911
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "fox a 1 -1 fox rpc\n{\n};;"
+        output_match_type: regex
+        output: '(?s)^fox a 0 -1 fox hello\n\{\nfox\.version=s:.*\nauthAgentTypeSpecs=s:fox:FoxUsernamePasswordAuthAgent\n\};;$'
+        invert_match: false
+    confidence: Medium
+    comment: "A Fox message that is not a hello (an empty 'fox rpc' message, sent without a session) is answered with the station hello: FoxPot has a single reply for every input, so the session never reaches the login exchange it advertises (fox:FoxUsernamePasswordAuthAgent). Glutton's Fox emulation answers only hello messages. Medium: no genuine station was available to confirm its answer to a message outside a session. Matched: FoxPot 39a142b (2026-11)."
