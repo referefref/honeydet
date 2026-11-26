@@ -22329,3 +22329,51 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: "A Fox message that is not a hello (an empty 'fox rpc' message, sent without a session) is answered with the station hello: FoxPot has a single reply for every input, so the session never reaches the login exchange it advertises (fox:FoxUsernamePasswordAuthAgent). Glutton's Fox emulation answers only hello messages. Medium: no genuine station was available to confirm its answer to a message outside a session. Matched: FoxPot 39a142b (2026-11)."
+  - name: hassio-mqtt-honeypot-tls-no-dhe
+    id: 2510
+    port: 8883
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "160301005e0100005a03030000000000000000000000000000000000000000000000000000000000000000000002c02f0100002f000a00080006001d00170018000b00020100000d000c000a080404010501040302010017000000230000ff01000100"
+        output_match_type: hex
+        output: "c02f000015ff01000100000b0004030001020023000000170000"
+        invert_match: false
+      - input_type: hex
+        input: "16030100480100004403030000000000000000000000000000000000000000000000000000000000000000000002009e01000019000d000c000a0804040105010403020100170000ff01000100"
+        reconnect: true
+        output_match_type: hex
+        output: "15030300020228"
+        invert_match: false
+    confidence: Low
+    comment: "hassio-mqtt-honeypot (MQTT over TLS on 8883, Python ssl module): a TLS 1.2 ClientHello offering ECDHE-RSA-AES128-GCM-SHA256 gets an OpenSSL ServerHello (extensions renegotiation_info, ec_point_formats, session_ticket, extended_master_secret in that order), but a ClientHello offering only DHE-RSA-AES256-GCM-SHA384 gets a handshake_failure alert, because the Python server context loads no Diffie-Hellman parameters. Mosquitto 2.0.11 and 2.1.4 (also the broker of the Home Assistant Mosquitto add-on) negotiate DHE; EMQX sends a different ServerHello. Any OpenSSL TLS terminator without DH parameters on 8883 (for example an nginx stream proxy, as the lab nginx on 443 does) would also match. Matched: hassio-mqtt-honeypot 1.0.1 (commit 7e70114) (2026-11)."
+  - name: hassio-mqtt-honeypot-tls-python-default-ciphers
+    id: 2511
+    port: 8883
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "160301005e0100005a03030000000000000000000000000000000000000000000000000000000000000000000002c02f0100002f000a00080006001d00170018000b00020100000d000c000a080404010501040302010017000000230000ff01000100"
+        output_match_type: hex
+        output: "c02f000015ff01000100000b0004030001020023000000170000"
+        invert_match: false
+      - input_type: hex
+        input: "160301005e0100005a03030000000000000000000000000000000000000000000000000000000000000000000002c0130100002f000a00080006001d00170018000b00020100000d000c000a080404010501040302010017000000230000ff01000100"
+        reconnect: true
+        output_match_type: hex
+        output: "15030300020228"
+        invert_match: false
+      - input_type: hex
+        input: "160301004a0100004603030000000000000000000000000000000000000000000000000000000000000000000004009c009d01000019000d000c000a0804040105010403020100170000ff01000100"
+        reconnect: true
+        output_match_type: hex
+        output: "15030300020228"
+        invert_match: false
+      - input_type: hex
+        input: "16030100480100004403030000000000000000000000000000000000000000000000000000000000000000000002009e01000019000d000c000a0804040105010403020100170000ff01000100"
+        reconnect: true
+        output_match_type: hex
+        output: "15030300020228"
+        invert_match: false
+    confidence: Medium
+    comment: "hassio-mqtt-honeypot as the upstream Home Assistant add-on image (Alpine, Python 3.12 with Python's own default cipher string): ECDHE-RSA-AES128-GCM-SHA256 gets an OpenSSL ServerHello, but ECDHE-RSA-AES128-SHA (SHA-1 MAC), static-RSA key exchange (AES-GCM) and DHE-RSA-AES256-GCM-SHA384 are each refused with a handshake_failure alert (Python's default cipher string and no Diffie-Hellman parameters). Mosquitto 2.0.11 and 2.1.4 with default TLS settings accept all three, and nginx with a typical configuration accepts SHA-1; EMQX sends a different ServerHello. Does not match builds whose Python uses the OpenSSL default cipher list (Debian). Matched: hassio-mqtt-honeypot 1.0.1 (commit 7e70114) (2026-11)."
