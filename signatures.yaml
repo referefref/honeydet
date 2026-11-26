@@ -22377,3 +22377,102 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: "hassio-mqtt-honeypot as the upstream Home Assistant add-on image (Alpine, Python 3.12 with Python's own default cipher string): ECDHE-RSA-AES128-GCM-SHA256 gets an OpenSSL ServerHello, but ECDHE-RSA-AES128-SHA (SHA-1 MAC), static-RSA key exchange (AES-GCM) and DHE-RSA-AES256-GCM-SHA384 are each refused with a handshake_failure alert (Python's default cipher string and no Diffie-Hellman parameters). Mosquitto 2.0.11 and 2.1.4 with default TLS settings accept all three, and nginx with a typical configuration accepts SHA-1; EMQX sends a different ServerHello. Does not match builds whose Python uses the OpenSSL default cipher list (Debian). Matched: hassio-mqtt-honeypot 1.0.1 (commit 7e70114) (2026-11)."
+  - name: honeymonx-conpot06-ftp-greeting-200
+    id: 2520
+    port: 21
+    proto: tcp
+    steps:
+    - input_type: hex
+      input: ""
+      output_match_type: regex
+      output: '^200 \S'
+      invert_match: false
+    - input_type: string
+      input: "USER anonymous\r"
+      output_match_type: regex
+      output: '^331 Now specify the Password\.'
+      invert_match: false
+    confidence: High
+    comment: 'FTP: the server greets new clients with reply code 200 (''200 FTP server ready.'' by default) instead of the 220 service-ready code RFC 959 requires, and answers USER with ''331 Now specify the Password.''. The 200 code is hard-coded in Conpot 0.6''s FTP handler, so it survives a changed banner; vsftpd, ProFTPD, Pure-FTPd and Conpot 1.0 greet with 220. Also matches other deployments of Conpot 0.6.x. Matched: HoneyMonX 3075049 (Conpot 0.6.0 at f0e6925, PLC1 template) (2026-11).'
+  - name: honeymonx-conpot06-http-bad-request-no-status-line
+    id: 2521
+    port: 80
+    proto: tcp
+    steps:
+    - input_type: string
+      input: "XYZ\r\n\r"
+      output_match_type: regex
+      output: '(?s)^\s*<HTML>.*Bad request'
+      invert_match: false
+    confidence: High
+    comment: 'HTTP: a malformed request line is answered with the template''s ''Bad request'' HTML page and no status line or headers at all, as if the client spoke HTTP/0.9. nginx, Apache, IIS and embedded PLC web servers answer with an ''HTTP/1.x 400'' status line. Conpot 0.6 request handling; also matches other deployments of Conpot 0.6.x whose templates define a 400 page. Matched: HoneyMonX 3075049 (Conpot 0.6.0 at f0e6925, PLC1 template) (2026-11).'
+  - name: honeymonx-plc1-http-empty-unittest-page
+    id: 2522
+    port: 80
+    proto: tcp
+    steps:
+    - input_type: string
+      input: "GET /tests/unittest_base.html HTTP/1.0\r\n\r"
+      output_match_type: regex
+      output: '(?s)^HTTP/1\.1 200 OK\r\n.*Last-Modified: Tue, 19 May 1993 09:00:00 GMT\r\n.*Content-Length: 0\s*$'
+      invert_match: false
+    confidence: Medium
+    comment: 'HTTP: the PLC1 template keeps the Conpot unit-test routes (/tests/unittest_*.html) without their files, so /tests/unittest_base.html answers 200 OK with an empty body and the 1993 Last-Modified date of the test node. Genuine web servers answer 404 for a path they do not have; Conpot''s default template serves the test page with content. Template configuration. Matched: HoneyMonX 3075049 (Conpot 0.6.0 at f0e6925, PLC1 template) (2026-11).'
+  - name: honeymonx-plc1-http-scada-status-page
+    id: 2523
+    port: 80
+    proto: tcp
+    steps:
+    - input_type: string
+      input: "GET /index.html HTTP/1.0\r\n\r"
+      output_match_type: regex
+      output: '(?s)<title>Overview -\s+Siemens, SIMATIC, S7-300\s+</title>.*Timeticks\(deciseconds\)'
+      invert_match: false
+    confidence: Medium
+    comment: 'HTTP: the HoneyMonX status page, titled ''Overview - Siemens, SIMATIC, S7-300'', with its ''Timeticks(deciseconds)'' uptime line (the value counts seconds) and substation voltage and temperature tiles; / redirects to /index.html. S7-300 CPUs have no web server of their own. Template values. Matched: HoneyMonX 3075049 (Conpot 0.6.0 at f0e6925, PLC1 template) (2026-11).'
+  - name: honeymonx-plc1-http-404-fhict
+    id: 2524
+    port: 80
+    proto: tcp
+    steps:
+    - input_type: string
+      input: "GET /honeydet-not-here.html HTTP/1.0\r\n\r"
+      output_match_type: regex
+      output: '(?s)^HTTP/1\.1 404 Not Found\r\n.*<TITLE>Not found - Siemens, SIMATIC, S7-300</TITLE>.*<h2>PLC 1\.0 FHICT</h2>'
+      invert_match: false
+    confidence: Medium
+    comment: 'HTTP: the not-found page names the device ''Siemens, SIMATIC, S7-300'' and ''PLC 1.0 FHICT'', the PLC1 template''s system name. Template values. Matched: HoneyMonX 3075049 (Conpot 0.6.0 at f0e6925, PLC1 template) (2026-11).'
+  - name: honeymonx-plc1-snmp-identity
+    id: 2525
+    port: 161
+    proto: udp
+    steps:
+    - input_type: string
+      input: 1.3.6.1.2.1.1.1.0
+      output_match_type: string
+      output: Siemens, SIMATIC, S7-300
+      invert_match: false
+    - input_type: string
+      input: 1.3.6.1.2.1.1.6.0
+      output_match_type: string
+      output: Eindhoven
+      invert_match: false
+    confidence: Medium
+    comment: 'SNMPv2c (community public): sysDescr ''Siemens, SIMATIC, S7-300'' together with sysLocation ''Eindhoven'', the PLC1 template''s values. Siemens communication processors report ''Siemens, SIMATIC NET'' descriptions with module and firmware details. Template values. Matched: HoneyMonX 3075049 (Conpot 0.6.0 at f0e6925, PLC1 template) (2026-11).'
+  - name: honeymonx-plc1-snmp-null-sysobjectid
+    id: 2526
+    port: 161
+    proto: udp
+    steps:
+    - input_type: string
+      input: 1.3.6.1.2.1.1.1.0
+      output_match_type: string
+      output: Siemens, SIMATIC, S7-300
+      invert_match: false
+    - input_type: string
+      input: 1.3.6.1.2.1.1.2.0
+      output_match_type: regex
+      output: '^\.?0\.0$'
+      invert_match: false
+    confidence: Medium
+    comment: 'SNMPv2c: sysObjectID is the null object identifier 0.0 next to a Siemens S7-300 sysDescr. Genuine agents report their vendor''s enterprise OID (Siemens 1.3.6.1.4.1.4329, net-snmp 1.3.6.1.4.1.8072). Template values. Matched: HoneyMonX 3075049 (Conpot 0.6.0 at f0e6925, PLC1 template) (2026-11).'
