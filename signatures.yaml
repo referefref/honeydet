@@ -23347,3 +23347,87 @@ signatures:
         invert_match: false
     confidence: High
     comment: "OPTIONS to a random path is answered by Flask's automatic OPTIONS handler for the decoy's catch-all route: 200, empty body and the same six-method Allow header from gunicorn, whatever response code and message are configured. A genuine Flask application returns 404 for an undefined path. Matched: crowsi-platform 074c28e with httpcatcherdecoy 1.2.0 (2026-11)."
+  - name: iocaine-qmk-garbage-template-ai-crawler
+    id: 2680
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /hd-{{rand}} HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; GPTBot/1.2; +https://openai.com/gptbot)\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 [^\r\n]*\r\n.*\r\n\r\n<!doctype html><meta charset=utf-8><meta content="width=device-width,initial-scale=1.0" name=viewport><title>.*?</title><body><main><h1>.*<nav><strong>See also:</strong><ul><li><a href=[^>]+/>.*</ul></nav></main><footer><hr><p>Copyright © \d+ '
+        invert_match: false
+    confidence: High
+    comment: "A request with an AI crawler user agent (GPTBot, listed in the ai.robots.txt data that QMK embeds) for any path returns QMK's built-in garbage page instead of the site: minified HTML with a generated title repeated as h1, Markov-chain paragraphs, a 'See also:' list of links that each end in a slash, and 'Copyright © <year> <words>' in the footer. A genuine site returns the same page (or 404) to any user agent. High for the built-in template; an operator who supplies template-file changes it. Matched: iocaine 3.6.0 (2026-11)."
+  - name: iocaine-qmk-major-browser-without-fetch-metadata
+    id: 2681
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /hd-{{rand}} HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:143.0) Gecko/20100101 Firefox/143.0\r\nAccept: text/html\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 [^\r\n]*\r\n.*\r\n\r\n<!doctype html><meta charset=utf-8>.*</ul></nav></main><footer><hr><p>Copyright © \d+ [^<]*</footer>'
+        invert_match: false
+    confidence: High
+    comment: "QMK's major-browsers rule: a Firefox or Chrome user agent without a Sec-Fetch-Mode header (which every current browser sends) is treated as a disguised scraper and gets the garbage page with its 'Copyright © <year>' footer (years are random, 895 to 4269). The same request with Sec-Fetch-Mode: navigate is passed through to the real site. Genuine servers ignore Fetch Metadata for ordinary pages. Matched: iocaine 3.6.0 (2026-11)."
+  - name: iocaine-qmk-signature-agent-header
+    id: 2682
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /hd-{{rand}} HTTP/1.1\r\nHost: x\r\nUser-Agent: curl/8.5.0\r\nSignature-Agent: \"https://crawler.example\"\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 [^\r\n]*\r\n.*\r\n\r\n<!doctype html><meta charset=utf-8>.*<nav><strong>See also:</strong><ul><li><a href='
+        invert_match: false
+    confidence: High
+    comment: "Any request that carries a Signature-Agent header (used by signed AI agents and crawlers under the HTTP message signatures proposal) is sent into the maze, even with a plain curl user agent and a random path; a genuine server ignores the header and answers 404 or its normal page. QMK rule 'ai-agents', added in iocaine 3.5.1. Matched: iocaine 3.6.0 (2026-11)."
+  - name: iocaine-qmk-links-extend-requested-path
+    id: 2683
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /hdprobe-iocaine HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; GPTBot/1.2; +https://openai.com/gptbot)\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 [^\r\n]*\r\n.*\r\n\r\n<!doctype html>.*<li><a href=/hdprobe-iocaine[^/ >]+/>.*<li><a href=/hdprobe-iocaine[^/ >]+/>'
+        invert_match: false
+    confidence: High
+    comment: "Every generated link is the requested path with a poison ID (by default a 22-character URL-safe base64 value derived from the instance ID) and one or two dictionary words appended directly, ending in a slash: /hdprobe-iocaine<poison-id>word-word/. Requests for those paths are then recognised as poisoned and get more garbage whatever the user agent. No genuine site invents child links by concatenating text onto an arbitrary, non-existent path. Matched: iocaine 3.6.0 (2026-11)."
+  - name: iocaine-qmk-default-corpus-source-code
+    id: 2684
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /honeydet HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; GPTBot/1.2; +https://openai.com/gptbot)\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 [^\r\n]*\r\n.*\r\n\r\n<!doctype html><meta charset=utf-8>.*<title>.*(?:::|[{}]|->|=>|\(\)|`|&lt;|#\[|\b(?:fn|impl|pub|iocaine)\b).*<nav><strong>See also:</strong>'
+        invert_match: false
+    confidence: Medium
+    comment: "With no training corpus configured, QMK trains its Markov chain on iocaine's own embedded files (Rust source, KDL configuration, roto and Lua scripts, README), so garbage pages are full of code: 'use std::collections::HashMap;', 'pub fn', '-> Result&lt;()>', braces and backticks. The garbage is seeded by host, path and initial seed, so this fixed path gives the same page on every instance with the defaults. Medium: disappears once a corpus is configured (as the documentation recommends). Matched: iocaine 3.6.0 (2026-11)."
+  - name: iocaine-direct-421-empty-fallthrough
+    id: 2685
+    port: 42069
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nUser-Agent: curl/8.5.0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.[01] 421 Misdirected Request\r\n(?:connection: close\r\n)?content-length: 0\r\ndate: [^\r\n]+$'
+        invert_match: false
+    confidence: High
+    comment: "iocaine reached directly on its default port 42069 (the front-end proxy normally keeps it on localhost) answers every request it does not poison with an empty '421 Misdirected Request' (QMK's fall-through status, which tells the reverse proxy to serve the real content), with hyper's lower-case header names and no Server header. Web servers answer a plain GET with 200, 3xx or 404. The status is configurable (fallthrough-status-code) since 3.5.0. Matched: iocaine 3.6.0 (2026-11)."
+  - name: iocaine-direct-garbage-bare-headers
+    id: 2686
+    port: 42069
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /hd-{{rand}} HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; GPTBot/1.2; +https://openai.com/gptbot)\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\ncontent-type: text/html\r\n(?:connection: close\r\n)?content-length: \d+\r\ndate: [^\r\n]+\r\n\r\n<!doctype html><meta charset=utf-8><meta content="width=device-width,initial-scale=1.0" name=viewport><title>.*?</title><body><main><h1>.*<nav><strong>See also:</strong>'
+        invert_match: false
+    confidence: High
+    comment: "Directly on port 42069, an AI crawler user agent gets the garbage page with only four lower-case headers (content-type: text/html, connection, content-length, date) and no Server header: iocaine's axum/hyper server. Matched: iocaine 3.6.0 (2026-11)."
