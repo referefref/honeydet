@@ -23311,3 +23311,39 @@ signatures:
         invert_match: false
     confidence: High
     comment: "Authenticated (-username admin -password admin123). The scripted shell's cal prints only the month heading and weekday names followed by '(use `cal` on a real system)'. Genuine cal (util-linux or bsdmainutils/ncal) prints the full month grid, and a system without it reports 'command not found'. Matched: CICDecoy v0.1.0 (f168a09), docker compose stack (2026-11)."
+  - name: crowsi-httpcatcherdecoy-success-any-path
+    id: 2670
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /hd-{{rand}}.php HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*Server: gunicorn\r\n.*\r\n\r\nsuccess$'
+        invert_match: false
+    confidence: Medium
+    comment: "httpCatcherDecoy's default answer: any path, including a random one, returns 200 with the seven-byte body 'success' from gunicorn (Content-Type text/html). A genuine Flask or Django application under gunicorn returns 404 for an unknown path. Medium because the code and body can be changed (DefaultAPIResponseCode, DefaultAPIResponseMessage). Matched: crowsi-platform 074c28e with httpcatcherdecoy 1.2.0 (2026-11)."
+  - name: crowsi-httpcatcherdecoy-catchall-patch-405
+    id: 2671
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "PATCH /hd-{{rand}}/x HTTP/1.1\r\nHost: x\r\nContent-Length: 0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 405 (Method Not Allowed|METHOD NOT ALLOWED)\r\n(.*\r\n)?(Allow: (GET|OPTIONS|HEAD|DELETE|PUT|POST)(, (GET|OPTIONS|HEAD|DELETE|PUT|POST)){5}\r\n(.*\r\n)?Server: gunicorn\r\n|Server: gunicorn\r\n(.*\r\n)?Allow: (GET|OPTIONS|HEAD|DELETE|PUT|POST)(, (GET|OPTIONS|HEAD|DELETE|PUT|POST)){5}\r\n).*<title>405 Method Not Allowed</title>'
+        invert_match: false
+    confidence: High
+    comment: "httpCatcherDecoy's catch-all route accepts GET, POST, PUT and DELETE on every path, so PATCH to a random path returns Werkzeug's 405 page with an Allow header of exactly those methods plus HEAD and OPTIONS (in any order) from gunicorn, where a genuine Flask application returns 404 for a path it does not define. Independent of the configured response code and message; matches through Traefik (title-case reason) and on the decoy directly (Werkzeug's upper case). Matched: crowsi-platform 074c28e with httpcatcherdecoy 1.2.0 (2026-11)."
+  - name: crowsi-httpcatcherdecoy-catchall-options
+    id: 2672
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "OPTIONS /hd-{{rand}}/x HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n(.*\r\n)?(Allow: (GET|OPTIONS|HEAD|DELETE|PUT|POST)(, (GET|OPTIONS|HEAD|DELETE|PUT|POST)){5}(\r\n.*)?\r\nServer: gunicorn(\r\n|$)|Server: gunicorn\r\n(.*\r\n)?Allow: (GET|OPTIONS|HEAD|DELETE|PUT|POST)(, (GET|OPTIONS|HEAD|DELETE|PUT|POST)){5}\r\n)'
+        invert_match: false
+    confidence: High
+    comment: "OPTIONS to a random path is answered by Flask's automatic OPTIONS handler for the decoy's catch-all route: 200, empty body and the same six-method Allow header from gunicorn, whatever response code and message are configured. A genuine Flask application returns 404 for an undefined path. Matched: crowsi-platform 074c28e with httpcatcherdecoy 1.2.0 (2026-11)."
