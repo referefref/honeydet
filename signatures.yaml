@@ -23431,3 +23431,107 @@ signatures:
         invert_match: false
     confidence: High
     comment: "Directly on port 42069, an AI crawler user agent gets the garbage page with only four lower-case headers (content-type: text/html, connection, content-length, date) and no Server header: iocaine's axum/hyper server. Matched: iocaine 3.6.0 (2026-11)."
+  - name: nepenthes-stats-endpoint
+    id: 2690
+    port: 8893
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /stats HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\nServer: nginx\r\n(content-type: application/json\r\nconnection: close|connection: close\r\ncontent-type: application/json)\r\n\r\n\{.*("bytes_generated_total":.*"delay_total":|"delay_total":.*"bytes_generated_total":)'
+        invert_match: false
+        max_response_ms: 3000
+    confidence: High
+    comment: "Nepenthes on its own port (8893 by default) answers /stats with its rolling statistics as JSON (hits, bytes_generated_total, delay_total, unsent_bytes and similar) under a bare 'Server: nginx' header followed by lower-case headers. Upstream binds localhost by default; seen when the port is exposed. Matched: Nepenthes 2.8 (2026-11)."
+  - name: nepenthes-direct-header-block
+    id: 2691
+    port: 8893
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 200 OK\r\nServer: nginx\r\n(content-type: text/html; charset=(utf|UTF)-8\r\nconnection: close|connection: close\r\ncontent-type: text/html; charset=(utf|UTF)-8)(\r\n|$)'
+        invert_match: false
+        max_response_ms: 3000
+    confidence: High
+    comment: "Nepenthes' lua-http server claims 'Server: nginx' without a version, writes lower-case content-type and connection headers (the charset is spelled utf-8 or UTF-8 depending on the process, as Lua table order varies between starts) and sends no Date or Content-Length; genuine nginx sends Date and capitalised headers. The page then trickles out over tens of seconds. Matched: Nepenthes 2.8 (2026-11)."
+  - name: nepenthes-direct-unmapped-method
+    id: 2692
+    port: 8893
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST / HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nContent-Length: 0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 404 Not Found\r\nServer: nginx\r\n(content-type|connection): .*The requested URL was not mapped:'
+        invert_match: false
+        max_response_ms: 3000
+    confidence: High
+    comment: "Methods other than GET and HEAD reach the Perihelion framework's fallback: an immediate 404 page 'The requested URL was not mapped' under the bare 'Server: nginx' header. Matched: Nepenthes 2.8 (2026-11)."
+  - name: nepenthes-direct-bogon-delay
+    id: 2693
+    port: 8893
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /hd{{rand}} HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 404 Not Found\r\nServer: nginx\r\n.*Nothing exists at this URL'
+        invert_match: false
+        min_response_ms: 4000
+    confidence: High
+    comment: "A path containing a word that is not in the silo's word list trips the bogon filter: Nepenthes holds the headers back for header_min_wait to header_max_wait seconds (5 to 30 by default) and then answers 404 'Nothing exists at this URL'. Run with -timeout 35. Matched: Nepenthes 2.8 (2026-11)."
+  - name: nepenthes-maze-unmapped-method
+    id: 2694
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST /maze/hd{{rand}} HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nContent-Length: 0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 404 .*The requested URL was not mapped:'
+        invert_match: false
+        max_response_ms: 3000
+    confidence: Medium
+    comment: "Behind the documented reverse-proxy block (location /maze/ passed to Nepenthes) a POST into the maze passes through and returns the framework's 'The requested URL was not mapped' 404 page. Depends on the /maze/ prefix of the documentation (configurable). Matched: Nepenthes 2.8 behind nginx 1.22 (2026-11)."
+  - name: nepenthes-maze-bogon-delay
+    id: 2695
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /maze/hd{{rand}} HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 404 .*Nothing exists at this URL'
+        invert_match: false
+        min_response_ms: 4000
+    confidence: Medium
+    comment: "Behind the documented /maze/ proxy block a non-dictionary path gets the bogon answer: a 404 'Nothing exists at this URL' after a 5 to 30 second header delay, where a real site answers a missing page at once. Depends on the /maze/ prefix (configurable). Run with -timeout 35. Matched: Nepenthes 2.8 behind nginx 1.22 (2026-11)."
+  - name: nepenthes-maze-drip-feed
+    id: 2696
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /maze/house HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\n.*Content-Type: text/html; charset=(utf|UTF)-8\r\n.*Transfer-Encoding: chunked(\r\n[^\r\n]+)*(\r\n\r\n[0-9a-f]{1,2}\r\n<.*)?$'
+        invert_match: false
+        max_response_ms: 3000
+    confidence: Medium
+    comment: "A dictionary-word path under /maze/ returns 200 at once, but with proxy buffering off (as the documentation requires) the page arrives as a trickle of tiny chunks: the headers come at once, then either nothing for a moment or a first chunk of a few bytes of '<!DOCTYPE html>' (as little as '<'). A real site answers 404, or sends a whole page. Depends on the /maze/ prefix (configurable). Matched: Nepenthes 2.8 behind nginx 1.22 (2026-11)."
+  - name: nepenthes-maze-head-delay
+    id: 2697
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "HEAD /maze/house HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\n.*[Cc]ontent-[Tt]ype: text/html; charset=(utf|UTF)-8'
+        invert_match: false
+        min_response_ms: 4000
+    confidence: Medium
+    comment: "HEAD for any dictionary-word path under /maze/ is answered 200 text/html, but only after a 5 to 30 second header delay. Depends on the /maze/ prefix (configurable). Run with -timeout 35. Matched: Nepenthes 2.8 behind nginx 1.22 (2026-11)."
