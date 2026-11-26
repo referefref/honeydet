@@ -22846,3 +22846,81 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: "The Hue bridge configuration is served by Django's development server (Server: WSGIServer/0.2 CPython/3.x, or WSGIServer/0.1 Python/2.7 for the original), which ThingPot's README uses to run the API. A Hue bridge does not run Python. Medium: it disappears behind another WSGI server or a reverse proxy. Matched: ThingPot 9df3596 (Python 3 port and Python 2.7 original) (2026-11)."
+  - name: u-pot-ssdp-wemo-udn-served-by-gupnp
+    id: 2560
+    port: "1900"
+    proto: udp
+    steps:
+      - input_type: string
+        input: "M-SEARCH * HTTP/1.1\r\nHOST: 239.255.255.250:1900\r\nMAN: \"ssdp:discover\"\r\nMX: 1\r\nST: upnp:rootdevice\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\n.*USN: uuid:[A-Za-z]+-1_0-[0-9A-Z]+::upnp:rootdevice\r\nServer: [^\r\n]*UPnP/1\.0 GUPnP/[0-9.]+\r\n'
+        invert_match: false
+    confidence: High
+    comment: "U-PoT SSDP (udp/1900, run with honeydet -proto udp): a search for upnp:rootdevice is answered for a Belkin WeMo device (USN uuid:<Model>-1_0-<serial>, the WeMo naming scheme) by the GUPnP stack that U-PoT's generated C code is built on (Server: <OS>/<kernel> UPnP/1.0 GUPnP/<version>). WeMo firmware is built on the Portable UPnP SDK (libupnp): the project's own capture of the genuine WeMo Insight shows SERVER: Unspecified, UPnP/1.0, Unspecified and X-User-Agent: redsonic, and GUPnP products (Rygel, gupnp-network-light) use random UUIDs. Matched: U-PoT 1781156 (WeMo Insight descriptors, GUPnP 1.6.3) (2026-11)."
+  - name: u-pot-ssdp-belkin-search-target-answered-by-gupnp
+    id: 2561
+    port: "1900"
+    proto: udp
+    steps:
+      - input_type: string
+        input: "M-SEARCH * HTTP/1.1\r\nHOST: 239.255.255.250:1900\r\nMAN: \"ssdp:discover\"\r\nMX: 1\r\nST: urn:Belkin:device:insight:1\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\n.*Server: [^\r\n]*GUPnP/[0-9.]+\r\n.*ST: urn:Belkin:device:'
+        invert_match: false
+    confidence: High
+    comment: "U-PoT SSDP (udp/1900, -proto udp): an M-SEARCH for the Belkin device type urn:Belkin:device:insight:1 is answered by a GUPnP server. Genuine WeMo devices answer Belkin search targets from libupnp (SERVER ... Unspecified, X-User-Agent: redsonic); GUPnP and other genuine UPnP servers (Rygel, gupnp-network-light, MiniDLNA, Gerbera, MiniUPnPd) do not answer Belkin search targets at all. Matched: U-PoT 1781156 (WeMo Insight descriptors, GUPnP 1.6.3) (2026-11)."
+  - name: u-pot-ssdp-shipped-wemo-insight-identity
+    id: 2562
+    port: "1900"
+    proto: udp
+    steps:
+      - input_type: string
+        input: "M-SEARCH * HTTP/1.1\r\nHOST: 239.255.255.250:1900\r\nMAN: \"ssdp:discover\"\r\nMX: 1\r\nST: upnp:rootdevice\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\n.*USN: uuid:Insight-1_0-231624K120011C::upnp:rootdevice\r\n'
+        invert_match: false
+    confidence: Medium
+    comment: "U-PoT SSDP (udp/1900, -proto udp): the device descriptors shipped in the repository (device-descriptors/WeMo) carry the identity of the authors' own WeMo Insight, UDN uuid:Insight-1_0-231624K120011C (serial 231624K120011C, MAC 149182B3A4D0), so every deployment that uses them announces the same device. Medium: an operator can capture or edit another device's descriptors. Matched: U-PoT 1781156 (WeMo Insight descriptors, GUPnP 1.6.3) (2026-11)."
+  - name: u-pot-http-belkin-description-gupnp-headers
+    id: 2563
+    port: "49153"
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /setup.xml HTTP/1.1\r\nHost: wemo\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 200 OK\r\nDate: [^\r\n]+\r\n(?:Connection: [^\r\n]+\r\n)?(?:User-Agent: [^\r\n]*\r\n)?Content-Type: text/xml; charset="utf-8"\r\nAccept-Ranges: bytes\r\nContent-Length: [0-9]+\r\n\r\n<\?xml[^>]*>\s*<root xmlns="urn:Belkin:device-1-0">'
+        invert_match: false
+    confidence: High
+    comment: "U-PoT description server (tcp/49153, the WeMo port): GET /setup.xml returns the Belkin device description (urn:Belkin:device-1-0) with GUPnP/libsoup response headers (Date, Content-Type text/xml; charset=\"utf-8\", Accept-Ranges, Content-Length; no Server header, sometimes a User-Agent header echoing an earlier client). A genuine WeMo serves setup.xml from libupnp, whose responses carry upper-case headers with SERVER and X-User-Agent: redsonic; genuine GUPnP servers never serve a Belkin description. Matched: U-PoT 1781156 (WeMo Insight descriptors, GUPnP 1.6.3) (2026-11)."
+  - name: u-pot-soap-belkin-control-gupnp-host-check
+    id: 2564
+    port: "49153"
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST /upnp/control/basicevent1 HTTP/1.1\r\nHost: wemo\r\nContent-Type: text/xml; charset=\"utf-8\"\r\nSOAPACTION: \"urn:Belkin:service:basicevent:1#GetBinaryState\"\r\nContent-Length: 272\r\nConnection: close\r\n\r\n<?xml version=\"1.0\" encoding=\"utf-8\"?><s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\" s:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\"><s:Body><u:GetBinaryState xmlns:u=\"urn:Belkin:service:basicevent:1\"></u:GetBinaryState></s:Body></s:Envelope>"
+        output_match_type: regex
+        output: '^HTTP/1\.1 412 Host header mismatch\r\n'
+        invert_match: false
+    confidence: High
+    comment: "U-PoT control endpoint (tcp/49153): a SOAP call to the WeMo basicevent control URL (/upnp/control/basicevent1, GetBinaryState) whose Host header is not the device's own address and port is refused with GUPnP's '412 Host header mismatch' (GUPnP's protection against DNS rebinding). Genuine WeMo firmware is built on libupnp and has no such reply; genuine GUPnP products have no Belkin control URL (they answer 404 or 501 there). Matched: U-PoT 1781156 (WeMo Insight descriptors, GUPnP 1.6.3) (2026-11)."
+  - name: u-pot-http-referenced-icon-missing
+    id: 2565
+    port: "49153"
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /setup.xml HTTP/1.1\r\nHost: wemo\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)<root xmlns="urn:Belkin:device-1-0">.*<url>icon\.jpg</url>'
+        invert_match: false
+      - input_type: string
+        input: "GET /icon.jpg HTTP/1.1\r\nHost: wemo\r\nConnection: close\r\n\r"
+        reconnect: true
+        output_match_type: regex
+        output: '^HTTP/1\.1 404 Not found\r\n'
+        invert_match: false
+    confidence: Medium
+    comment: "U-PoT description server (tcp/49153): the WeMo description lists an icon (<url>icon.jpg</url>), but GET /icon.jpg returns GUPnP's empty 404 Not found, because the shipped descriptor folder has no icon file. A genuine device serves the icons its description lists. Medium: an operator can add the file. Matched: U-PoT 1781156 (WeMo Insight descriptors, GUPnP 1.6.3) (2026-11)."
