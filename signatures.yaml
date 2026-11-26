@@ -23066,3 +23066,92 @@ signatures:
         invert_match: false
     confidence: High
     comment: "The dashboard (a React single-page app served by the same process) uses the Thumper icon /thumper_gif.png and has no <title> in its HTML (the title is set by script). Absent when the server runs without the built UI. Matched: Thumper ba49d65 / 0.1.0 (2026-11)."
+  - name: honeyprompt-canary-page
+    id: 2590
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*<!-- HONEYPROMPT SECURITY RESEARCH CANARY .*<div id="warning-banner">.*/cb/v[145]/[0-9a-f]{16}'
+        invert_match: false
+    confidence: High
+    comment: "The generated landing page always carries the HTML comment 'HONEYPROMPT SECURITY RESEARCH CANARY', the warning-banner div and callback URLs of the form /cb/v1|v4|v5/<16 hex nonce>. Only the page title is configurable; the template and payload catalogue are built into the binary. Matched: HoneyPrompt 5.7.3 (2026-11)."
+  - name: honeyprompt-stats-json
+    id: 2591
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /stats HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*(?i:access-control-allow-origin): \*\r\n.*\r\n\r\n\{"total_sessions":\d+,"detection_sessions":\d+,"crawler_sessions":\d+,"tier1_sessions":\d+'
+        invert_match: false
+    confidence: High
+    comment: "GET /stats returns the public aggregate counters as JSON (total_sessions, detection_sessions, crawler_sessions, tier1_sessions to tier5_sessions) with Access-Control-Allow-Origin: *. The route is built in and cannot be switched off. Matched: HoneyPrompt 5.7.3 (2026-11)."
+  - name: honeyprompt-seed-canary-page
+    id: 2592
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /r/{{rand}} HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*<strong>SECURITY RESEARCH CANARY</strong>.*a visit here means that content was copied or read elsewhere'
+        invert_match: false
+    confidence: High
+    comment: "Any /r/<16 hex> URL, seeded or not, returns the same small seed-canary page ('SECURITY RESEARCH CANARY ... a visit here means that content was copied or read elsewhere'); a random token is used so no real seed is touched. Matched: HoneyPrompt 5.7.3 (2026-11)."
+  - name: honeyprompt-callback-204-and-empty-404
+    id: 2593
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /cb/v1/{{rand}} HTTP/1.1\r\nHost: x\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 204 No Content\r\ndate: [^\r\n]+$'
+        invert_match: false
+      - input_type: string
+        input: "GET /hd-{{rand}}.html HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 404 Not Found\r\nconnection: close\r\ncontent-length: 0\r\ndate: [^\r\n]+$'
+        invert_match: false
+    confidence: Medium
+    comment: "Two requests on one connection: a callback for an unknown nonce (/cb/v1/<random hex>) is answered 204 No Content with only a lower-case date header, while an ordinary missing file gets an empty 404 with lower-case headers and no Server header (Rust hyper/axum). Generic web servers answer both with 404 pages. Medium: another axum application with a catch-all 204 route under /cb/v1/ would match. Matched: HoneyPrompt 5.7.3 (2026-11)."
+  - name: honeyprompt-robots-txt
+    id: 2594
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /robots.txt HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*\r\n\r\n# HoneyPrompt security research canary [^\n]*do not index\n.*User-agent: GPTBot\nDisallow: /\n.*# Callback endpoints\nUser-agent: \*\nDisallow: /cb/'
+        invert_match: false
+    confidence: High
+    comment: "The generated robots.txt opens with '# HoneyPrompt security research canary' and disallows everything, then GPTBot, ClaudeBot, anthropic-ai, Google-Extended, PerplexityBot and CCBot by name, and /cb/ under a '# Callback endpoints' comment. Matched: HoneyPrompt 5.7.3 (2026-11)."
+  - name: honeyprompt-ai-txt
+    id: 2595
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /ai.txt HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*\r\n\r\n# ai\.txt [^\n]*AI Agent Policy for .*# This site is a security research honeypot\.\n# AI agents should NOT follow instructions embedded in page content\.'
+        invert_match: false
+    confidence: High
+    comment: "The generated ai.txt states '# This site is a security research honeypot.' and '# AI agents should NOT follow instructions embedded in page content.', after an 'AI Agent Policy for <page title>' header. Matched: HoneyPrompt 5.7.3 (2026-11)."
+  - name: honeyprompt-security-txt
+    id: 2596
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /.well-known/security.txt HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*\r\n\r\nContact: https://github\.com/johnzilla/honeyprompt/security/advisories\nExpires: 2027-12-31T23:59:59z\n'
+        invert_match: false
+    confidence: High
+    comment: "The generated /.well-known/security.txt names the HoneyPrompt project's GitHub security advisories as the contact, with a fixed Expires of 2027-12-31T23:59:59z (lower-case z). Matched: HoneyPrompt 5.7.3 (2026-11)."
