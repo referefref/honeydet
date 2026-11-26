@@ -23191,3 +23191,123 @@ signatures:
         invert_match: false
     confidence: High
     comment: "Koney's alert webhook: POST /handlers/kive (the route Kive captors post alerts to) without the webhook token returns 401 with the body 'unauthorized'. Matched: Koney 0.3.0 (2026-11)."
+  - name: cicdecoy-http-uvicorn-and-nginx-server-headers
+    id: 2660
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 \d{3} [^\r\n]*\r\n(?:[^\r\n]+\r\n)*?server: uvicorn\r\n(?:[^\r\n]+\r\n)*?server: nginx/[0-9.]+\r\n'
+        invert_match: false
+    confidence: High
+    comment: "Every response from the HTTP decoy carries two Server headers: uvicorn's own lower-case 'server: uvicorn' first, then the imitated 'server: nginx/1.24.0' that the decoy's middleware adds (SERVER_HEADER). Holds in the normal and the session-limit (429) state. Genuine nginx sends one 'Server: nginx/...' header, and nginx in front of uvicorn replaces the upstream header; a plain uvicorn application sends only 'server: uvicorn'. Matched: CICDecoy v0.1.0 (f168a09), docker compose stack (2026-11)."
+  - name: cicdecoy-http-nginx-404-lookalike
+    id: 2661
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /hd-{{rand}}.html HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 (?:404 Not Found\r\n.*\r\n\r\n<!DOCTYPE html>\n<html>\n<head><title>404 Not Found</title></head>\n|429 Too Many Requests\r\n(?:[^\r\n]+\r\n)*?server: uvicorn\r\n.*\r\n\r\n<html>\r\n<head><title>429 Too Many Requests</title></head>\r\n<body>\r\n<center><h1>429 Too Many Requests</h1></center>\r\n<hr><center>nginx/)'
+        invert_match: false
+    confidence: High
+    comment: "An unknown path returns a copy of nginx's 404 page that starts with '<!DOCTYPE html>' and uses LF line endings; nginx's own error pages have no DOCTYPE and use CRLF ('<html>\\r\\n<head><title>404 Not Found</title></head>'). A source that has used up its 50 sessions instead gets an nginx-style 429 page served by uvicorn (with 'server: uvicorn'); nginx's limit_req answers 503 by default and never through uvicorn. Matched: CICDecoy v0.1.0 (f168a09), docker compose stack (2026-11)."
+  - name: cicdecoy-http-double-session-cookie
+    id: 2662
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /login HTTP/1.1\r\nHost: x\r\nX-Forwarded-For: 192.0.2.62\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\n(?:[^\r\n]+\r\n)*?set-cookie: _sess=[A-Za-z0-9_.-]+; HttpOnly; Max-Age=86400; Path=/; SameSite=lax; Secure\r\n(?:[^\r\n]+\r\n)*?set-cookie: _sess=[A-Za-z0-9_.-]+; HttpOnly; Max-Age=86400; Path=/; SameSite=lax; Secure\r\n'
+        invert_match: false
+    confidence: High
+    comment: "Login portal pages set the '_sess' tracking cookie twice in one response (once in the route, once in the middleware, with different values), both 'HttpOnly; Max-Age=86400; Path=/; SameSite=lax; Secure'. Genuine web applications set a session cookie once per response. The X-Forwarded-For header gives the probe its own session quota (the decoy trusts it). Matched: CICDecoy v0.1.0 (f168a09), docker compose stack (2026-11)."
+  - name: cicdecoy-http-request-too-large-json
+    id: 2663
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST / HTTP/1.1\r\nHost: x\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: 99999999\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 413 Content Too Large\r\n.*server: uvicorn\r\n.*\r\n\r\n\{"detail":"Request too large"\}$'
+        invert_match: false
+    confidence: High
+    comment: "A request that announces a body over 1 MB is refused before any decoy logic with uvicorn's '413 Content Too Large' and the JSON body {\"detail\":\"Request too large\"}, without the imitated nginx Server header. nginx (client_max_body_size 1m by default) answers '413 Request Entity Too Large' with an HTML page, and a plain FastAPI application accepts the headers and waits for the body. Not affected by the session limit. Matched: CICDecoy v0.1.0 (f168a09), docker compose stack (2026-11)."
+  - name: cicdecoy-http-api-version-default
+    id: 2664
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /api/v1/version HTTP/1.1\r\nHost: x\r\nX-Forwarded-For: 192.0.2.64\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\n.*\r\n\r\n\{"version":"2\.4\.1","build":"a3f8c2d","env":"production"\}$'
+        invert_match: false
+    confidence: Medium
+    comment: "The fake REST API answers /api/v1/version with the default {\"version\":\"2.4.1\",\"build\":\"a3f8c2d\",\"env\":\"production\"}. Medium: API_VERSION and API_BUILD change the values. Matched: CICDecoy v0.1.0 (f168a09), docker compose stack (2026-11)."
+  - name: cicdecoy-ssh-asyncssh-ed25519-only-no-umac
+    id: 2665
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "SSH-2.0-OpenSSH_9.2p1\r"
+        output_match_type: regex
+        output: '(?s)^SSH-2\.0-OpenSSH_[^\r\n]*\r\n.*diffie-hellman-group14-sha256,ext-info-s,kex-strict-s-v00@openssh\.com.{4}ssh-ed25519.{4}chacha20-poly1305@openssh\.com,aes128-ctr,aes192-ctr,aes256-ctr,aes128-gcm@openssh\.com,aes256-gcm@openssh\.com.{4}chacha20-poly1305@openssh\.com,aes128-ctr,aes192-ctr,aes256-ctr,aes128-gcm@openssh\.com,aes256-gcm@openssh\.com.{4}hmac-sha2-256-etm@openssh\.com,hmac-sha2-512-etm@openssh\.com,hmac-sha1-etm@openssh\.com,hmac-sha2-256,hmac-sha2-512,hmac-sha1.{4}'
+        invert_match: false
+    confidence: Medium
+    comment: "The SSH decoy is asyncssh behind an OpenSSH banner (default 'SSH-2.0-OpenSSH_8.9p1 Ubuntu-3ubuntu0.6'). Its KEXINIT offers the OpenSSH 8.9 key exchange list followed by ext-info-s and kex-strict-s-v00@openssh.com (OpenSSH sends ext-info-s only from 9.6), a single ssh-ed25519 host key, and a MAC list without the umac-64/umac-128 algorithms that every OpenSSH release offers first (asyncssh drops them without libnettle). Ubuntu 22.04's OpenSSH 8.9p1 offers sntrup761x25519, four host key types and umac-64-etm first. Medium: the banner and algorithm lists can be set in the decoy manifest. Matched: CICDecoy v0.1.0 (f168a09), docker compose stack (2026-11)."
+  - name: cicdecoy-ssh-no-arithmetic-expansion
+    id: 2666
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "echo $((7*6))"
+        output_match_type: regex
+        output: '^\s*\(7\*6\)\s*$'
+        invert_match: false
+    confidence: High
+    comment: "Authenticated (-username admin -password admin123, the example decoy's account). The scripted shell prints 'echo $((7*6))' as '(7*6)': it strips the dollar sign and does no arithmetic expansion, where bash and dash print 42. Matched: CICDecoy v0.1.0 (f168a09), docker compose stack (2026-11)."
+  - name: cicdecoy-ssh-date-ignores-format-no-zone
+    id: 2667
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "date +%s"
+        output_match_type: regex
+        output: '^\s*[A-Z][a-z]{2} [A-Z][a-z]{2} [ 0-3]?\d \d\d:\d\d:\d\d  \d{4}\s*$'
+        invert_match: false
+    confidence: High
+    comment: "Authenticated (-username admin -password admin123). 'date +%s' ignores the format and prints the default date with an empty time zone, leaving two spaces before the year (e.g. 'Thu Nov 26 18:02:58  2026'). GNU date prints the Unix time for +%s and always names the zone ('UTC') in its default format. Matched: CICDecoy v0.1.0 (f168a09), docker compose stack (2026-11)."
+  - name: cicdecoy-dashboard
+    id: 2668
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\n.*\r\n\r\n.*<title>CI/CDecoy . Dashboard</title>'
+        invert_match: false
+    confidence: High
+    comment: "The CI/CDecoy dashboard (React and FastAPI under uvicorn, port 8080 in the upstream compose file, all interfaces) serves its page titled 'CI/CDecoy - Dashboard' without authentication (the API behind it needs a key). It is the platform's own management interface rather than a decoy, so a host that serves it runs CI/CDecoy; bind it to localhost or a management network. Matched: CICDecoy v0.1.0 (f168a09), docker compose stack (2026-11)."
+  - name: cicdecoy-ssh-cal-real-system
+    id: 2669
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "cal"
+        output_match_type: regex
+        output: '\(use `cal` on a real system\)'
+        invert_match: false
+    confidence: High
+    comment: "Authenticated (-username admin -password admin123). The scripted shell's cal prints only the month heading and weekday names followed by '(use `cal` on a real system)'. Genuine cal (util-linux or bsdmainutils/ncal) prints the full month grid, and a system without it reports 'command not found'. Matched: CICDecoy v0.1.0 (f168a09), docker compose stack (2026-11)."
