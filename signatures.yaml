@@ -22726,3 +22726,123 @@ signatures:
         invert_match: false
     confidence: High
     comment: "The yes, binsh, echo and cmdnot responders: the '192.0.0.64.login: ' greeting, any user name and password accepted, then the fixed BusyBox v1.1.2 (2007.05.09-01:19+0000) banner and '~ $ ' prompt. A genuine telnetd refuses a random password. Matched: IoTPOT 633bd92 (Python 2.7 original and Python 3 patch) (2026-11)."
+  - name: thingpot-hue-unregistered-user-gets-full-datastore
+    id: 2550
+    port: "80"
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /api/{{rand}} HTTP/1.1\r\nHost: bridge\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*\r\n\r\n\{.*"lights":\{"[0-9]+":\{'
+        invert_match: false
+    confidence: High
+    comment: "GET /api/<random 16-character user name> returns the whole bridge datastore (lights, groups, config with whitelist) as if the name were a registered user: ThingPot's URL patterns route any 7 to 40 character name to the full template. A Hue bridge (and diyHue) answers an unknown user name with [{\"error\":{\"type\":1,...,\"description\":\"unauthorized user\"}}]. Matched: ThingPot 9df3596 (Python 3 port and Python 2.7 original) (2026-11)."
+  - name: thingpot-hue-registration-without-link-button
+    id: 2551
+    port: "80"
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST /api/ HTTP/1.1\r\nHost: bridge\r\nContent-Type: application/json\r\nContent-Length: 31\r\nConnection: close\r\n\r\n{\"devicetype\":\"honeydet#probe\"}"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*\r\n\r\n\[\{"success":\{"username":"[A-Za-z0-9]{40}"\}\}\]$'
+        invert_match: false
+    confidence: High
+    comment: "POST /api/ with a devicetype registers a new application at once: ThingPot returns [{\"success\":{\"username\":\"<40 random letters and digits>\"}}] without anyone pressing the link button, and the name is not remembered. A Hue bridge (and diyHue) answers [{\"error\":{\"type\":101,...,\"description\":\"link button not pressed\"}}] unless the button was pressed in the last 30 seconds. Matched: ThingPot 9df3596 (Python 3 port and Python 2.7 original) (2026-11)."
+  - name: thingpot-hue-default-bridge-identity
+    id: 2552
+    port: "80"
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /api/config HTTP/1.1\r\nHost: bridge\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*\r\n\r\n\{.*"bridgeid":"001788FFFE473057"'
+        invert_match: false
+    confidence: Medium
+    comment: "The unauthenticated /api/config answer comes from the shipped api/config.json: bridge name a33a, MAC 00:17:88:47:30:57, bridge id 001788FFFE473057, API version 1.16.0 with software version 01036659 and no starterkitid field, the same for every installation. A real bridge reports its own MAC and id (and current firmware adds starterkitid). Medium: the file can be edited. Matched: ThingPot 9df3596 (Python 3 port and Python 2.7 original) (2026-11)."
+  - name: thingpot-hue-lure-info-route
+    id: 2553
+    port: "80"
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /hue HTTP/1.1\r\nHost: bridge\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*\r\n\r\n\{.*("config_path":"/api/[A-Za-z0-9]+/config".*"xmpp_account":"|"xmpp_account":"[^"]*".*"config_path":"/api/[A-Za-z0-9]+/config")'
+        invert_match: false
+    confidence: Medium
+    comment: "Any path that starts with hue or Philips (and any path ending in api followed by up to 40 characters) returns the lure document api/tempfile.json: a JSON object naming the device, ready-made config, whitelist and light-control paths with a 40-character user name, and an XMPP account. A Hue bridge has no such resource (diyHue answers 404). Medium: the document can be edited, though the routes are in the code. Matched: ThingPot 9df3596 (Python 3 port and Python 2.7 original) (2026-11)."
+  - name: thingpot-hue-get-not-available-for-unknown-user
+    id: 2554
+    port: "80"
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /api/{{rand}}/hd{{rand}}/ HTTP/1.1\r\nHost: bridge\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*\r\n\r\n\[\{"error":\{.*"description":"method, GET, not available for resource, /hd{{rand}}"'
+        invert_match: false
+    confidence: High
+    comment: "GET /api/<random user>/<random resource>/ returns error type 4, 'method, GET, not available for resource, /<resource>', for a user name that was never registered. A Hue bridge (and diyHue) checks the user name first and answers error type 1, unauthorized user. Matched: ThingPot 9df3596 (Python 3 port and Python 2.7 original) (2026-11)."
+  - name: thingpot-hue-rest-framework-view-metadata
+    id: 2555
+    port: "80"
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "OPTIONS /api/config HTTP/1.1\r\nHost: bridge\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*\r\n\r\n\{"name":"Get Simp Config","description":"","renders":\["application/json"\]'
+        invert_match: false
+    confidence: High
+    comment: "OPTIONS /api/config returns Django REST framework's view metadata, naming ThingPot's view class: {\"name\":\"Get Simp Config\",\"description\":\"\",\"renders\":[\"application/json\"],\"parses\":[...]}. A Hue bridge does not run REST framework; diyHue answers OPTIONS with an empty body and an Allow header. Matched: ThingPot 9df3596 (Python 3 port and Python 2.7 original) (2026-11)."
+  - name: thingpot-hue-bridge-with-django-admin
+    id: 2556
+    port: "80"
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /api/config HTTP/1.1\r\nHost: bridge\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*\r\n\r\n\{.*"modelid":"BSB002"'
+        invert_match: false
+      - input_type: string
+        input: "GET /admin/login/ HTTP/1.1\r\nHost: bridge\r\nConnection: close\r\n\r"
+        reconnect: true
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*<title>Log in \| Django site admin</title>'
+        invert_match: false
+    confidence: High
+    comment: "A host that answers /api/config as a Hue bridge v2 (modelid BSB002) also serves the Django administration login page at /admin/login/, because ThingPot keeps the admin site of its Django project. A Hue bridge does not run Django (diyHue answers 404). Matched: ThingPot 9df3596 (Python 3 port and Python 2.7 original) (2026-11)."
+  - name: thingpot-hue-bridge-without-description-xml
+    id: 2557
+    port: "80"
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /api/config HTTP/1.1\r\nHost: bridge\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*\r\n\r\n\{.*"modelid":"BSB002"'
+        invert_match: false
+      - input_type: string
+        input: "GET /description.xml HTTP/1.1\r\nHost: bridge\r\nConnection: close\r\n\r"
+        reconnect: true
+        output_match_type: regex
+        output: '^HTTP/1\.[01] 404 '
+        invert_match: false
+    confidence: High
+    comment: "A host that answers /api/config as a Hue bridge v2 (modelid BSB002) returns 404 for /description.xml. Every Hue bridge serves its UPnP device description there (the address its SSDP announcements point to), and diyHue does too; ThingPot has no route for it. Matched: ThingPot 9df3596 (Python 3 port and Python 2.7 original) (2026-11)."
+  - name: thingpot-hue-bridge-on-django-development-server
+    id: 2558
+    port: "80"
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /api/config HTTP/1.1\r\nHost: bridge\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n(?:[^\r\n]*\r\n)*?Server: WSGIServer/0\.[12] (?:C)?Python/[0-9.]+\r\n.*\r\n\r\n\{.*"modelid":"BSB002"'
+        invert_match: false
+    confidence: Medium
+    comment: "The Hue bridge configuration is served by Django's development server (Server: WSGIServer/0.2 CPython/3.x, or WSGIServer/0.1 Python/2.7 for the original), which ThingPot's README uses to run the API. A Hue bridge does not run Python. Medium: it disappears behind another WSGI server or a reverse proxy. Matched: ThingPot 9df3596 (Python 3 port and Python 2.7 original) (2026-11)."
