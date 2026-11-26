@@ -22476,3 +22476,253 @@ signatures:
       invert_match: false
     confidence: Medium
     comment: 'SNMPv2c: sysObjectID is the null object identifier 0.0 next to a Siemens S7-300 sysDescr. Genuine agents report their vendor''s enterprise OID (Siemens 1.3.6.1.4.1.4329, net-snmp 1.3.6.1.4.1.8072). Template values. Matched: HoneyMonX 3075049 (Conpot 0.6.0 at f0e6925, PLC1 template) (2026-11).'
+  - name: iotpot-any-login-busybox-112-banner
+    id: 2530
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ''
+        output_match_type: hex
+        output: 'fffd01'
+        invert_match: false
+      - input_type: hex
+        input: ''
+        output_match_type: regex
+        output: '(?i)login:$'
+        invert_match: false
+      - input_type: string
+        input: "hd{{rand}}\r"
+        output_match_type: regex
+        output: 'Password:$'
+        invert_match: false
+      - input_type: string
+        input: "{{rand}}\r"
+        output_match_type: regex
+        output: '^BusyBox v1\.1\.2 \(2007\.05\.09-01:19\+0000\) Built-in shell \(ash\)\r\nEnter ''help'' for a list of built-in commands\.\r\n\r\n~ \$$'
+        invert_match: false
+    confidence: High
+    comment: "IoTPOT's responders accept any user name and password and answer with the fixed banner of BusyBox v1.1.2 (2007.05.09-01:19+0000) and a '~ $ ' prompt. A genuine telnetd refuses a random password ('Login incorrect'). Matched: IoTPOT 633bd92 (Python 2.7 original and Python 3 patch) (2026-11)."
+  - name: iotpot-busybox-applet-command-not-found
+    id: 2531
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ''
+        output_match_type: hex
+        output: 'fffd01'
+        invert_match: false
+      - input_type: hex
+        input: ''
+        output_match_type: regex
+        output: '(?i)login:$'
+        invert_match: false
+      - input_type: string
+        input: "hd{{rand}}\r"
+        output_match_type: regex
+        output: 'Password:$'
+        invert_match: false
+      - input_type: string
+        input: "{{rand}}\r"
+        output_match_type: regex
+        output: '~ \$$'
+        invert_match: false
+      - input_type: string
+        input: "/bin/busybox hd{{rand}}\r"
+        output_match_type: regex
+        output: '^sh: /bin/busybox hd{{rand}}: command not found\r\n~ \$$'
+        invert_match: false
+    confidence: High
+    comment: "After the fake login, '/bin/busybox <unknown applet>' (the probe many IoT bots use to confirm a BusyBox shell) gets 'sh: /bin/busybox <applet>: command not found' without echoing the line; only a few applet names seen in 2015 (ZORRO, WOPBOT, wget) get BusyBox's 'applet not found'. Genuine BusyBox answers '<applet>: applet not found'. Matched: IoTPOT 633bd92 (Python 2.7 original and Python 3 patch) (2026-11)."
+  - name: iotpot-var-path-zorro-applet
+    id: 2532
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ''
+        output_match_type: hex
+        output: 'fffd01'
+        invert_match: false
+      - input_type: hex
+        input: ''
+        output_match_type: regex
+        output: '(?i)login:$'
+        invert_match: false
+      - input_type: string
+        input: "hd{{rand}}\r"
+        output_match_type: regex
+        output: 'Password:$'
+        invert_match: false
+      - input_type: string
+        input: "{{rand}}\r"
+        output_match_type: regex
+        output: '~ \$$'
+        invert_match: false
+      - input_type: string
+        input: "cat /var/hd{{rand}}\r"
+        output_match_type: regex
+        output: '^cat /var/hd{{rand}}\r\nZORRO: applet not found\r\n~ \$$'
+        invert_match: false
+    confidence: High
+    comment: "Any command line containing 'var' is echoed and answered with 'ZORRO: applet not found', a reply written for one 2015 bot family. A genuine shell reports the missing file ('No such file or directory'). Matched: IoTPOT 633bd92 (Python 2.7 original and Python 3 patch) (2026-11)."
+  - name: iotpot-cd-tmp-pwd-not-found
+    id: 2533
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ''
+        output_match_type: hex
+        output: 'fffd01'
+        invert_match: false
+      - input_type: hex
+        input: ''
+        output_match_type: regex
+        output: '(?i)login:$'
+        invert_match: false
+      - input_type: string
+        input: "hd{{rand}}\r"
+        output_match_type: regex
+        output: 'Password:$'
+        invert_match: false
+      - input_type: string
+        input: "{{rand}}\r"
+        output_match_type: regex
+        output: '~ \$$'
+        invert_match: false
+      - input_type: string
+        input: "cd /tmp\r"
+        output_match_type: regex
+        output: '^/tmp \$$'
+        invert_match: false
+      - input_type: string
+        input: "pwd\r"
+        output_match_type: regex
+        output: '^sh: pwd: command not found\r\n/tmp \$$'
+        invert_match: false
+    confidence: High
+    comment: "'cd /tmp' only changes the prompt to '/tmp $ ' (no echo), and the shell built-in 'pwd' is reported as 'sh: pwd: command not found'. Every genuine shell has pwd. Matched: IoTPOT 633bd92 (Python 2.7 original and Python 3 patch) (2026-11)."
+  - name: iotpot-echo-prints-empty-line
+    id: 2534
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ''
+        output_match_type: hex
+        output: 'fffd01'
+        invert_match: false
+      - input_type: hex
+        input: ''
+        output_match_type: regex
+        output: '(?i)login:$'
+        invert_match: false
+      - input_type: string
+        input: "hd{{rand}}\r"
+        output_match_type: regex
+        output: 'Password:$'
+        invert_match: false
+      - input_type: string
+        input: "{{rand}}\r"
+        output_match_type: regex
+        output: '~ \$$'
+        invert_match: false
+      - input_type: string
+        input: "echo hd{{rand}}\r"
+        output_match_type: regex
+        output: '^echo hd{{rand}}\r\n\r\n~ \$$'
+        invert_match: false
+    confidence: High
+    comment: "'echo <word>' is echoed back followed by an empty line instead of the word (only a handful of 2015 bot echo strings are answered). A genuine shell prints the argument. Matched: IoTPOT 633bd92 (Python 2.7 original and Python 3 patch) (2026-11)."
+  - name: iotpot-username-echoed-raw
+    id: 2535
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ''
+        output_match_type: hex
+        output: 'fffd01'
+        invert_match: false
+      - input_type: hex
+        input: ''
+        output_match_type: regex
+        output: '(?i)login:$'
+        invert_match: false
+      - input_type: string
+        input: "hd{{rand}}\nhd{{rand}}\r"
+        output_match_type: regex
+        output: '^hd{{rand}}\nhd{{rand}}\r\nPassword:$'
+        invert_match: false
+    confidence: High
+    comment: "Two lines sent in one packet (the first ending in a bare LF) are taken as one user name and echoed back raw, bare LF included, followed by the Password prompt; the responders only look for CR LF somewhere in each read and echo the whole read. A genuine telnetd and login take the first line as the user name and the second as the password. Matched: IoTPOT 633bd92 (Python 2.7 original and Python 3 patch) (2026-11)."
+  - name: iotpot-option-greeting-bcm96328-port23
+    id: 2536
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ''
+        output_match_type: hex
+        output: 'fffd01fffd21fffb01fffb03'
+        invert_match: false
+      - input_type: hex
+        input: ''
+        output_match_type: hex
+        output: '42434d39363332382042726f616462616e6420526f757465720d0a4c6f67696e3a'
+        invert_match: false
+    confidence: Medium
+    comment: "The option responder picks one of 29 recorded device greetings by listening port (port mod 29 plus 1); on port 23 it is DO ECHO, DO REMOTE-FLOW-CONTROL, WILL ECHO, WILL SGA and 'BCM96328 Broadband Router' / 'Login:' (etc/login_prompt line 24), sent 0.6 s after the options, so it arrives as a second read. Medium: the greeting was recorded from real routers and depends on the port and mode. Matched: IoTPOT 633bd92 (Python 2.7 original and Python 3 patch) (2026-11)."
+  - name: iotpot-greeting-192-0-0-64-login
+    id: 2537
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ''
+        output_match_type: regex
+        output: '192\.0\.0\.64\.login:$'
+        invert_match: false
+    confidence: Medium
+    comment: "The yes, binsh, no, echo and cmdnot responders all greet with the hard-coded prompt '192.0.0.64.login: ' (an address with a dot before 'login', recorded from a real device). Medium: not used by the option responder and editable. Matched: IoTPOT 633bd92 (Python 2.7 original and Python 3 patch) (2026-11)."
+  - name: iotpot-option-greeting-advrdvs-port2323
+    id: 2538
+    port: 2323
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ''
+        output_match_type: hex
+        output: 'fffd01fffd1ffffb01fffb03'
+        invert_match: false
+      - input_type: hex
+        input: ''
+        output_match_type: hex
+        output: '61647672647673206c6f67696e3a'
+        invert_match: false
+    confidence: Medium
+    comment: "On port 2323 the option responder uses greeting line 4: DO ECHO, DO NAWS, WILL ECHO, WILL SGA and 'advrdvs login:' (a DVR prompt). Medium: recorded from real devices and depends on the port and mode. Matched: IoTPOT 633bd92 (Python 2.7 original and Python 3 patch) (2026-11)."
+  - name: iotpot-192-0-0-64-any-login-busybox-112
+    id: 2539
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ''
+        output_match_type: regex
+        output: '192\.0\.0\.64\.login:$'
+        invert_match: false
+      - input_type: string
+        input: "hd{{rand}}\r"
+        output_match_type: regex
+        output: 'Password:$'
+        invert_match: false
+      - input_type: string
+        input: "{{rand}}\r"
+        output_match_type: regex
+        output: '^BusyBox v1\.1\.2 \(2007\.05\.09-01:19\+0000\) Built-in shell \(ash\)\r\nEnter ''help'' for a list of built-in commands\.\r\n\r\n~ \$$'
+        invert_match: false
+    confidence: High
+    comment: "The yes, binsh, echo and cmdnot responders: the '192.0.0.64.login: ' greeting, any user name and password accepted, then the fixed BusyBox v1.1.2 (2007.05.09-01:19+0000) banner and '~ $ ' prompt. A genuine telnetd refuses a random password. Matched: IoTPOT 633bd92 (Python 2.7 original and Python 3 patch) (2026-11)."
