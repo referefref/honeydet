@@ -22982,3 +22982,87 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: "ICSSIM bottle factory PLC2 (pyModbusTCP on port 504): holding registers 22 and 23 hold the bottle fill limit 1.8 litres as ICSSIM's two-word fixed-point value (0,18000) and registers 18 and 19 the conveyor engine mode 3 (automatic, 0,30000). Defaults from Configs.py, unchanged by the PLC logic. Matched: VirtuePot 02888a2 (2026-11)."
+  - name: thumper-openapi-title
+    id: 2580
+    port: 8000
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /openapi.json HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*\r\n\r\n\{"openapi":"3\.[0-9.]+","info":\{"title":"Thumper","version":"[^"]+"\},"paths":\{"/api/stats":'
+        invert_match: false
+    confidence: High
+    comment: "FastAPI's default OpenAPI document is public and names the application 'Thumper', with /api/stats as the first path (the dashboard API). Genuine FastAPI services carry their own title (default 'FastAPI'). Matched: Thumper ba49d65 / 0.1.0 (2026-11)."
+  - name: thumper-token-type-catalogue
+    id: 2581
+    port: 8000
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /api/token-types HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*\r\n\r\n\[\{"type":"aws","display_name":"AWS access key","default_path":"~/\.aws/credentials".*Shai-Hulud'
+        invert_match: false
+    confidence: High
+    comment: "GET /api/token-types returns, without authentication, Thumper's honeytoken catalogue: the credential types it can fake and the recommended bait paths (~/.aws/credentials first), with a description naming the Shai-Hulud worm. Matched: Thumper ba49d65 / 0.1.0 (2026-11)."
+  - name: thumper-install-token-gate
+    id: 2582
+    port: 8000
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /api/install.sh HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 401 Unauthorized\r\n.*\r\n\r\n\{"detail":"invalid install token"\}$'
+        invert_match: false
+    confidence: High
+    comment: "The self-installing agent script /api/install.sh is gated by the install token; without one the server answers 401 with the JSON detail 'invalid install token'. Other servers return 404 for this path. Matched: Thumper ba49d65 / 0.1.0 (2026-11)."
+  - name: thumper-agent-script
+    id: 2583
+    port: 8000
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /api/agent/thumper_agent.sh HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*(?i:content-type): text/x-shellscript.*\r\n\r\n#!/bin/sh\n# Thumper endpoint agent '
+        invert_match: false
+    confidence: High
+    comment: "The server hands the endpoint agent to anyone who asks: GET /api/agent/thumper_agent.sh returns the POSIX shell agent (text/x-shellscript) starting '# Thumper endpoint agent'. Matched: Thumper ba49d65 / 0.1.0, agent 0.1.0 (2026-11)."
+  - name: thumper-trigger-callback
+    id: 2584
+    port: 8000
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST /api/trigger HTTP/1.1\r\nHost: x\r\nContent-Length: 0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 401 Unauthorized\r\n.*(?i:server): uvicorn\r\n.*(?i:vary): Origin\r\n(?:[^\r\n]*\r\n)*\r\n\{"detail":"invalid signature"\}$'
+        invert_match: false
+    confidence: Medium
+    comment: "The alert callback /api/trigger rejects an unsigned POST with 401 and the JSON detail 'invalid signature' from uvicorn, with the 'vary: Origin' header that Thumper's allow-all CORS middleware adds. Specific to Thumper's callback path, but a short message that another FastAPI webhook receiver could share, so Medium. Matched: Thumper ba49d65 / 0.1.0 (2026-11)."
+  - name: thumper-settings-thresholds
+    id: 2585
+    port: 8000
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /api/settings HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*\r\n\r\n\{"database":\{"backend":"[a-z]+","location":"[^"]*"\},"thresholds":\{"stale_minutes":[0-9]+,"inactive_hours":[0-9]+\},"dashboard":\{"refresh_seconds":[0-9]+\}\}$'
+        invert_match: false
+    confidence: High
+    comment: "GET /api/settings returns, without authentication, the dashboard's read-only settings: database backend and location, the endpoint stale/inactive thresholds and the refresh interval. Matched: Thumper ba49d65 / 0.1.0 (2026-11)."
+  - name: thumper-dashboard-spa
+    id: 2586
+    port: 8000
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*\r\n\r\n<!doctype html>.*<link rel="icon" type="image/png" href="/thumper_gif\.png" />.*<div id="root"></div>'
+        invert_match: false
+    confidence: High
+    comment: "The dashboard (a React single-page app served by the same process) uses the Thumper icon /thumper_gif.png and has no <title> in its HTML (the title is set by script). Absent when the server runs without the built UI. Matched: Thumper ba49d65 / 0.1.0 (2026-11)."
