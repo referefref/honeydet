@@ -1675,12 +1675,12 @@ signatures:
     proto: tcp
     steps:
       - input_type: string
-        input: "GET //_nodes HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        input: "GET //_nodes HTTP/1.1\r\nHost: x\r\n\r\nGET /_nodes HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
         output_match_type: regex
-        output: '^HTTP/1\.1 301 Moved Permanently\r\nContent-Type: text/html; charset=utf-8\r\nLocation: /_nodes\r\n[\s\S]*<a href="/_nodes">Moved Permanently</a>'
+        output: '^HTTP/1\.1 301 Moved Permanently\r\nContent-Type: text/html; charset=utf-8\r\nLocation: /_nodes\r\n[\s\S]*?<a href="/_nodes">Moved Permanently</a>\.\s*HTTP/1\.1 200 OK\r\n[\s\S]*?Content-Type: text/plain; charset=utf-8\r\n[\s\S]*?\r\n\r\n\s*\{\s*"cluster_name" : "[^"]*",\s*"nodes" : \{'
         invert_match: false
     confidence: High
-    comment: "Go's http.ServeMux cleans the path and redirects //_nodes to /_nodes with an HTML 301 page. Genuine Elasticsearch answers the request itself (200 in 1.x, 405 in 7.x and 8.x)."
+    comment: "Two pipelined requests: Go's http.ServeMux cleans the path and redirects //_nodes to /_nodes with an HTML 301 page, and the following GET /_nodes returns Elastichoney's fixed, hand-formatted node listing (\"cluster_name\" : ...) labelled text/plain. Genuine Elasticsearch answers //_nodes itself (200 in 1.x, 405 in 7.x and 8.x) and sends compact application/json; other Go net/http servers redirect but do not return the node listing. Matched: Elastichoney 1b03740 and elastichoney-nx 397a852 (2026-11)."
   - name: mongodb-honeyproxy-client-metadata-accepted-twice
     id: 150
     port: 27017
@@ -2945,10 +2945,10 @@ signatures:
       - input_type: string
         input: "GET /phpmyadmin/phpmyadmin_files/phpmyadmin.css HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
         output_match_type: regex
-        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*Content-Type: text/css'
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*?Content-Type: text/css.*?\r\n\r\n\s*\.syntax_comment \{color: #808000;\}'
         invert_match: false
     confidence: Medium
-    comment: "The login page's stylesheet, logo and help icon come from phpmyadmin_files/, the folder a browser creates with 'Save page as'. Genuine phpMyAdmin serves themes from themes/<name>/ (and phpmyadmin.css.php in 3.x and 4.x); phpmyadmin_files/ returns 404. Medium: the folder can be renamed together with the page."
+    comment: "The login page's stylesheet, logo and help icon come from phpmyadmin_files/, the folder a browser creates with 'Save page as'; phpmyadmin.css there is the saved phpMyAdmin 3 stylesheet, which starts with the SQL syntax-highlighting rules (.syntax_comment {color: #808000;}). Genuine phpMyAdmin serves themes from themes/<name>/ (and phpmyadmin.css.php in 3.x and 4.x); phpmyadmin_files/ returns 404. Medium: the folder can be renamed together with the page. Matched: phpMyAdmin_honeypot d0e0e46 (2026-11)."
   # eohoneypotbundle (ids 310-313)
   - name: eohoneypotbundle-hidden-field-contact
     id: 310
