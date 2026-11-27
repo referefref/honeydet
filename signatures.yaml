@@ -23595,3 +23595,39 @@ signatures:
         invert_match: false
     confidence: High
     comment: "The example configuration's sample payloads on 8080 to 8082 and 8100 to 8104: 'word: ' lines, the eXtremail pattern with its release number fused to 'REMote', and banners that still carry the FUZZ_HERE and __FUZZ__ placeholders (220 FUZZ_HERE ESMTP OpenSMTPD, HTTP/1v0 200 OK with Server: Apache/__FUZZ__). Matched: Portspoof v2.0 (6618156, 2026-11) with the upstream example configuration."
+  - name: juggler-default-404-page
+    id: 2710
+    port: 8888
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 404 Not Found\r\nContent-Type: text/html; charset=utf-8\r\nDate: [^\r\n]+\r\nContent-Length: 23\r\n(?:Connection: close\r\n)?\r\nThis is a default page\.\n?$'
+        invert_match: false
+    confidence: Medium
+    comment: "Any request whose Host header has no plugin of its own runs scripts/default.lua, which answers 404 with the shipped html/default_404.html: the 23-byte body 'This is a default page.' with Go net/http's header order and no Server header. Genuine gin and net/http servers answer '404 page not found' (text/plain); nginx and Apache send their own HTML 404 pages. Disappears when default_404.html is edited. Matched: Juggler 9a6a062 (2026-11)."
+  - name: juggler-example-plugin-sqli-hash
+    id: 2711
+    port: 8888
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /login HTTP/1.1\r\nHost: juggler.test.com\r\nrule: sqli\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*\r\n\r\nCongratulation！Password hash is [0-9a-f]{32}\.\n?$'
+        invert_match: false
+    confidence: Medium
+    comment: "The shipped example plugin scripts/juggler.test.com.lua answers a request for Host juggler.test.com carrying the WAF rule header 'rule: sqli' with 200 and 'Congratulation！Password hash is <random MD5>.' (full-width exclamation mark). No genuine server reacts to that header. Disappears when the example plugin is removed. Matched: Juggler 9a6a062 (2026-11)."
+  - name: juggler-example-plugin-fake-shadow
+    id: 2712
+    port: 8888
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /x HTTP/1.1\r\nHost: juggler.test.com\r\nrule: lfi_shadow\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*\r\n\r\nroot:\$6\$kcgcu794R0VP3fDL\$.*\nbin:\*:17632:0:99999:7:::\ndaemon:\*:17632:0:99999:7:::\n?$'
+        invert_match: false
+    confidence: Medium
+    comment: "With Host juggler.test.com and 'rule: lfi_shadow' the example plugin returns the shipped html/etc_shadow.html, a three-line fake /etc/shadow whose root entry always has the same salt (kcgcu794R0VP3fDL) and whose other entries share the date 17632 (2018-04-11). Disappears when the example plugin or etc_shadow.html is changed. Matched: Juggler 9a6a062 (2026-11)."
