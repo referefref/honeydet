@@ -23555,10 +23555,10 @@ signatures:
       - input_type: string
         input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
         output_match_type: regex
-        output: '(?s)^HTTP/(?:[0-9]\.[0-9]{2,}|[0-9]\.[0-9] [06-9][0-9]{2} |[0-9]\.[0-9] [0-9]{3} [a-z]\r\n|.*\r\n(?i:Date|Expires|Last-Modified): [^\r\n](?:\r\n|$)|.*\r\n[a-z](?:Server|Set-Cookie|Expires|Content-Type|Content-type|Date|Location|User-Agent|Connection|Cache-Control|WWW-Authenticate|Content-Length|Pragma|Last-Modified|X-Powered-By): )'
+        output: '(?s)^HTTP/(?:[0-9]\.[0-9]{2,}|[0-9]\.[0-9] [06-9][0-9]{2} |[0-9]\.[0-9] [0-9]{3} [a-z]\r\n|.*\r\n(?i:Date|Expires|Last-Modified): [^\r\n0-9](?:\r\n|$)|.*\r\n[a-z](?:Server|Set-Cookie|Expires|Content-Type|Content-type|Date|Location|User-Agent|Connection|Cache-Control|WWW-Authenticate|Content-Length|Pragma|Last-Modified|X-Powered-By): )'
         invert_match: false
     confidence: High
-    comment: "The reply to a GET is an HTTP response generated from an Nmap match pattern, with the traces of the regex reverser: a version such as HTTP/1.634, a status code outside 1xx-5xx or a one-letter reason phrase (HTTP/1.0 200 x), a one-character Date, Expires or Last-Modified value (Date: q), or a stray lower-case letter fused to a header name (xServer:, tSet-Cookie:). No genuine web server writes any of these. Matched on about 18% of ports. Matched: Portspoof v2.0 (6618156, 2026-11)."
+    comment: "The reply to a GET is an HTTP response generated from an Nmap match pattern, with the traces of the regex reverser: a version such as HTTP/1.634, a status code outside 1xx-5xx or a one-letter reason phrase (HTTP/1.0 200 x), a one-letter Date, Expires or Last-Modified value (Date: q; a single digit such as Expires: 0 is left out because genuine servers send it), or a stray lower-case letter fused to a header name (xServer:, tSet-Cookie:). No genuine web server writes any of these. Matched on about 18% of ports. Matched: Portspoof v2.0 (6618156, 2026-11)."
   - name: portspoof-regex-syntax-in-banner
     id: 2702
     port: "1-65535"
@@ -24252,3 +24252,141 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: "Any .png path returns the default 'PNG' logo, which is JPEG data (starts FF D8 FF E0) labelled Content-Type: image/png, from the BaseHTTP server. Medium: depends on the default assets/logo.png, which operators may replace. Matched: Pyison adf48d8 (2026-11)."
+  - name: sarracenia-tarpit-default-headers
+    id: 2780
+    port: 7277
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /hd-{{rand}}.php HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.[01] 200 OK\r\nCache-Control: no-store, no-cache\r\nContent-Security-Policy: default-src \x27self\x27; script-src \x27self\x27 \x27unsafe-inline\x27; style-src \x27self\x27 \x27unsafe-inline\x27;\r\nContent-Type: text/html; charset=utf-8\r\nExpires: 0\r\nPragma: no-cache\r\nDate: '
+        invert_match: false
+    confidence: High
+    comment: "Any path on the tarpit port returns 200 with Sarracenia's default tarpit_config headers in Go's sorted order (Cache-Control 'no-store, no-cache', the exact default Content-Security-Policy, Expires 0, Pragma no-cache), then Go's Date header and no Server header. The header set is configurable (tarpit_config.headers). Matched: Sarracenia v1.2.4 (2026-11)."
+  - name: sarracenia-tarpit-default-template
+    id: 2781
+    port: 7277
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /hd-{{rand}}/ HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*\r\n\r\n(?:[0-9a-f]+\r\n)?<!DOCTYPE html>\n<html>\n<head>\n    <title>[^<\n]+\.</title>\n</head>\n<body>\n<h3>[^<\n]+\.</h3>\n<p>\n    [^<]+</p>\n<ul>\n(?:\s*<li><a href="/[^"<>]+/">[^<]+</a></li>){5}\s*</ul>\n<a href="/[^"<>]+/">[^<]+</a>\n</body>\n</html>'
+        invert_match: false
+    confidence: High
+    comment: "Body of the shipped page.tmpl.html: four-space-indented title and an h3 of random dictionary words ending in a full stop, one or two paragraphs, a list of exactly five links plus one more, every link a relative path of one to five dictionary words ending in a slash. Independent of the header configuration; an operator who writes custom templates changes it. Matched: Sarracenia v1.2.4 (2026-11)."
+  - name: sarracenia-favicon-204-robots-maze
+    id: 2782
+    port: 7277
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /favicon.ico HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 204 No Content\r\nDate: [^\r\n]+\r\nConnection: close$'
+        invert_match: false
+      - input_type: string
+        input: "GET /robots.txt HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        reconnect: true
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*Content-Type: text/html.*\r\n\r\n.*<!DOCTYPE html>.*<a href="/[^"<>]+/">'
+        invert_match: false
+    confidence: High
+    comment: "/favicon.ico is the only path the tarpit exempts: a bare 204 No Content with nothing but Date and Connection headers; /robots.txt, like every other path, is a generated HTML page of directory-style links rather than a text/plain robots file or a 404. Matched: Sarracenia v1.2.4 (2026-11)."
+  - name: sarracenia-tarpit-any-method
+    id: 2783
+    port: 7277
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "DELETE /hd-{{rand}} HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*Pragma: no-cache\r\n.*\r\n\r\n(?:[0-9a-f]+\r\n)?<!DOCTYPE html>.*<a href="/[^"<>]+/">'
+        invert_match: false
+    confidence: Medium
+    comment: "The tarpit handler ignores the method: DELETE (like POST, PUT and HEAD) on a random path returns 200 and a generated page of directory-style links, where a genuine site returns 404, 405 or an error. Medium because catch-all applications exist. Matched: Sarracenia v1.2.4 (2026-11)."
+  - name: sarracenia-dashboard-title
+    id: 2784
+    port: 7278
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*<title>Sarracenia Dashboard</title>'
+        invert_match: false
+    confidence: High
+    comment: "The dashboard and API port serves the Sarracenia Dashboard page without authentication (the API behind it needs a key). The README warns not to expose this port. Matched: Sarracenia v1.2.4 (2026-11)."
+  - name: sarracenia-dashboard-api-js
+    id: 2785
+    port: 7278
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /static/js/api.js HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*\r\n\r\n.*\x27sarr-auth\x27: appState\.apiKey'
+        invert_match: false
+    confidence: High
+    comment: "The dashboard's static API wrapper sends the key in a 'sarr-auth' header, a name specific to Sarracenia. Matched: Sarracenia v1.2.4 (2026-11)."
+  - name: sarracenia-api-health-and-auth
+    id: 2786
+    port: 7278
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /api/health HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 200 OK\r\nContent-Type: application/json\r\nDate: [^\r\n]+\r\nContent-Length: 16\r\nConnection: close\r\n\r\n\{"status":"ok"\}$'
+        invert_match: false
+      - input_type: string
+        input: "GET /api/stats/summary HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        reconnect: true
+        output_match_type: regex
+        output: '^HTTP/1\.1 401 Unauthorized\r\nContent-Type: text/plain; charset=utf-8\r\nX-Content-Type-Options: nosniff\r\nDate: [^\r\n]+\r\nContent-Length: 13\r\nConnection: close\r\n\r\nUnauthorized$'
+        invert_match: false
+    confidence: Medium
+    comment: "Unauthenticated health check returning status ok as 16 bytes of JSON from Go net/http, and Go's plain-text 401 'Unauthorized' for /api/stats/summary without a sarr-auth key. Each half is generic Go behaviour; together on one port they are Sarracenia's API. Matched: Sarracenia v1.2.4 (2026-11)."
+  - name: sarracenia-tarpit-default-headers-80
+    id: 2787
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /hd-{{rand}}.php HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.[01] 200 OK\r\nCache-Control: no-store, no-cache\r\nContent-Security-Policy: default-src \x27self\x27; script-src \x27self\x27 \x27unsafe-inline\x27; style-src \x27self\x27 \x27unsafe-inline\x27;\r\nContent-Type: text/html; charset=utf-8\r\nExpires: 0\r\nPragma: no-cache\r\nDate: '
+        invert_match: false
+    confidence: High
+    comment: "Port 80 copy of 2780 (tarpit exposed on 80 or forwarded unchanged): default tarpit header block, no Server header. Matched: Sarracenia v1.2.4 (2026-11)."
+  - name: sarracenia-tarpit-default-template-80
+    id: 2788
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /hd-{{rand}}/ HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*\r\n\r\n(?:[0-9a-f]+\r\n)?<!DOCTYPE html>\n<html>\n<head>\n    <title>[^<\n]+\.</title>\n</head>\n<body>\n<h3>[^<\n]+\.</h3>\n<p>\n    [^<]+</p>\n<ul>\n(?:\s*<li><a href="/[^"<>]+/">[^<]+</a></li>){5}\s*</ul>\n<a href="/[^"<>]+/">[^<]+</a>\n</body>\n</html>'
+        invert_match: false
+    confidence: High
+    comment: "Port 80 copy of 2781: the shipped page.tmpl.html maze page. Survives a reverse proxy that rewrites headers. Matched: Sarracenia v1.2.4 (2026-11)."
+  - name: sarracenia-favicon-204-robots-maze-80
+    id: 2789
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /favicon.ico HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.1 204 No Content\r\nDate: [^\r\n]+\r\nConnection: close$'
+        invert_match: false
+      - input_type: string
+        input: "GET /robots.txt HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        reconnect: true
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*Content-Type: text/html.*\r\n\r\n.*<!DOCTYPE html>.*<a href="/[^"<>]+/">'
+        invert_match: false
+    confidence: High
+    comment: "Port 80 copy of 2782: bare 204 for /favicon.ico and a generated HTML maze page for /robots.txt. Matched: Sarracenia v1.2.4 (2026-11)."
