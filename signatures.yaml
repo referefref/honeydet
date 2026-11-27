@@ -23703,3 +23703,173 @@ signatures:
         invert_match: false
     confidence: High
     comment: "The Java sandbox (dataanalysis.war on Tomcat 9.0.0.M21) that evaluates deserialisation and JNDI payloads for the proxy: a JSON body posted to /dataanalysis/json/process returns the sandbox's counters {\"attack\":0,\"hijack\":0,\"exploit\":0}. Published on 18080 by the upstream compose file. Matched: Mimicry c4a3d21 (2026-11)."
+  - name: artillery-random-greeting-then-close-22
+    id: 2740
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '(?s)^(?:[\t\n\r\x20-\x7e]*[^\t\n\r\x20-\x7e]){100}'
+        invert_match: false
+      - input_type: hex
+        input: ""
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+    confidence: High
+    comment: "Artillery's honeypot listener on tcp/22 (SSH): unsolicited random data (5 to 30,000 bytes from os.urandom, different on every connection; at least 100 non-text bytes required) sent the moment the connection opens, then the connection is closed. Genuine: an SSH server sends a printable 'SSH-2.0-...' banner and keeps the connection open. Matched: Artillery 2.3 (commit 805a5d8, 2026-11)."
+  - name: artillery-random-greeting-then-close-21
+    id: 2741
+    port: 21
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '(?s)^(?:[\t\n\r\x20-\x7e]*[^\t\n\r\x20-\x7e]){100}'
+        invert_match: false
+      - input_type: hex
+        input: ""
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+    confidence: High
+    comment: "Artillery's honeypot listener on tcp/21 (FTP): unsolicited random data (5 to 30,000 bytes from os.urandom, different on every connection; at least 100 non-text bytes required) sent the moment the connection opens, then the connection is closed. Genuine: an FTP server sends a printable '220 ' greeting and waits for USER. Matched: Artillery 2.3 (commit 805a5d8, 2026-11)."
+  - name: artillery-random-greeting-then-close-25
+    id: 2742
+    port: 25
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '(?s)^(?:[\t\n\r\x20-\x7e]*[^\t\n\r\x20-\x7e]){100}'
+        invert_match: false
+      - input_type: hex
+        input: ""
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+    confidence: High
+    comment: "Artillery's honeypot listener on tcp/25 (SMTP): unsolicited random data (5 to 30,000 bytes from os.urandom, different on every connection; at least 100 non-text bytes required) sent the moment the connection opens, then the connection is closed. Genuine: an SMTP server sends a printable '220 ' greeting and waits for EHLO. Matched: Artillery 2.3 (commit 805a5d8, 2026-11)."
+  - name: artillery-random-greeting-then-close-110
+    id: 2743
+    port: 110
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '(?s)^(?:[\t\n\r\x20-\x7e]*[^\t\n\r\x20-\x7e]){100}'
+        invert_match: false
+      - input_type: hex
+        input: ""
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+    confidence: High
+    comment: "Artillery's honeypot listener on tcp/110 (POP3): unsolicited random data (5 to 30,000 bytes from os.urandom, different on every connection; at least 100 non-text bytes required) sent the moment the connection opens, then the connection is closed. Genuine: a POP3 server sends a printable '+OK' greeting and waits for a command. Matched: Artillery 2.3 (commit 805a5d8, 2026-11)."
+  - name: artillery-random-greeting-then-close-1433
+    id: 2744
+    port: 1433
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '(?s)^(?:[\t\n\r\x20-\x7e]*[^\t\n\r\x20-\x7e]){100}'
+        invert_match: false
+      - input_type: hex
+        input: ""
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+    confidence: High
+    comment: "Artillery's honeypot listener on tcp/1433 (MSSQL): unsolicited random data (5 to 30,000 bytes from os.urandom, different on every connection; at least 100 non-text bytes required) sent the moment the connection opens, then the connection is closed. Genuine: SQL Server sends nothing until the client's TDS pre-login packet. Matched: Artillery 2.3 (commit 805a5d8, 2026-11)."
+  - name: artillery-random-greeting-then-close-1723
+    id: 2745
+    port: 1723
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '(?s)^(?:[\t\n\r\x20-\x7e]*[^\t\n\r\x20-\x7e]){100}'
+        invert_match: false
+      - input_type: hex
+        input: ""
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+    confidence: High
+    comment: "Artillery's honeypot listener on tcp/1723 (PPTP): unsolicited random data (5 to 30,000 bytes from os.urandom, different on every connection; at least 100 non-text bytes required) sent the moment the connection opens, then the connection is closed. Genuine: a PPTP server sends nothing until the client's Start-Control-Connection-Request. Matched: Artillery 2.3 (commit 805a5d8, 2026-11)."
+  - name: artillery-random-greeting-then-close-5060
+    id: 2746
+    port: 5060
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '(?s)^(?:[\t\n\r\x20-\x7e]*[^\t\n\r\x20-\x7e]){100}'
+        invert_match: false
+      - input_type: hex
+        input: ""
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+    confidence: High
+    comment: "Artillery's honeypot listener on tcp/5060 (SIP): unsolicited random data (5 to 30,000 bytes from os.urandom, different on every connection; at least 100 non-text bytes required) sent the moment the connection opens, then the connection is closed. Genuine: a SIP server on TCP sends nothing until it receives a request. Matched: Artillery 2.3 (commit 805a5d8, 2026-11)."
+  - name: artillery-random-greeting-then-close-5900
+    id: 2747
+    port: 5900
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '(?s)^(?:[\t\n\r\x20-\x7e]*[^\t\n\r\x20-\x7e]){100}'
+        invert_match: false
+      - input_type: hex
+        input: ""
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+    confidence: High
+    comment: "Artillery's honeypot listener on tcp/5900 (VNC): unsolicited random data (5 to 30,000 bytes from os.urandom, different on every connection; at least 100 non-text bytes required) sent the moment the connection opens, then the connection is closed. Genuine: a VNC server sends a printable 'RFB 003.00x' version string and waits for the client's. Matched: Artillery 2.3 (commit 805a5d8, 2026-11)."
+  - name: artillery-random-greeting-then-close-8080
+    id: 2748
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '(?s)^(?:[\t\n\r\x20-\x7e]*[^\t\n\r\x20-\x7e]){100}'
+        invert_match: false
+      - input_type: hex
+        input: ""
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+    confidence: High
+    comment: "Artillery's honeypot listener on tcp/8080 (HTTP): unsolicited random data (5 to 30,000 bytes from os.urandom, different on every connection; at least 100 non-text bytes required) sent the moment the connection opens, then the connection is closed. Genuine: an HTTP server or proxy sends nothing until it receives a request. Matched: Artillery 2.3 (commit 805a5d8, 2026-11)."
+  - name: artillery-random-greeting-then-close-10000
+    id: 2749
+    port: 10000
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '(?s)^(?:[\t\n\r\x20-\x7e]*[^\t\n\r\x20-\x7e]){100}'
+        invert_match: false
+      - input_type: hex
+        input: ""
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+    confidence: High
+    comment: "Artillery's honeypot listener on tcp/10000 (Webmin): unsolicited random data (5 to 30,000 bytes from os.urandom, different on every connection; at least 100 non-text bytes required) sent the moment the connection opens, then the connection is closed. Genuine: Webmin (HTTP or HTTPS) sends nothing until the client speaks. Matched: Artillery 2.3 (commit 805a5d8, 2026-11)."
