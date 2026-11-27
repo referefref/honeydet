@@ -23631,3 +23631,75 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: "With Host juggler.test.com and 'rule: lfi_shadow' the example plugin returns the shipped html/etc_shadow.html, a three-line fake /etc/shadow whose root entry always has the same salt (kcgcu794R0VP3fDL) and whose other entries share the date 17632 (2018-04-11). Disappears when the example plugin or etc_shadow.html is changed. Matched: Juggler 9a6a062 (2026-11)."
+  - name: mimicry-shell-sandbox-version-handshake
+    id: 2720
+    port: 2022
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: "77616e77616e303030"
+        output_match_type: regex
+        output: '^ok$'
+        invert_match: false
+    confidence: High
+    comment: "The shell sandbox (honeypot/shell/init) sends nothing on connect; the nine-byte version check that the deception payload sends first ('wanwan000') is answered with exactly 'ok' and the connection is closed. Compiled into the binary. Matched: Mimicry c4a3d21 (2026-11)."
+  - name: mimicry-webshell-sandbox-auth-realm
+    id: 2721
+    port: 3389
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 401 Unauthorized\r\n.*Server: nginx/[^\r\n]*\r\n.*WWW-Authenticate: Basic realm="my auth"\r\n'
+        invert_match: false
+    confidence: Medium
+    comment: "The webshell sandbox is nginx (1.18.0 on Ubuntu 20.04) on port 3389, a port where an RDP server is expected, behind HTTP Basic authentication with the realm 'my auth' from the upstream site configuration (honeypot/nginx/default). The realm is a configurable default, hence Medium. Matched: Mimicry c4a3d21 (2026-11)."
+  - name: mimicry-webshell-sandbox-php-status
+    id: 2722
+    port: 3389
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /prod_php/status.php HTTP/1.1\r\nHost: x\r\nAuthorization: Basic YWRtaW46YWRtaW4=\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*X-Powered-By: PHP/5\.6\.[0-9]+\r\n(?:.*\r\n)?\r\nok$'
+        invert_match: false
+    confidence: High
+    comment: "With the account the mimicry-tools webshell stub hard-codes (admin:admin, compiled into the tool), /prod_php/status.php in the sandbox answers 'ok' from PHP 5.6. The status page and account are part of the migration protocol. Matched: Mimicry c4a3d21 (2026-11)."
+  - name: mimicry-webshell-sandbox-jsp-status
+    id: 2723
+    port: 3389
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /prod_jsp/status.jsp HTTP/1.1\r\nHost: x\r\nAuthorization: Basic YWRtaW46YWRtaW4=\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 \r\n.*Set-Cookie: JPSESSIONID=[0-9A-F]{32}; Path=/prod_jsp; HttpOnly\r\n(?:.*\r\n)?\r\nok$'
+        invert_match: false
+    confidence: High
+    comment: "The JSP side of the webshell sandbox: /prod_jsp/status.jsp, proxied by nginx to Tomcat, answers 'ok' and sets a session cookie named JPSESSIONID (the upstream context.xml renames Tomcat's JSESSIONID). Matched: Mimicry c4a3d21 (2026-11)."
+  - name: mimicry-file-sandbox-readfile
+    id: 2724
+    port: 8888
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /readfile HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 OK\r\n.*Content-Type: text/plain; charset=utf-8\r\n(?:.*\r\n)?\r\nopen : no such file or directory$'
+        invert_match: false
+    confidence: High
+    comment: "The file-inclusion sandbox (honeypot/fileinclude/server, Go) used by the proxy for fake local file inclusion: /readfile without a path parameter returns 200 with the raw Go error 'open : no such file or directory'. Published on 8888 by the upstream compose file. Matched: Mimicry c4a3d21 (2026-11)."
+  - name: mimicry-java-sandbox-json-counters
+    id: 2725
+    port: 18080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST /dataanalysis/json/process HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nContent-Length: 7\r\nConnection: close\r\n\r\n{\"a\":1}"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 \r\n.*\{"attack":[0-9]+,"hijack":[0-9]+,"exploit":[0-9]+\}'
+        invert_match: false
+    confidence: High
+    comment: "The Java sandbox (dataanalysis.war on Tomcat 9.0.0.M21) that evaluates deserialisation and JNDI payloads for the proxy: a JSON body posted to /dataanalysis/json/process returns the sandbox's counters {\"attack\":0,\"hijack\":0,\"exploit\":0}. Published on 18080 by the upstream compose file. Matched: Mimicry c4a3d21 (2026-11)."
