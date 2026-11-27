@@ -24104,3 +24104,151 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: "SMTP form of 2768: Honeyd's Sendmail script run with dash greets with '-e 220 ...', the literal '-e ' that dash's echo prints. No SMTP server sends that. Medium: only deployments that run the scripts with dash. Matched: Honeyd 1.6d (DataSoft a0f3d64) with scripts/linux/sendmail.sh run by sh (dash 0.5.12) (2026-11)."
+  - name: pyison-title-from-url
+    id: 2770
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /hd{{rand}}/alpha_beta-gamma HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.0 200 OK\r\nServer: BaseHTTP/0\.6 Python/[0-9.]+\r\nDate: [^\r\n]+\r\nContent-Type: text/html\r\n\r\n<!DOCTYPE html>.*Alpha Beta Gamma'
+        invert_match: false
+    confidence: High
+    comment: "Any path under the document root is a 200 HTML page whose title is the last path segment with the spacing characters (_ - %20) turned into spaces and title-cased: /hd<token>/alpha_beta-gamma becomes 'Alpha Beta Gamma'. The response comes from Python's BaseHTTPRequestHandler (HTTP/1.0, Server: BaseHTTP/0.6, Content-Type with no charset and no Content-Length). A genuine site returns 404 for an invented path, and Python's own http.server reports SimpleHTTP. Behind a reverse proxy the status line and Server header change. Matched: Pyison adf48d8 (2026-11)."
+  - name: pyison-any-stylesheet-path
+    id: 2771
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /hd{{rand}}/{{rand}}.css HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.0 200 OK\r\nServer: BaseHTTP/0\.6 Python/[0-9.]+\r\nDate: [^\r\n]+\r\nContent-Type: text/css\r\n\r\n'
+        invert_match: false
+    confidence: High
+    comment: "Any path ending in .css (likewise .png, .jpg, .ico) is answered with 200 and the configured file, whatever the directory or name, with bare BaseHTTPRequestHandler headers (no Content-Length, no Last-Modified). Genuine servers return 404 for an invented file. Matched: Pyison adf48d8 (2026-11)."
+  - name: pyison-silent-close-unknown-extension-and-post
+    id: 2772
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /hd{{rand}}/a_b HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.0 200 OK\r\nServer: BaseHTTP/0\.6 Python/[0-9.]+\r\nDate: [^\r\n]+\r\nContent-Type: text/html\r\n\r\n'
+        invert_match: false
+      - input_type: string
+        input: "GET /hd{{rand}}.php HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r"
+        reconnect: true
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+        max_response_ms: 1500
+      - input_type: string
+        input: "POST / HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: 3\r\nConnection: close\r\n\r\na=b"
+        reconnect: true
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+        max_response_ms: 1500
+    confidence: High
+    comment: "The server serves generated HTML for paths without a file extension, but a path with any other three-letter extension (.php, .txt, .zip, .env) and every POST, PUT or DELETE request is closed at once without a single byte: the handler sets a 404 status but never sends the headers. A genuine server answers both with a status line. The README describes POST and PUT as answered with 404. Matched: Pyison adf48d8 (2026-11)."
+  - name: pyison-query-string-empty-title
+    id: 2773
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /?hd={{rand}} HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.0 200 OK\r\nServer: BaseHTTP/0\.6 Python/[0-9.]+\r\nDate: [^\r\n]+\r\nContent-Type: text/html\r\n\r\n.*<title> \| </title>'
+        invert_match: false
+    confidence: Medium
+    comment: "A query string on the home page makes the request differ from the document root, so the page title and parent title are both empty and the default template's title reads ' | ' (the home page itself is 'Home | '). Medium: depends on the default template (assets/template.html), which the README encourages operators to change. Matched: Pyison adf48d8 (2026-11)."
+  - name: pyison-png-served-as-jpeg
+    id: 2774
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /hd{{rand}}/{{rand}}.png HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r"
+        output_match_type: hex
+        output: "436f6e74656e742d547970653a20696d6167652f706e670d0a0d0affd8ffe0"
+        invert_match: false
+    confidence: Medium
+    comment: "Any .png path returns the default 'PNG' logo, which is JPEG data (starts FF D8 FF E0) labelled Content-Type: image/png, from the BaseHTTP server. Medium: depends on the default assets/logo.png, which operators may replace. Matched: Pyison adf48d8 (2026-11)."
+  - name: pyison-title-from-url-8080
+    id: 2775
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /hd{{rand}}/alpha_beta-gamma HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.0 200 OK\r\nServer: BaseHTTP/0\.6 Python/[0-9.]+\r\nDate: [^\r\n]+\r\nContent-Type: text/html\r\n\r\n<!DOCTYPE html>.*Alpha Beta Gamma'
+        invert_match: false
+    confidence: High
+    comment: "Any path under the document root is a 200 HTML page whose title is the last path segment with the spacing characters (_ - %20) turned into spaces and title-cased: /hd<token>/alpha_beta-gamma becomes 'Alpha Beta Gamma'. The response comes from Python's BaseHTTPRequestHandler (HTTP/1.0, Server: BaseHTTP/0.6, Content-Type with no charset and no Content-Length). A genuine site returns 404 for an invented path, and Python's own http.server reports SimpleHTTP. Behind a reverse proxy the status line and Server header change. Matched: Pyison adf48d8 (2026-11)."
+  - name: pyison-any-stylesheet-path-8080
+    id: 2776
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /hd{{rand}}/{{rand}}.css HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.0 200 OK\r\nServer: BaseHTTP/0\.6 Python/[0-9.]+\r\nDate: [^\r\n]+\r\nContent-Type: text/css\r\n\r\n'
+        invert_match: false
+    confidence: High
+    comment: "Any path ending in .css (likewise .png, .jpg, .ico) is answered with 200 and the configured file, whatever the directory or name, with bare BaseHTTPRequestHandler headers (no Content-Length, no Last-Modified). Genuine servers return 404 for an invented file. Matched: Pyison adf48d8 (2026-11)."
+  - name: pyison-silent-close-unknown-extension-and-post-8080
+    id: 2777
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /hd{{rand}}/a_b HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '^HTTP/1\.0 200 OK\r\nServer: BaseHTTP/0\.6 Python/[0-9.]+\r\nDate: [^\r\n]+\r\nContent-Type: text/html\r\n\r\n'
+        invert_match: false
+      - input_type: string
+        input: "GET /hd{{rand}}.php HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r"
+        reconnect: true
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+        max_response_ms: 1500
+      - input_type: string
+        input: "POST / HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: 3\r\nConnection: close\r\n\r\na=b"
+        reconnect: true
+        output_match_type: no-response
+        output: ""
+        invert_match: false
+        max_response_ms: 1500
+    confidence: High
+    comment: "The server serves generated HTML for paths without a file extension, but a path with any other three-letter extension (.php, .txt, .zip, .env) and every POST, PUT or DELETE request is closed at once without a single byte: the handler sets a 404 status but never sends the headers. A genuine server answers both with a status line. The README describes POST and PUT as answered with 404. Matched: Pyison adf48d8 (2026-11)."
+  - name: pyison-query-string-empty-title-8080
+    id: 2778
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /?hd={{rand}} HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.0 200 OK\r\nServer: BaseHTTP/0\.6 Python/[0-9.]+\r\nDate: [^\r\n]+\r\nContent-Type: text/html\r\n\r\n.*<title> \| </title>'
+        invert_match: false
+    confidence: Medium
+    comment: "A query string on the home page makes the request differ from the document root, so the page title and parent title are both empty and the default template's title reads ' | ' (the home page itself is 'Home | '). Medium: depends on the default template (assets/template.html), which the README encourages operators to change. Matched: Pyison adf48d8 (2026-11)."
+  - name: pyison-png-served-as-jpeg-8080
+    id: 2779
+    port: 8080
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /hd{{rand}}/{{rand}}.png HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r"
+        output_match_type: hex
+        output: "436f6e74656e742d547970653a20696d6167652f706e670d0a0d0affd8ffe0"
+        invert_match: false
+    confidence: Medium
+    comment: "Any .png path returns the default 'PNG' logo, which is JPEG data (starts FF D8 FF E0) labelled Content-Type: image/png, from the BaseHTTP server. Medium: depends on the default assets/logo.png, which operators may replace. Matched: Pyison adf48d8 (2026-11)."
