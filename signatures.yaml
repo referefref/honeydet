@@ -121,7 +121,7 @@ signatures:
         output: bad version 1111
         invert_match: false
     confidence: High
-    comment: "Twisted Conch rejects the malformed version with 'bad version'. Matches OpenCanary 0.9.10 and Cowrie before 3.x; Cowrie 3.1.3 replies 'Invalid SSH identification string.' like OpenSSH (see ids 43-49). Also matches twisted-honeypots 0a83d90 SSH (2026-11). Also matches HonSSH 821ce87 and honssh-nx 0b1761c (2026-11). Also matches Kojoney2 a1b653a and kojoney2-nx 5aac7a7 (2026-11). Also matches MockSSH 2.0.0 (4cb930c, 2026-11)."
+    comment: "Twisted Conch rejects the malformed version with 'bad version'. Matches OpenCanary 0.9.10 and Cowrie before 3.x; Cowrie 3.1.3 replies 'Invalid SSH identification string.' like OpenSSH (see ids 43-49). Also matches twisted-honeypots 0a83d90 SSH (2026-11). Also matches HonSSH 821ce87 and honssh-nx 0b1761c (2026-11). Also matches Kojoney2 a1b653a and kojoney2-nx 5aac7a7 (2026-11). Also matches MockSSH 2.0.0 (4cb930c, 2026-11). Not Cowrie 3.1.6 or 3.1.8 (2026-11)."
   # WOWHoneypot blocks a scanner after four bad connections, so its signatures run before other web-port signatures
   # wowhoneypot (ids 460-469)
   - name: wowhoneypot-default-page-direct
@@ -842,7 +842,7 @@ signatures:
         output: '^\$\$$'
         invert_match: false
     confidence: High
-    comment: "Requires -u/-pw (Cowrie accepts any root password except root/123456). Cowrie's shell does not expand $$; a real shell prints its PID. Behavioural, survives config changes. Also fires on sshesame v0.0.39 when credentials are supplied (2026-11). Also matches Cyanide 1.1.2 (2026-11). Matched: Cowrie 3.1.3; not Cowrie 3.1.7 (2026-11). Also matches the Cowrie 2.2.0 sensor bundled with CHN 1.9.1 (2026-11)."
+    comment: "Requires -u/-pw (Cowrie accepts any root password except root/123456). Cowrie's shell does not expand $$; a real shell prints its PID. Behavioural, survives config changes. Also fires on sshesame v0.0.39 when credentials are supplied (2026-11). Also matches Cyanide 1.1.2 (2026-11). Matched: Cowrie 3.1.3; not Cowrie 3.1.7 (2026-11). Also matches the Cowrie 2.2.0 sensor bundled with CHN 1.9.1 (2026-11). Not Cowrie 3.1.6 or 3.1.8 either, which print the shell's PID (2026-11)."
   - name: cowrie-no-arithmetic-expansion
     id: 44
     port: 22
@@ -854,7 +854,7 @@ signatures:
         output: "6*7: command not found"
         invert_match: false
     confidence: High
-    comment: "Requires -u/-pw (Cowrie accepts any root password except root/123456). Cowrie treats $((6*7)) as a command; a real POSIX shell prints 42. Behavioural. Matched: Cowrie 3.1.3; not Cowrie 3.1.7 (2026-11)."
+    comment: "Requires -u/-pw (Cowrie accepts any root password except root/123456). Cowrie treats $((6*7)) as a command; a real POSIX shell prints 42. Behavioural. Matched: Cowrie 3.1.3; not Cowrie 3.1.7 (2026-11). Not Cowrie 3.1.6 or 3.1.8 either, which print 42 (2026-11)."
   - name: cowrie-exec-format-error
     id: 45
     port: 22
@@ -866,7 +866,7 @@ signatures:
         output: "cannot execute binary file: Exec format error"
         invert_match: false
     confidence: High
-    comment: "Requires -u/-pw (Cowrie accepts any root password except root/123456). Binaries present in the fake filesystem but not implemented as commands return Exec format error (shell/protocol.py). Also matches the Cowrie 3.1.7 bundled with DShield Sensor 9064593 (2026-11)."
+    comment: "Requires -u/-pw (Cowrie accepts any root password except root/123456). Binaries present in the fake filesystem but not implemented as commands return Exec format error (shell/protocol.py). Also matches the Cowrie 3.1.7 bundled with DShield Sensor 9064593 (2026-11). Matched: Cowrie 3.1.3.dev11, 3.1.6 and 3.1.8 (cowrie/cowrie images, default settings, with credentials) (2026-11)."
   - name: cowrie-invalid-ipv6-link-local
     id: 46
     port: 22
@@ -878,7 +878,7 @@ signatures:
         output: 'inet6 addr: fe([0-7][0-9a-f]|8[1-9a-f]|9[0-9a-f]|[a-f][0-9a-f])::'
         invert_match: false
     confidence: High
-    comment: "Requires -u/-pw (Cowrie accepts any root password except root/123456). commands/ifconfig.py builds the link-local address as fe<random byte>::; real link-local is always fe80::. Wrong in 255 of 256 process starts. Also matches the Cowrie 3.1.7 bundled with DShield Sensor 9064593 (2026-11). Also matches the Cowrie 2.2.0 sensor bundled with CHN 1.9.1 (2026-11)."
+    comment: "Requires -u/-pw (Cowrie accepts any root password except root/123456). commands/ifconfig.py builds the link-local address as fe<random byte>::; real link-local is always fe80::. Wrong in 255 of 256 process starts. Also matches the Cowrie 3.1.7 bundled with DShield Sensor 9064593 (2026-11). Also matches the Cowrie 2.2.0 sensor bundled with CHN 1.9.1 (2026-11). Matched: Cowrie 3.1.3.dev11, 3.1.6 and 3.1.8 (cowrie/cowrie images, default settings, with credentials) (2026-11)."
   - name: cowrie-default-user-phil
     id: 47
     port: 22
@@ -890,7 +890,7 @@ signatures:
         output: "Phil California"
         invert_match: false
     confidence: Medium
-    comment: "Requires -u/-pw (Cowrie accepts any root password except root/123456). Default fake /etc/passwd contains user phil (Phil California). Removed if the operator rebuilds fs.pickle. Also matches the Cowrie 3.1.7 bundled with DShield Sensor 9064593 (2026-11). Also matches the Cowrie 2.2.0 sensor bundled with CHN 1.9.1 (2026-11)."
+    comment: "Requires -u/-pw (Cowrie accepts any root password except root/123456). Default fake /etc/passwd contains user phil (Phil California). Removed if the operator rebuilds fs.pickle. Also matches the Cowrie 3.1.7 bundled with DShield Sensor 9064593 (2026-11). Also matches the Cowrie 2.2.0 sensor bundled with CHN 1.9.1 (2026-11). Matched: Cowrie 3.1.3.dev11, 3.1.6 and 3.1.8 (cowrie/cowrie images, default settings, with credentials) (2026-11)."
   - name: cowrie-default-hostname
     id: 48
     port: 22
@@ -902,7 +902,7 @@ signatures:
         output: '^svr04$'
         invert_match: false
     confidence: Medium
-    comment: "Requires -u/-pw (Cowrie accepts any root password except root/123456). Default hostname in cowrie.cfg.dist is svr04."
+    comment: "Requires -u/-pw (Cowrie accepts any root password except root/123456). Default hostname in cowrie.cfg.dist is svr04. Matched: Cowrie 3.1.3.dev11, 3.1.6 and 3.1.8 (cowrie/cowrie images, default settings, with credentials) (2026-11)."
   - name: cowrie-busybox-1-20-2
     id: 49
     port: 22
@@ -914,7 +914,7 @@ signatures:
         output: "BusyBox v1.20.2 (Debian 1:1.20.0-7)"
         invert_match: false
     confidence: Medium
-    comment: "Requires -u/-pw (Cowrie accepts any root password except root/123456). Hard-coded BusyBox 1.20.2 banner (2012) on a host claiming a 2024 Debian 12 kernel. Also matches the Cowrie 3.1.7 bundled with DShield Sensor 9064593 (2026-11). Also matches the Cowrie 2.2.0 sensor bundled with CHN 1.9.1 (2026-11)."
+    comment: "Requires -u/-pw (Cowrie accepts any root password except root/123456). Hard-coded BusyBox 1.20.2 banner (2012) on a host claiming a 2024 Debian 12 kernel. Also matches the Cowrie 3.1.7 bundled with DShield Sensor 9064593 (2026-11). Also matches the Cowrie 2.2.0 sensor bundled with CHN 1.9.1 (2026-11). Matched: Cowrie 3.1.3.dev11, 3.1.6 and 3.1.8 (cowrie/cowrie images, default settings, with credentials) (2026-11)."
   - name: dionaea-mysql-static-greeting
     id: 50
     port: 3306
@@ -15222,7 +15222,7 @@ signatures:
         output: '(?s)aes128-ctr,aes192-ctr,aes256-ctr,aes256-cbc,aes192-cbc,aes128-cbc,3des-cbc,blowfish-cbc,cast128-cbc.{4}aes128-ctr.*hmac-sha2-512,hmac-sha2-384,hmac-sha2-56,hmac-sha1,hmac-md5.{4}hmac-sha2-512,hmac-sha2-384,hmac-sha2-56,hmac-sha1,hmac-md5'
         invert_match: false
     confidence: High
-    comment: "T-Pot's Cowrie picks one of eleven personas at each start (Debian, Ubuntu, RHEL and Fedora servers, OpenWrt, D-Link, TP-Link and Ubiquiti routers, QNAP, Synology and Zyxel NAS), each with its own SSH banner (OpenSSH 7.4 to 9.2 or dropbear 2012.55 to 2017.75) and hostname, so banner and shell signatures written for Cowrie's defaults miss it. Every persona's cowrie.cfg sets the same algorithm lists, and the KEXINIT gives them away whatever the banner: a MAC list that offers 'hmac-sha2-56', which is not an SSH algorithm (a typo for hmac-sha2-256), and ciphers that still include blowfish-cbc and cast128-cbc. OpenSSH and dropbear never offer a non-existent MAC; Cowrie with its default configuration (cowrie/cowrie image) offers hmac-sha2-256 and no blowfish. Matched: T-Pot 24.04.1 images (Cowrie 3.0.1 with personas), tpotce 6792236 (2026-11). Also matches the Cowrie 2.2.0 sensor bundled with CHN 1.9.1 (2026-11)."
+    comment: "T-Pot's Cowrie picks one of eleven personas at each start (Debian, Ubuntu, RHEL and Fedora servers, OpenWrt, D-Link, TP-Link and Ubiquiti routers, QNAP, Synology and Zyxel NAS), each with its own SSH banner (OpenSSH 7.4 to 9.2 or dropbear 2012.55 to 2017.75) and hostname, so banner and shell signatures written for Cowrie's defaults miss it. Every persona's cowrie.cfg sets the same algorithm lists, and the KEXINIT gives them away whatever the banner: a MAC list that offers 'hmac-sha2-56', which is not an SSH algorithm (a typo for hmac-sha2-256), and ciphers that still include blowfish-cbc and cast128-cbc. OpenSSH and dropbear never offer a non-existent MAC; Cowrie with its default configuration (cowrie/cowrie image) offers hmac-sha2-256 and no blowfish. Matched: T-Pot 24.04.1 images (Cowrie 3.0.1 with personas), tpotce 6792236 (2026-11). Also matches the Cowrie 2.2.0 sensor bundled with CHN 1.9.1 (2026-11). Not stock Cowrie 3.1.3, 3.1.6 or 3.1.8 (2026-11)."
   - name: tpot-mailoney-schizo-relay-container-hostname
     id: 1473
     port: 25
@@ -20023,7 +20023,7 @@ signatures:
         output: '(?s)curve25519-sha256.*ssh-ed25519.{4}aes128-ctr,aes192-ctr,aes256-ctr,aes256-cbc,aes192-cbc,aes128-cbc,3des-cbc,cast128-cbc.{4}aes128-ctr,aes192-ctr,aes256-ctr,aes256-cbc,aes192-cbc,aes128-cbc,3des-cbc,cast128-cbc.{4}hmac-sha2-512,hmac-sha2-384,hmac-sha2-256,hmac-sha1,hmac-md5.{4}'
         invert_match: false
     confidence: High
-    comment: "The DShield installer configures its Cowrie with the identification of Debian 7's OpenSSH 6.0p1 (2012) and a fixed cipher list (aes-ctr, aes-cbc, 3des-cbc, cast128-cbc) and MAC list, while Cowrie's Twisted key exchange still offers curve25519-sha256 (and mlkem768x25519-sha256) and an ssh-ed25519 host key, which OpenSSH gained only in 6.5 and 9.9. Genuine OpenSSH 6.0p1 offers neither; stock Cowrie uses a 9.2p1 identification; T-Pot's personas offer blowfish-cbc and hmac-sha2-56; sshForShits (same identification, Go) starts its ciphers with AES-GCM. The algorithm lists are stock Cowrie's, so any Cowrie given this identification (for years it was Cowrie's own default) also matches, which is still a Cowrie detection. Steps: read the identification; send a client identification and read the server KEXINIT. Matched: DShield Sensor 9064593 (install.sh v102), Cowrie 3.1.7 (2026-11)."
+    comment: "The DShield installer configures its Cowrie with the identification of Debian 7's OpenSSH 6.0p1 (2012) and a fixed cipher list (aes-ctr, aes-cbc, 3des-cbc, cast128-cbc) and MAC list, while Cowrie's Twisted key exchange still offers curve25519-sha256 (and mlkem768x25519-sha256) and an ssh-ed25519 host key, which OpenSSH gained only in 6.5 and 9.9. Genuine OpenSSH 6.0p1 offers neither; stock Cowrie uses a 9.2p1 identification; T-Pot's personas offer blowfish-cbc and hmac-sha2-56; sshForShits (same identification, Go) starts its ciphers with AES-GCM. The algorithm lists are stock Cowrie's, so any Cowrie given this identification (for years it was Cowrie's own default) also matches, which is still a Cowrie detection. Steps: read the identification; send a client identification and read the server KEXINIT. Matched: DShield Sensor 9064593 (install.sh v102), Cowrie 3.1.7 (2026-11). Not stock Cowrie 3.1.3, 3.1.6 or 3.1.8, whose default identification is OpenSSH 9.2p1 (2026-11)."
   - name: dshield-sensor-cowrie-debian7-banner-modern-kex-2222
     id: 2267
     port: 2222
@@ -20040,7 +20040,7 @@ signatures:
         output: '(?s)curve25519-sha256.*ssh-ed25519.{4}aes128-ctr,aes192-ctr,aes256-ctr,aes256-cbc,aes192-cbc,aes128-cbc,3des-cbc,cast128-cbc.{4}aes128-ctr,aes192-ctr,aes256-ctr,aes256-cbc,aes192-cbc,aes128-cbc,3des-cbc,cast128-cbc.{4}hmac-sha2-512,hmac-sha2-384,hmac-sha2-256,hmac-sha1,hmac-md5.{4}'
         invert_match: false
     confidence: High
-    comment: "As 2266 on port 2222, where the sensor's Cowrie listens and which its firewall opens directly. Matched: DShield Sensor 9064593 (install.sh v102), Cowrie 3.1.7 (2026-11)."
+    comment: "As 2266 on port 2222, where the sensor's Cowrie listens and which its firewall opens directly. Matched: DShield Sensor 9064593 (install.sh v102), Cowrie 3.1.7 (2026-11). Not stock Cowrie 3.1.3, 3.1.6 or 3.1.8, whose default identification is OpenSSH 9.2p1 (2026-11)."
   - name: hfish-web-template-tomcat-decoy-headers
     id: 2270
     port: 80
@@ -24629,3 +24629,71 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: "Greeting fields after the first salt part: capabilities 0xf7ff (no TLS), character set 0xc0 (utf8mb4_unicode_ci), status 0x0002, extended capabilities 0x81ff and ten reserved zero bytes, unchanged if the version text or salt were edited. None of the genuine servers tested has this combination (MySQL 5.6 0xf7ff/0x08/0x807f; 5.7.44 0xffff/0x08/0xc1ff; 8.x and 9.x 0xffff/0xff/0xdfff; MariaDB 0xf7fe or 0xfffe/0x2d/0x81ff), but a genuine MySQL 5.7 built without TLS and configured for utf8mb4_unicode_ci could send it. Matched: MythSQL 7a567ea (2026-11)."
+  - name: cowrie-kexinit-default-algorithms
+    id: 3900
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^SSH-2\.0-'
+        invert_match: false
+      - input_type: string
+        input: "SSH-2.0-OpenSSH_9.2p1\r"
+        output_match_type: regex
+        output: '(?s)aes128-ctr,aes192-ctr,aes256-ctr,aes256-cbc,aes192-cbc,aes128-cbc,3des-cbc,cast128-cbc.{4}aes128-ctr,aes192-ctr,aes256-ctr,aes256-cbc,aes192-cbc,aes128-cbc,3des-cbc,cast128-cbc.{4}hmac-sha2-512,hmac-sha2-384,hmac-sha2-256,hmac-sha1,hmac-md5.{4}hmac-sha2-512,hmac-sha2-384,hmac-sha2-256,hmac-sha1,hmac-md5.{4}zlib@openssh\.com,zlib,none.{4}zlib@openssh\.com,zlib,none'
+        invert_match: false
+    confidence: High
+    comment: "Cowrie's SSH transport sends its own fixed algorithm lists whatever identification it claims: ciphers ending in 3des-cbc and cast128-cbc, MACs ending in hmac-md5, and pre-authentication 'zlib' compression, behind an OpenSSH identification (default 'OpenSSH_9.2p1 Debian-2+deb12u3'). OpenSSH has not offered cast128-cbc, 3des-cbc, hmac-md5 or pre-authentication zlib by default since 7.4, and Debian 12's 9.2p1 offers chacha20-poly1305, AES-GCM and the etm MACs instead. No credentials needed. The lists come from the [ssh] ciphers, macs and compression settings, so an operator who edits them removes the tell (T-Pot's personas do). Steps: read the identification; send a client identification and read the server KEXINIT. Matched: Cowrie 3.1.8 (cowrie/cowrie:3.1.8 image) and 3.1.6 (cowrie/cowrie:latest of 2026-11-06), Cowrie 3.1.3.dev11 c7773f49 (2026-11). Also matches the Cowrie 3.1.7 bundled with DShield Sensor 9064593 (2026-11)."
+  - name: cowrie-kexinit-default-algorithms-2222
+    id: 3901
+    port: 2222
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^SSH-2\.0-'
+        invert_match: false
+      - input_type: string
+        input: "SSH-2.0-OpenSSH_9.2p1\r"
+        output_match_type: regex
+        output: '(?s)aes128-ctr,aes192-ctr,aes256-ctr,aes256-cbc,aes192-cbc,aes128-cbc,3des-cbc,cast128-cbc.{4}aes128-ctr,aes192-ctr,aes256-ctr,aes256-cbc,aes192-cbc,aes128-cbc,3des-cbc,cast128-cbc.{4}hmac-sha2-512,hmac-sha2-384,hmac-sha2-256,hmac-sha1,hmac-md5.{4}hmac-sha2-512,hmac-sha2-384,hmac-sha2-256,hmac-sha1,hmac-md5.{4}zlib@openssh\.com,zlib,none.{4}zlib@openssh\.com,zlib,none'
+        invert_match: false
+    confidence: High
+    comment: "As 3900 on port 2222, Cowrie's default listening port. Cowrie's SSH transport sends its own fixed algorithm lists whatever identification it claims: ciphers ending in 3des-cbc and cast128-cbc, MACs ending in hmac-md5, and pre-authentication 'zlib' compression, behind an OpenSSH identification (default 'OpenSSH_9.2p1 Debian-2+deb12u3'). OpenSSH has not offered cast128-cbc, 3des-cbc, hmac-md5 or pre-authentication zlib by default since 7.4, and Debian 12's 9.2p1 offers chacha20-poly1305, AES-GCM and the etm MACs instead. No credentials needed. The lists come from the [ssh] ciphers, macs and compression settings, so an operator who edits them removes the tell (T-Pot's personas do). Steps: read the identification; send a client identification and read the server KEXINIT. Matched: Cowrie 3.1.8 (cowrie/cowrie:3.1.8 image) and 3.1.6 (cowrie/cowrie:latest of 2026-11-06), Cowrie 3.1.3.dev11 c7773f49 (2026-11). Also matches the Cowrie 3.1.7 bundled with DShield Sensor 9064593 (2026-11)."
+  - name: cowrie-31x-mlkem-kex-under-older-openssh-banner
+    id: 3902
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^SSH-2\.0-OpenSSH_([1-8]\.|9\.[0-8]p)'
+        invert_match: false
+      - input_type: string
+        input: "SSH-2.0-OpenSSH_9.2p1\r"
+        output_match_type: regex
+        output: '(?s)mlkem768x25519-sha256,curve25519-sha256,curve25519-sha256@libssh\.org,ecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521,diffie-hellman-group14-sha1,ext-info-s.{4}ssh-rsa,ecdsa-sha2-nistp256,ssh-ed25519.{4}aes128-ctr,aes192-ctr,aes256-ctr,aes256-cbc,aes192-cbc,aes128-cbc,3des-cbc,cast128-cbc'
+        invert_match: false
+    confidence: High
+    comment: "Cowrie 3.1.6 and later (on Twisted 26.10) offer a key exchange list no OpenSSH release sends: mlkem768x25519-sha256 (added in OpenSSH 9.9) first, no sntrup761x25519, no strict-kex marker, no Diffie-Hellman group exchange and diffie-hellman-group14-sha1 last, while the identification claims an earlier OpenSSH (default 'OpenSSH_9.2p1 Debian-2+deb12u3'). Genuine Debian 12 OpenSSH 9.2p1 offers sntrup761x25519-sha512 first and kex-strict-s-v00@openssh.com. The key exchange list is Twisted's own (other Twisted SSH honeypots send it too), so the signature also requires Cowrie's host key set (ssh-rsa, ecdsa-sha2-nistp256, ssh-ed25519) and cipher list. Cowrie 3.1.3 offers group exchange and no ML-KEM, so this one dates the install. No credentials needed. Matched: Cowrie 3.1.8 (cowrie/cowrie:3.1.8 image) and 3.1.6 (cowrie/cowrie:latest of 2026-11-06); not Cowrie 3.1.3.dev11 (2026-11)."
+  - name: cowrie-31x-mlkem-kex-under-older-openssh-banner-2222
+    id: 3903
+    port: 2222
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^SSH-2\.0-OpenSSH_([1-8]\.|9\.[0-8]p)'
+        invert_match: false
+      - input_type: string
+        input: "SSH-2.0-OpenSSH_9.2p1\r"
+        output_match_type: regex
+        output: '(?s)mlkem768x25519-sha256,curve25519-sha256,curve25519-sha256@libssh\.org,ecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521,diffie-hellman-group14-sha1,ext-info-s.{4}ssh-rsa,ecdsa-sha2-nistp256,ssh-ed25519.{4}aes128-ctr,aes192-ctr,aes256-ctr,aes256-cbc,aes192-cbc,aes128-cbc,3des-cbc,cast128-cbc'
+        invert_match: false
+    confidence: High
+    comment: "As 3902 on port 2222, Cowrie's default listening port. Cowrie 3.1.6 and later (on Twisted 26.10) offer a key exchange list no OpenSSH release sends: mlkem768x25519-sha256 (added in OpenSSH 9.9) first, no sntrup761x25519, no strict-kex marker, no Diffie-Hellman group exchange and diffie-hellman-group14-sha1 last, while the identification claims an earlier OpenSSH (default 'OpenSSH_9.2p1 Debian-2+deb12u3'). Genuine Debian 12 OpenSSH 9.2p1 offers sntrup761x25519-sha512 first and kex-strict-s-v00@openssh.com. The key exchange list is Twisted's own (other Twisted SSH honeypots send it too), so the signature also requires Cowrie's host key set (ssh-rsa, ecdsa-sha2-nistp256, ssh-ed25519) and cipher list. Cowrie 3.1.3 offers group exchange and no ML-KEM, so this one dates the install. No credentials needed. Matched: Cowrie 3.1.8 (cowrie/cowrie:3.1.8 image) and 3.1.6 (cowrie/cowrie:latest of 2026-11-06); not Cowrie 3.1.3.dev11 (2026-11)."
