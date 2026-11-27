@@ -23873,3 +23873,69 @@ signatures:
         invert_match: false
     confidence: High
     comment: "Artillery's honeypot listener on tcp/10000 (Webmin): unsolicited random data (5 to 30,000 bytes from os.urandom, different on every connection; at least 100 non-text bytes required) sent the moment the connection opens, then the connection is closed. Genuine: Webmin (HTTP or HTTPS) sends nothing until the client speaks. Matched: Artillery 2.3 (commit 805a5d8, 2026-11)."
+  - name: honeybadger-login-page
+    id: 2750
+    port: 5000
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /login HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 .*<title>Honey Badger</title>\s*<meta name="description" content="Geolocation tracker\.">.*name="email".*name="password"'
+        invert_match: false
+    confidence: High
+    comment: "The HoneyBadger web interface login page (/login, where / redirects unauthenticated visitors) has the title 'Honey Badger', the meta description 'Geolocation tracker.' and an email and password form. The page is the tool's own and has no counterpart in other products. Matched: HoneyBadger v3 8eaeb4a (2026-11)."
+  - name: honeybadger-demo-csp-beacon-uri
+    id: 2751
+    port: 5000
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /demo/hd-{{rand}} HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 .*\r\nX-XSS-Protection: 0\r\nContent-Security-Policy-Report-Only: script-src ''nonce-[A-Za-z0-9+/=]+''; report-uri /api/beacon/hd-{{rand}}/Content-Security-Policy\r\n'
+        invert_match: false
+    confidence: High
+    comment: "The unauthenticated demo page /demo/<target> answers for any target name with X-XSS-Protection: 0 and a report-only Content-Security-Policy whose report-uri is HoneyBadger's beacon API for that target (/api/beacon/<target>/Content-Security-Policy), the CSP agent. A server without this route answers 404. Matched: HoneyBadger v3 8eaeb4a (2026-11)."
+  - name: honeybadger-java-applet-agent
+    id: 2752
+    port: 5000
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /static/honey.jar HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 .*\r\nContent-Disposition: inline; filename=honey\.jar\r\n.*\r\n\r\nPK\x03\x04.*honey\.class'
+        invert_match: false
+    confidence: High
+    comment: "HoneyBadger serves its Java applet agent (honey.jar, containing honey.class) from /static/ without authentication; the demo page loads it as the 'Secure Java Applet'. Matched: HoneyBadger v3 8eaeb4a (2026-11)."
+  - name: honeybadger-debug-demo-traceback
+    id: 2753
+    port: 5000
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST /demo/hd-{{rand}} HTTP/1.1\r\nHost: x\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: 12\r\nConnection: close\r\n\r\ntext=a&key=b"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 500 .*<title>AttributeError: &#39;NoneType&#39; object has no attribute &#39;check_password&#39;\s*// Werkzeug Debugger</title>'
+        invert_match: false
+    confidence: Medium
+    comment: "With the upstream defaults (DEBUG = True in honeybadger/__init__.py), a form post to the demo page without a session fails in the password check and Flask's debugger returns its traceback page, naming check_password. Medium: only deployments that keep the upstream debug setting (the companion script turns it off; the demo page then answers 200). Matched: HoneyBadger v3 8eaeb4a with upstream defaults (2026-11); not with the companion script's settings."
+  - name: honeybadger-beacon-api-cors
+    id: 2754
+    port: 5000
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "OPTIONS /api/beacon/hd-{{rand}}/HTML HTTP/1.1\r\nHost: x\r\nOrigin: http://hd-{{rand}}.example\r\nAccess-Control-Request-Method: GET\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.[01] 200 .*\r\nAllow: (?:(?:GET|HEAD|OPTIONS|POST)(?:, )?){4}\r\nAccess-Control-Allow-Origin: http://hd-{{rand}}\.example\r\nAccess-Control-Allow-Methods: DELETE, GET, HEAD, OPTIONS, PATCH, POST, PUT\r\n'
+        invert_match: false
+      - input_type: string
+        input: "OPTIONS /hd-{{rand}}/HTML HTTP/1.1\r\nHost: x\r\nOrigin: http://hd-{{rand}}.example\r\nAccess-Control-Request-Method: GET\r\nConnection: close\r\n\r"
+        reconnect: true
+        output_match_type: regex
+        output: '^HTTP/1\.[01] 404 '
+        invert_match: false
+    confidence: Medium
+    comment: "The beacon API /api/beacon/<target>/<agent> accepts any target and agent in a CORS preflight: Werkzeug answers with Allow listing GET, HEAD, OPTIONS and POST (in any order) and Flask-CORS reflects any Origin with its default method list, while the same request outside /api/beacon/ is a 404. Medium: the route shape is HoneyBadger's, but the headers come from Flask and Flask-CORS defaults. Matched: HoneyBadger v3 8eaeb4a (2026-11)."
