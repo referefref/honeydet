@@ -24525,3 +24525,107 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: "The management plane (default port 4877) redirects / to '/<access path>/admin/login' (default /agentcapture/admin/login) from uvicorn; the login page itself is titled 'AgentCapture'. Identifies an exposed AgentCapture console rather than a decoy; the port and access path are configurable, hence Medium. Matched: AgentCapture 0.7.0 (728ffa0, 2026-11)."
+  - name: mythsql-fixed-greeting-salt
+    id: 2830
+    port: 3306
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: hex
+        output: "0a352e372e32360008000000603e236c7f09736f00"
+        invert_match: false
+    confidence: High
+    comment: "Reads the greeting without sending anything. MythSQL replays one captured MySQL 5.7.26 greeting byte for byte, so every connection offers thread id 8 and the same 20-byte authentication salt (first part 603e236c7f09736f). Genuine MySQL 5.6, 5.7, 8.0, 8.4 and 9.7 and MariaDB 10.11 and 11.8 send a fresh random salt and an increasing thread id on each connection. Matched: MythSQL 7a567ea (2026-11)."
+  - name: mythsql-ok-before-handshake-response
+    id: 2831
+    port: 3306
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: hex
+        output: "6d7973716c5f6e61746976655f70617373776f7264000700000200000002000000"
+        invert_match: false
+    confidence: High
+    comment: "Reads the greeting without sending anything. MythSQL sends an OK packet (sequence 2, 'login accepted') straight after its greeting, before the client has sent any user name or password. A genuine server sends only the greeting and waits for the client's handshake response. Matched: MythSQL 7a567ea (2026-11)."
+  - name: mythsql-local-infile-request-on-handshake
+    id: 2832
+    port: 3306
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: string
+        output: "mysql_native_password"
+        invert_match: false
+      - input_type: hex
+        input: "0100000100"
+        output_match_type: hex
+        output: "000001fb"
+        invert_match: false
+    confidence: High
+    comment: "Reads the greeting, then sends a one-byte handshake response. With its file request turned on (the upstream behaviour, any file name), MythSQL answers every packet it does not recognise with a LOAD DATA LOCAL INFILE request (0xFB), asking the client to upload a file. Genuine MySQL and MariaDB answer error 1043 #08S01 Bad handshake and never send a file request outside a LOAD DATA LOCAL statement. Matched: MythSQL 7a567ea (2026-11)."
+  - name: mythsql-aggressor-prop-file-request
+    id: 2833
+    port: 3306
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: string
+        output: "mysql_native_password"
+        invert_match: false
+      - input_type: hex
+        input: "0100000100"
+        output_match_type: string
+        output: "C:/Users/User/.aggressor.prop"
+        invert_match: false
+    confidence: High
+    comment: "As 2832, for the upstream default: the file requested is C:/Users/User/.aggressor.prop, the settings file of the Cobalt Strike client on Windows. No genuine server requests a file at this point. Matched: MythSQL 7a567ea (2026-11)."
+  - name: mythsql-ok-to-malformed-handshake
+    id: 2834
+    port: 3306
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: string
+        output: "mysql_native_password"
+        invert_match: false
+      - input_type: hex
+        input: "0100000100"
+        output_match_type: regex
+        output: '^\x07\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00$'
+        invert_match: false
+    confidence: Medium
+    comment: "Reads the greeting, then sends a one-byte handshake response. With the file request turned off (the default of the Deception Technology companion LXC script and Docker version), MythSQL answers with an OK packet. Genuine MySQL and MariaDB answer error 1043 #08S01 Bad handshake. Matched: MythSQL 7a567ea with the companion scripts' default (2026-11)."
+  - name: mythsql-show-databases-before-login
+    id: 2835
+    port: 3306
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: string
+        output: "mysql_native_password"
+        invert_match: false
+      - input_type: hex
+        input: "0f0000000353484f5720444154414241534553"
+        output_match_type: hex
+        output: "12696e666f726d6174696f6e5f736368656d6106000005056d7973716c"
+        invert_match: false
+    confidence: High
+    comment: "Reads the greeting, then sends SHOW DATABASES as a query in place of the handshake response, without logging in. MythSQL answers with its canned list (information_schema, mysql, performance_schema, sys) in every mode. Genuine MySQL and MariaDB answer error 1156 #08S01 Got packets out of order. Matched: MythSQL 7a567ea (2026-11)."
+  - name: mythsql-greeting-capabilities
+    id: 2836
+    port: 3306
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: hex
+        output: "00fff7c00200ff811500000000000000000000"
+        invert_match: false
+    confidence: Medium
+    comment: "Greeting fields after the first salt part: capabilities 0xf7ff (no TLS), character set 0xc0 (utf8mb4_unicode_ci), status 0x0002, extended capabilities 0x81ff and ten reserved zero bytes, unchanged if the version text or salt were edited. None of the genuine servers tested has this combination (MySQL 5.6 0xf7ff/0x08/0x807f; 5.7.44 0xffff/0x08/0xc1ff; 8.x and 9.x 0xffff/0xff/0xdfff; MariaDB 0xf7fe or 0xfffe/0x2d/0x81ff), but a genuine MySQL 5.7 built without TLS and configured for utf8mb4_unicode_ci could send it. Matched: MythSQL 7a567ea (2026-11)."
