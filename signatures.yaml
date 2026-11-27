@@ -8992,7 +8992,7 @@ signatures:
         output: '^250-\S+ Hello '
         invert_match: false
     confidence: High
-    comment: "Commands are recognised by prefix, so the unknown verb EHLOX is treated as EHLO and answered with the EHLO reply. Every genuine server tested rejects it as an unrecognised command (500 or 501). Matched: Honeymail ce62f66 (2026-11)."
+    comment: "Commands are recognised by prefix, so the unknown verb EHLOX is treated as EHLO and answered with the EHLO reply. Every genuine server tested rejects it as an unrecognised command (500 or 501). Matched: Honeymail ce62f66 (2026-11). Also matches Honeyd 1.6d sendmail.sh (2026-11)."
   - name: honeymail-silent-close-after-five-errors
     id: 1015
     port: 25
@@ -23939,3 +23939,168 @@ signatures:
         invert_match: false
     confidence: Medium
     comment: "The beacon API /api/beacon/<target>/<agent> accepts any target and agent in a CORS preflight: Werkzeug answers with Allow listing GET, HEAD, OPTIONS and POST (in any order) and Flask-CORS reflects any Origin with its default method list, while the same request outside /api/beacon/ is a 404. Medium: the route shape is HoneyBadger's, but the headers come from Flask and Flask-CORS defaults. Matched: HoneyBadger v3 8eaeb4a (2026-11)."
+  - name: honeyd-web-sh-404
+    id: 2760
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 404 NOT FOUND\nServer: Microsoft-IIS/5\.0\nP3P: CP=.*\nContent-Location:\nDate: \nContent-Type: text/html\n'
+        invert_match: false
+    confidence: High
+    comment: "Honeyd's IIS web script (scripts/win32/web.sh, also scripts/backdoors/web.sh) answers every request with the same 404 page: an upper-case status text '404 NOT FOUND', bare line feeds instead of CRLF, Server: Microsoft-IIS/5.0, an empty Content-Location header and an empty Date header (the script prints DATE before setting it). IIS sends 'HTTP/1.1 404 Not Found' with CRLF line endings and a real date. Matched: Honeyd 1.6d (DataSoft a0f3d64) (2026-11)."
+  - name: honeyd-web-sh-cmd-listing
+    id: 2761
+    port: 80
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /scripts/honeydet/cmd.exe?/c+dir HTTP/1.0\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.0 200 OK\nDate: [^\n]+\nServer: Microsoft-IIS/5\.0\nConnection: close\nContent-Type: text/plain\n.*Volume Serial Number is 3421-07F5\n Directory of C:\\inetpub\n'
+        invert_match: false
+    confidence: High
+    comment: "Any HTTP/1.0 request for a path under /scripts/ naming cmd.exe and dir gets the IIS web script's fixed directory listing of C:\\inetpub (volume serial 3421-07F5, dates from 2000 to 2002), with bare line feeds. A genuine IIS server does not serve a directory listing for a non-existent path. Matched: Honeyd 1.6d (DataSoft a0f3d64) (2026-11)."
+  - name: honeyd-router-telnet-banner
+    id: 2762
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: hex
+        output: "fffe01fffb01fffb0355736572732028617574686f72697a6564206f7220756e617574686f72697a6564292068617665206e6f206578706c69636974206f720d0a"
+        invert_match: false
+    confidence: High
+    comment: "Honeyd's router Telnet script (scripts/embedded/router-telnet.pl, also used in config.sample) opens with exactly IAC DONT ECHO, IAC WILL ECHO, IAC WILL SUPPRESS-GO-AHEAD (ff fe 01 ff fb 01 ff fb 03) followed at once by its fixed warning banner 'Users (authorized or unauthorized) have no explicit or'. Cisco IOS starts with WILL ECHO, WILL SUPPRESS-GO-AHEAD, DO TERMINAL-TYPE and DO NAWS and shows the banner the administrator configured. Matched: Honeyd 1.6d (DataSoft a0f3d64) (2026-11)."
+  - name: honeyd-router-telnet-password-skipped
+    id: 2763
+    port: 23
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '(?s)\r\nUser Access Verification\r\n\r\nUsername:$'
+        invert_match: false
+      - input_type: string
+        input: "honeydet\r"
+        output_match_type: regex
+        output: '^honeydet\r\nPassword: \r\n% Login invalid\r\n\r\nUsername:$'
+        invert_match: false
+    confidence: High
+    comment: "A user name ended with CR LF (the usual Telnet end of line) is echoed and answered at once with 'Password:', '% Login invalid' and a new 'Username:' prompt: the router Telnet script ends the user name at the CR and takes the LF as an empty password. Cisco IOS waits for the password. Matched: Honeyd 1.6d (DataSoft a0f3d64) (2026-11)."
+  - name: honeyd-ssh-sh-echo
+    id: 2764
+    port: 22
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^(-e )?SSH-[12]\.[0-9]+-[!-~]+$'
+        invert_match: false
+      - input_type: string
+        input: "SSH-2.0-honeydet_{{rand}}\r"
+        output_match_type: regex
+        output: '^SSH-2\.0-honeydet_{{rand}}\r?$'
+        invert_match: false
+    confidence: High
+    comment: "Honeyd's SSH script (scripts/linux/ssh.sh) sends the version line from its strings file (SSH-1.99-OpenSSH_2.1.1 in example.conf) and then echoes every line the client sends: the client's own identification string comes straight back. A genuine SSH server answers the identification with a binary KEXINIT. Without SSH credentials honeydet sends the steps over raw TCP. Matched: Honeyd 1.6d (DataSoft a0f3d64) (2026-11)."
+  - name: honeyd-ftp-sh-help
+    id: 2765
+    port: 21
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^(-e )?220 \S+ FTP server \(.*\) ready\.$'
+        invert_match: false
+      - input_type: string
+        input: "USER anonymous\r"
+        output_match_type: regex
+        output: '^331 '
+        invert_match: false
+      - input_type: string
+        input: "PASS honeydet@example.com\r"
+        output_match_type: regex
+        output: '(?s)^230-Hello User at .*\r\n230 Guest login ok, access restrictions apply\.$'
+        invert_match: false
+      - input_type: string
+        input: "HELP\r"
+        output_match_type: regex
+        output: '(?s)^214-The following commands are recognized.*\r\n214 Direct comments to ftp@\.$'
+        invert_match: false
+    confidence: High
+    comment: "Honeyd's WU-FTPD script (scripts/linux/ftp.sh) logs in any anonymous user with a fixed wu-ftpd welcome text ('230-Hello User at <address>, we have 82 users ...') and ends its HELP list with '214 Direct comments to ftp@.', an address with no host part, because the script uses a variable it never sets. wu-ftpd names its own host (ftp@<host>), and other servers answer HELP differently. The banner check covers any version string in the strings file. Matched: Honeyd 1.6d (DataSoft a0f3d64) (2026-11)."
+  - name: honeyd-sendmail-sh-quit-220
+    id: 2766
+    port: 25
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^(-e )?220 \S+ ESMTP '
+        invert_match: false
+      - input_type: string
+        input: "QUIT\r"
+        output_match_type: regex
+        output: '^220 2\.0\.0 \S+ closing connection$'
+        invert_match: false
+    confidence: High
+    comment: "Honeyd's Sendmail script (scripts/linux/sendmail.sh) answers QUIT with '220 2.0.0 <host> closing connection'. RFC 5321 requires 221 for QUIT, and Sendmail sends '221 2.0.0 <host> closing connection'. Matched: Honeyd 1.6d (DataSoft a0f3d64) (2026-11)."
+  - name: honeyd-qpop-sh-ftp-style-error
+    id: 2767
+    port: 110
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^(-e )?\+OK '
+        invert_match: false
+      - input_type: string
+        input: "USER honeydet\r"
+        output_match_type: regex
+        output: '^\+OK Password required for honeydet\.$'
+        invert_match: false
+      - input_type: string
+        input: "HONEYDET\r"
+        output_match_type: regex
+        output: "^500 'HONEYDET': command not understood\\.$"
+        invert_match: false
+      - input_type: string
+        input: "QUIT\r"
+        output_match_type: regex
+        output: '^\+OK Pop serrver at \S+ signing off\.$'
+        invert_match: false
+    confidence: High
+    comment: "Honeyd's QPOP script (scripts/linux/qpop.sh) answers an unknown command after USER with the FTP-style \"500 'HONEYDET': command not understood.\" and QUIT with '+OK Pop serrver at <host> signing off.' (sic). POP3 replies always begin +OK or -ERR (RFC 1939); qpopper answers unknown commands with -ERR. Matched: Honeyd 1.6d (DataSoft a0f3d64) (2026-11)."
+  - name: honeyd-script-dash-echo-ftp
+    id: 2768
+    port: 21
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^-e 220 '
+        invert_match: false
+    confidence: Medium
+    comment: "Honeyd's DataSoft service scripts are bash scripts that print with 'echo -e'. Started as 'sh script' (the form in Honeyd's manual page) on a system whose sh is dash (Debian, Ubuntu), every line they print begins with a literal '-e ', so the FTP greeting reads '-e 220 ...'. No FTP server sends that. Medium: only deployments that run the scripts with dash. Matched: Honeyd 1.6d (DataSoft a0f3d64) with scripts/linux/ftp.sh run by sh (dash 0.5.12) (2026-11)."
+  - name: honeyd-script-dash-echo-smtp
+    id: 2769
+    port: 25
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^-e 220 '
+        invert_match: false
+    confidence: Medium
+    comment: "SMTP form of 2768: Honeyd's Sendmail script run with dash greets with '-e 220 ...', the literal '-e ' that dash's echo prints. No SMTP server sends that. Medium: only deployments that run the scripts with dash. Matched: Honeyd 1.6d (DataSoft a0f3d64) with scripts/linux/sendmail.sh run by sh (dash 0.5.12) (2026-11)."
