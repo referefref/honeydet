@@ -1596,7 +1596,7 @@ signatures:
         output: '^HTTP/1\.1 200 OK\r\n[\s\S]*?\r\n\r\n[\s\S]*"tagline" ?: ?"You Know, for Search"'
         invert_match: false
     confidence: High
-    comment: "Handlers ignore the HTTP method, so PUT / (also DELETE, OPTIONS and invented methods) returns the banner with 200. Genuine Elasticsearch answers PUT / with 400 'No handler found' (1.x) or 405 (7.x, 8.x). Also matches HFish 3.3.6 (2026-11). Also matches hachimi bc8b94b (2026-11)."
+    comment: "Handlers ignore the HTTP method, so PUT / (also DELETE, OPTIONS and invented methods) returns the banner with 200. Genuine Elasticsearch answers PUT / with 400 'No handler found' (1.x) or 405 (7.x, 8.x). Also matches HFish 3.3.6 (2026-11). Also matches hachimi bc8b94b (2026-11). Also matches AgentCapture 0.7.0 emulation on its own port (2026-11)."
   - name: elastichoney-nodes-invalid-json
     id: 143
     port: 9200
@@ -1750,7 +1750,7 @@ signatures:
         output: '\x00{10}[\s\S]*[^\x00-\x7f][\s\S]*\x00mysql_native_password\x00$'
         invert_match: false
     confidence: High
-    comment: "The second part of the greeting salt (12 bytes) is filled from rand() over the full byte range, so it almost always contains a byte of 0x80 or above (the check misses about one connection in 4,096). Genuine MySQL and MariaDB scrambles only use 7-bit bytes (MariaDB printable ASCII, MySQL 1 to 127). Not affected by --setver."
+    comment: "The second part of the greeting salt (12 bytes) is filled from rand() over the full byte range, so it almost always contains a byte of 0x80 or above (the check misses about one connection in 4,096). Genuine MySQL and MariaDB scrambles only use 7-bit bytes (MariaDB printable ASCII, MySQL 1 to 127). Not affected by --setver. Also matches AgentCapture 0.7.0 emulation on its own port (2026-11)."
   - name: mysql-honeypotd-default-version-8.0.19-native-password
     id: 163
     port: 3306
@@ -2050,7 +2050,7 @@ signatures:
         output: '^\$[0-9]+\r\nredis_version:'
         invert_match: false
     confidence: High
-    comment: "INFO. RedisHoneyPot builds INFO from the [info] section of redis.conf as one bulk string of key:value lines with no section headers, so it begins with redis_version. Genuine Redis 2.8 and later starts with '# Server' (NOAUTH with a password); NoSQLpot returns an array (*43). The format is in the code; the values come from redis.conf."
+    comment: "INFO. RedisHoneyPot builds INFO from the [info] section of redis.conf as one bulk string of key:value lines with no section headers, so it begins with redis_version. Genuine Redis 2.8 and later starts with '# Server' (NOAUTH with a password); NoSQLpot returns an array (*43). The format is in the code; the values come from redis.conf. Also matches AgentCapture 0.7.0 emulation on its own port (2026-11)."
   - name: redishoneypot-config-get-uppercase
     id: 206
     port: 6379
@@ -18007,7 +18007,7 @@ signatures:
         output: '^\*0$'
         invert_match: false
     confidence: High
-    comment: "COMMAND returns an empty array ('*0'). Genuine Redis 2.8 onwards lists its commands (157 in 2.8, 241 in 7.2) and Valkey does the same. Matched: RediTrap 8b5d789 (2026-11)."
+    comment: "COMMAND returns an empty array ('*0'). Genuine Redis 2.8 onwards lists its commands (157 in 2.8, 241 in 7.2) and Valkey does the same. Matched: RediTrap 8b5d789 (2026-11). Also matches AgentCapture 0.7.0 emulation on its own port (2026-11)."
   - name: reditrap-auth-any-credentials-accepted
     id: 2065
     port: 6379
@@ -24390,3 +24390,138 @@ signatures:
         invert_match: false
     confidence: High
     comment: "Port 80 copy of 2782: bare 204 for /favicon.ico and a generated HTML maze page for /robots.txt. Matched: Sarracenia v1.2.4 (2026-11)."
+  - name: agentcapture-elasticsearch-honeypot-node-name
+    id: 2810
+    port: 19200
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\n.*"name": "honeypot-node-1",\s*"cluster_name": "elasticsearch-cluster",\s*"cluster_uuid": "aBcDeFgHiJkLmNoPqRsT"'
+        invert_match: false
+    confidence: High
+    comment: "The Elasticsearch emulation answers GET / with a fixed document: node name 'honeypot-node-1', cluster_uuid 'aBcDeFgHiJkLmNoPqRsT' (letters in alphabetical order, where Elasticsearch uses a random 22-character base64 id) and a 36-character build_hash (genuine builds carry a 40-character git hash). Genuine Elasticsearch 7.17.24 names the node after its host and sends a random cluster_uuid. Matched: AgentCapture 0.7.0 (728ffa0, 2026-11)."
+  - name: agentcapture-redis-info-server-stub
+    id: 2811
+    port: 63790
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "INFO server\r"
+        output_match_type: regex
+        output: '^\$\d+\r\nredis_version:[0-9.]+\r\nredis_mode:standalone\r\nos:[^\r\n]*\r\ntcp_port:'
+        invert_match: false
+    confidence: High
+    comment: "INFO server returns a seven-line stub (redis_version, redis_mode, os, tcp_port, uptime, clients, memory) with no '# Server' section header and redis_mode straight after redis_version. Genuine Redis (7.0.15 and 7.4 tested) starts the reply with '# Server' and lists redis_git_sha1, redis_git_dirty and redis_build_id between version and mode. Matched: AgentCapture 0.7.0 (728ffa0, 2026-11)."
+  - name: agentcapture-ftp-proftpd-banner-vsftpd-login
+    id: 2812
+    port: 2121
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^220 ProFTPD 1\.3\.8 Server ready\.$'
+        invert_match: false
+      - input_type: string
+        input: "USER anonymous\r"
+        output_match_type: regex
+        output: '^331 Password required for anonymous$'
+        invert_match: false
+      - input_type: string
+        input: "PASS probe@example.com\r"
+        output_match_type: regex
+        output: '^230 Login successful\.$'
+        invert_match: false
+    confidence: High
+    comment: "The FTP emulation greets as 'ProFTPD 1.3.8 Server ready.' and accepts any user and password with vsftpd's wording '230 Login successful.'. Genuine ProFTPD 1.3.8 (Debian 12) greets with 'ProFTPD Server (Debian) [address]' without a version, and answers a login with '230 User ... logged in' or '530 Login incorrect.'; vsftpd greets with '(vsFTPd 3.0.3)'. Matched: AgentCapture 0.7.0 (728ffa0, 2026-11)."
+  - name: agentcapture-mysql-greeting-capabilities
+    id: 2813
+    port: 33060
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: hex
+        output: "0001aa21020008001500000000000000000000"
+        invert_match: false
+    confidence: High
+    comment: "The MySQL 5.7.42 greeting carries capability flags 0xaa01 (low) and 0x0008 (high), character set 0x21 and status 0x0002, with connection id 42 on every connection: only LONG_PASSWORD, PROTOCOL_41, TRANSACTIONS, SECURE_CONNECTION, SSL and PLUGIN_AUTH are set. Genuine MySQL 5.7.44 sends 0xffff/0xc1ff and character set 0x08, MariaDB 10.11 0xf7fe/0x81ff, and both increment the connection id. Matched: AgentCapture 0.7.0 (728ffa0, 2026-11)."
+  - name: agentcapture-ssh-paramiko-as-openssh-8-9
+    id: 2814
+    port: 2222
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^SSH-2\.0-OpenSSH_8\.9p1 Ubuntu-3ubuntu0\.6$'
+        invert_match: false
+      - input_type: string
+        input: "SSH-2.0-OpenSSH_9.2p1 Debian-2+deb12u3\r"
+        output_match_type: regex
+        output: '(?s)rsa-sha2-512,rsa-sha2-256\x00\x00\x00.aes128-ctr,aes192-ctr,aes256-ctr,aes128-cbc,aes192-cbc,aes256-cbc,3des-cbc,'
+        invert_match: false
+    confidence: High
+    comment: "The interactive SSH honeypot is paramiko presenting the banner of Ubuntu 22.04's OpenSSH 8.9p1, but its key exchange offer is paramiko's: an RSA host key only (rsa-sha2-512, rsa-sha2-256) and a cipher list that starts aes128-ctr and includes the CBC modes and 3des-cbc. Genuine OpenSSH 8.9 and later offers chacha20-poly1305 first, no CBC or 3DES ciphers by default, and Ed25519 and ECDSA host keys alongside RSA (OpenSSH 9.2 on Debian 12 tested). Matched: AgentCapture 0.7.0 (728ffa0, 2026-11)."
+  - name: agentcapture-nginx-admin-catch-all-login
+    id: 2815
+    port: 8081
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET /agentcapture-probe-{{rand}}.php HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\nServer: nginx/1\.24\.0\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: \d+\r\nConnection: close\r\n\r\n<!doctype html><html><head><meta charset=.utf-8.><title>Nginx Admin</title>.*<h1>Nginx Admin Console</h1>'
+        invert_match: false
+    confidence: High
+    comment: "The 'nginx admin' service answers every path, including a random non-existent one, with 200 OK and the same 'Nginx Admin Console' login form, under a fixed Server: nginx/1.24.0 header. Genuine nginx (1.22 and current mainline tested) returns 404 Not Found with its standard error page for unknown paths and sends a Date header. Matched: AgentCapture 0.7.0 (728ffa0, 2026-11)."
+  - name: agentcapture-web-injected-build-comment
+    id: 2816
+    port: 48777
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)<!-- build 4711 \S+ deploy 2025-05-20 \S+ staging-compat -->.*<script defer src="/static/collector\.js" data-collect-url="[^"]*"></script>'
+        invert_match: false
+    confidence: High
+    comment: "Every HTML page of the web honeypot plane (and of sites behind AgentCapture's injector) ends with the same snippet: the comment 'build 4711 . deploy 2025-05-20 . staging-compat', hidden links to a backup archive, an SQL dump and an OpenAPI file, and the collector.js and fingerprint.js telemetry scripts. Genuine ThinkPHP 5.0.24 pages contain none of these. Changing the injector template removes it. Matched: AgentCapture 0.7.0 (728ffa0, 2026-11)."
+  - name: agentcapture-thinkphp-face-without-php
+    id: 2817
+    port: 48777
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\n.*content-security-policy: default-src .self.[^\r\n]*\r\n(?:[^\r\n]+\r\n)*\r\n<!DOCTYPE html>\s*<html>\s*<head><meta charset="utf-8"><title>ThinkPHP V5\.0\.24</title>'
+        invert_match: false
+    confidence: High
+    comment: "The ThinkPHP 5.0.24 facade is served by uvicorn: lower-case headers, a PHPSESSID cookie with SameSite, a strict Content-Security-Policy, and a page titled 'ThinkPHP V5.0.24'. A genuine ThinkPHP 5.0.24 welcome page (PHP 7.2 on Apache tested) has no title, says 'ThinkPHP V5' and comes with Server: Apache and X-Powered-By: PHP headers and no CSP. Matched: AgentCapture 0.7.0 (728ffa0, 2026-11)."
+  - name: agentcapture-mcp-initialize-audit-ref
+    id: 2818
+    port: 48777
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "POST /mcp HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nAccept: application/json, text/event-stream\r\nContent-Length: 151\r\nConnection: close\r\n\r\n{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{\"protocolVersion\":\"2025-06-18\",\"capabilities\":{},\"clientInfo\":{\"name\":\"probe\",\"version\":\"1\"}}}"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 200 OK\r\n.*\r\n\r\n\{"jsonrpc":"2\.0","id":1,"result":\{"protocolVersion":"[^"]+","serverInfo":\{"name":"[^"]*","version":"[^"]*"\},"capabilities":\{"tools":\{\}\},"audit_ref":"[0-9A-F]{10}"\}\}'
+        invert_match: false
+    confidence: High
+    comment: "The MCP honeypot at /mcp answers initialize with a non-standard 'audit_ref' field (a ten-character watermark tied to the visitor's session) inside the result, next to the configurable server name (default 'prod-db-mcp'). The MCP specification defines no such field and genuine MCP servers do not send it; ordinary web servers answer POST /mcp with 404 or 405. Matched: AgentCapture 0.7.0 (728ffa0, 2026-11)."
+  - name: agentcapture-console-redirect
+    id: 2819
+    port: 4877
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/1\.1 302 Found\r\n.*server: uvicorn\r\n.*location: /[A-Za-z0-9_-]+/admin/login\r\n'
+        invert_match: false
+    confidence: Medium
+    comment: "The management plane (default port 4877) redirects / to '/<access path>/admin/login' (default /agentcapture/admin/login) from uvicorn; the login page itself is titled 'AgentCapture'. Identifies an exposed AgentCapture console rather than a decoy; the port and access path are configurable, hence Medium. Matched: AgentCapture 0.7.0 (728ffa0, 2026-11)."
