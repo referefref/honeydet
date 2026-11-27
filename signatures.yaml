@@ -23535,3 +23535,63 @@ signatures:
         min_response_ms: 4000
     confidence: Medium
     comment: "HEAD for any dictionary-word path under /maze/ is answered 200 text/html, but only after a 5 to 30 second header delay. Depends on the /maze/ prefix (configurable). Run with -timeout 35. Matched: Nepenthes 2.8 behind nginx 1.22 (2026-11)."
+  - name: portspoof-unsolicited-http-response
+    id: 2700
+    port: "1-65535"
+    proto: tcp
+    steps:
+      - input_type: hex
+        input: ""
+        output_match_type: regex
+        output: '^HTTP/[0-9]'
+        invert_match: false
+    confidence: High
+    comment: "An HTTP response arrives as soon as the TCP connection opens, before the client has sent a request. HTTP is a client-first protocol, so a genuine web server stays silent until it receives a request. Portspoof sends its banner at once on about 60% of ports and about 40% of its banners are HTTP responses, so roughly one port in four answers this way. Matched: Portspoof v2.0 (6618156, 2026-11)."
+  - name: portspoof-http-regex-artefacts
+    id: 2701
+    port: "1-65535"
+    proto: tcp
+    steps:
+      - input_type: string
+        input: "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r"
+        output_match_type: regex
+        output: '(?s)^HTTP/(?:[0-9]\.[0-9]{2,}|[0-9]\.[0-9] [06-9][0-9]{2} |[0-9]\.[0-9] [0-9]{3} [a-z]\r\n|.*\r\n(?i:Date|Expires|Last-Modified): [^\r\n](?:\r\n|$)|.*\r\n[a-z](?:Server|Set-Cookie|Expires|Content-Type|Content-type|Date|Location|User-Agent|Connection|Cache-Control|WWW-Authenticate|Content-Length|Pragma|Last-Modified|X-Powered-By): )'
+        invert_match: false
+    confidence: High
+    comment: "The reply to a GET is an HTTP response generated from an Nmap match pattern, with the traces of the regex reverser: a version such as HTTP/1.634, a status code outside 1xx-5xx or a one-letter reason phrase (HTTP/1.0 200 x), a one-character Date, Expires or Last-Modified value (Date: q), or a stray lower-case letter fused to a header name (xServer:, tSet-Cookie:). No genuine web server writes any of these. Matched on about 18% of ports. Matched: Portspoof v2.0 (6618156, 2026-11)."
+  - name: portspoof-regex-syntax-in-banner
+    id: 2702
+    port: "1-65535"
+    proto: tcp
+    steps:
+      - input_type: string
+        input: ""
+        output_match_type: regex
+        output: '\r\?(?:\n|$)|\(\?[:=!]|\{[0-9]+(?:,[0-9]*)?\}|^SSH-(?:[0-9]{2,}|[03-9]|[12]\.[0-9]{3,})-'
+        invert_match: false
+    confidence: Medium
+    comment: "The banner still contains regular-expression syntax that the regex reverser copied literally, such as a carriage return followed by a question mark (from \r?), a group opener (?: or (?=, or a repeat count {8}, or an SSH identification with an impossible protocol version (SSH-974917676-). Matched on about 3% of ports; Medium because the fragments are short and a free-text banner could contain them. Matched: Portspoof v2.0 (6618156, 2026-11)."
+  - name: portspoof-example-config-ports-1-60
+    id: 2703
+    port: "1-60"
+    proto: tcp
+    steps:
+      - input_type: string
+        input: ""
+        output_match_type: regex
+        output: '^550 (?:12345 0[0-9a-f]{40,60}|4m2v4 FUZZ_HERE)$'
+        invert_match: false
+    confidence: High
+    comment: "With the example configuration that Portspoof installs as portspoof.conf (the README's recommended service emulation mode), ports 1 to 50 each send one row of an ASCII-art picture as '550 12345 0fff...f00' and ports 51 to 60 send '550 4m2v4 FUZZ_HERE'; ports 21, 22, 23 and 25 are in that range. Matches on every non-silent port of the range (about 90%). Matched: Portspoof v2.0 (6618156, 2026-11) with the upstream example configuration."
+  - name: portspoof-example-config-ports-8080-8104
+    id: 2704
+    port: "8080-8104"
+    proto: tcp
+    steps:
+      - input_type: string
+        input: ""
+        output_match_type: regex
+        output: '^(?:word: |OK0100 eXtremail V[0-9]+ release [0-9]+REMote management|220 FUZZ_HERE |550 12345 FUZZ_HERE|\+OK Lotus Notes POP3 server version lLlfMoHcd|HTTP/1v0 200 OK\r\nServer: Apache/__FUZZ__)'
+        invert_match: false
+    confidence: High
+    comment: "The example configuration's sample payloads on 8080 to 8082 and 8100 to 8104: 'word: ' lines, the eXtremail pattern with its release number fused to 'REMote', and banners that still carry the FUZZ_HERE and __FUZZ__ placeholders (220 FUZZ_HERE ESMTP OpenSMTPD, HTTP/1v0 200 OK with Server: Apache/__FUZZ__). Matched: Portspoof v2.0 (6618156, 2026-11) with the upstream example configuration."
